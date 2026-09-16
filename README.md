@@ -6,12 +6,14 @@ The wristband complements the environmental picture. The app remains useful with
 
 ## Current build
 
-The current implementation contains the first production UI slice: a four-page onboarding experience with:
+The current implementation contains the first production UI slice: a seven-page onboarding experience with:
 
 - The warm cream and coral HeatSense design system
 - Animated athlete and heart-signal visualization
 - UIL-oriented WBGT risk presentation
+- Coach-ready practice adjustments for work, rest, water, and equipment
 - Reusable icon-led vital cards and miniature charts
+- Movement context and the four-level alert behavior
 - Coach, athletic trainer, and athlete role selection
 - Working forward, back, skip, and completion navigation
 - Reduced-motion support for purposeful chart and athlete transitions

@@ -10,7 +10,7 @@ This document keeps interface work tied to the HeatSense product instead of drif
 
 ## Visual system
 
-- Warm cream canvas, warm-white surfaces, coral primary accent, near-black text.
+- Warm cream canvas (`#F6F3EC`), warm-white surfaces (`#FFFDF8`), coral primary accent (`#F06F5F`), near-black text (`#1B1C19`).
 - Color carries meaning: green is normal, amber is caution, orange is warning, and coral/red is emergency.
 - DM Sans is the product typeface. Use a restrained weight hierarchy instead of many display styles.
 - Use native symbols with consistent optical size. Do not place unrelated emoji, glossy 3D icons, or mismatched illustration styles in the interface.
@@ -51,9 +51,12 @@ Before a screen is accepted:
 | Step | Product purpose | Required content |
 | --- | --- | --- |
 | 1 | Establish the hierarchy | WBGT is primary; athlete context is additive |
-| 2 | Explain compliance workflow | Pre-practice reading, 30-minute checks, zone-change actions |
-| 3 | Explain optional hardware | Four physiological features, personal baseline, four risk tiers, collapse override |
-| 4 | Establish the user context | School/team example, hydration and emergency readiness, role selection |
+| 2 | Explain field risk | Current WBGT, school-specific zone, check timing, recent trend |
+| 3 | Explain the practice plan | Work, rest, water, and equipment adjustments |
+| 4 | Explain optional hardware | Four physiological features and the athlete's personal baseline |
+| 5 | Explain movement context | Why the same heart rate means something different during exertion and rest |
+| 6 | Explain alerts | Normal, Caution, Warning, Emergency, and the collapse override |
+| 7 | Establish the user context | School/team example, hydration and emergency readiness, role selection |
 | Completion | Begin real setup | School and team required; wristband pairing optional |
 
 ## Reference set
@@ -65,4 +68,3 @@ Before a screen is accepted:
 - [Approved Pinterest wearable-dashboard reference](https://www.pinterest.com/pin/4362930884633155/)
 - [Approved Pinterest risk-color reference](https://www.pinterest.com/pin/169659110952554883/)
 - [Anti AI Slop UI checklist](https://github.com/rwcod/anti-ai-slop-ui/blob/main/SKILL.md)
-

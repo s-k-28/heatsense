@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -12,11 +12,22 @@ import {
   type ViewStyle,
   useWindowDimensions,
 } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  interpolateColor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HeatIcon } from '@/components/heat-icon';
 import {
+  AlertLevelsVisual,
+  ContextVisual,
+  PracticePlanVisual,
   RunnerSignalVisual,
   SignalsVisual,
   TeamVisual,
@@ -43,15 +54,35 @@ const steps = [
     eyebrow: 'UIL practice guidance',
     title: 'Know the risk before practice starts.',
     description:
-      'Live conditions become clear UIL-aligned actions for work, rest, hydration, and equipment.',
+      'A single field reading becomes a clear, class-specific zone for the whole practice.',
     visual: WbgtVisual,
   },
   {
-    eyebrow: 'Optional wristband',
-    title: 'See the athlete behind the weather.',
+    eyebrow: 'Practice adjustments',
+    title: 'Turn the zone into a practice plan.',
     description:
-      'Tap any signal to preview how individual trends add context to field-wide WBGT.',
+      'HeatSense keeps the work, rest, water, and equipment rules in one coach-ready view.',
+    visual: PracticePlanVisual,
+  },
+  {
+    eyebrow: 'Athlete signals',
+    title: 'Four signals. One personal baseline.',
+    description: 'Available when an optional HeatSense wristband is paired.',
     visual: SignalsVisual,
+  },
+  {
+    eyebrow: 'Movement context',
+    title: 'The same heart rate can mean different things.',
+    description:
+      'Movement shows whether an elevated heart rate happened during exertion or while recovery stalled.',
+    visual: ContextVisual,
+  },
+  {
+    eyebrow: 'Alert behavior',
+    title: 'Make rising risk hard to miss.',
+    description:
+      'Combined signals move through four levels. Collapse detection goes directly to Emergency.',
+    visual: AlertLevelsVisual,
   },
   {
     eyebrow: 'Team setup',
@@ -107,22 +138,25 @@ export default function OnboardingScreen() {
               <Text style={styles.brandName}>HeatSense</Text>
             </View>
 
-            <Pressable
-              accessibilityLabel="Skip introduction"
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={() => setStepIndex(steps.length - 1)}
-              style={({ pressed }) => [styles.skipButton, pressed && styles.buttonPressed]}>
-              <Text style={styles.skipText}>{isFinalStep ? 'Setup' : 'Skip'}</Text>
-            </Pressable>
+            {!isFinalStep ? (
+              <Pressable
+                accessibilityLabel="Skip introduction"
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={() => setStepIndex(steps.length - 1)}
+                style={({ pressed }) => [styles.skipButton, pressed && styles.buttonPressed]}>
+                <Text style={styles.skipText}>Skip</Text>
+              </Pressable>
+            ) : null}
           </View>
 
-          <View accessibilityLabel={`Step ${stepIndex + 1} of ${steps.length}`} style={styles.progressRow}>
+          <View
+            accessibilityLabel={`Step ${stepIndex + 1} of ${steps.length}`}
+            accessibilityRole="progressbar"
+            accessibilityValue={{ max: steps.length, min: 1, now: stepIndex + 1 }}
+            style={styles.progressRow}>
             {steps.map((_, index) => (
-              <View
-                key={index}
-                style={[styles.progressTrack, index <= stepIndex && styles.progressTrackActive]}
-              />
+              <ProgressSegment active={index <= stepIndex} key={index} />
             ))}
           </View>
 
@@ -177,6 +211,21 @@ export default function OnboardingScreen() {
       </SafeAreaView>
     </View>
   );
+}
+
+function ProgressSegment({ active }: { active: boolean }) {
+  const reduceMotion = useReducedMotion();
+  const progress = useSharedValue(active ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = withTiming(active ? 1 : 0, { duration: reduceMotion ? 1 : 220 });
+  }, [active, progress, reduceMotion]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(progress.value, [0, 1], [Palette.border, Palette.coral]),
+  }));
+
+  return <Animated.View style={[styles.progressTrack, animatedStyle]} />;
 }
 
 function OnboardingCopy({
@@ -287,9 +336,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
   },
-  progressTrackActive: {
-    backgroundColor: Palette.coral,
-  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: Spacing.three,
@@ -357,8 +403,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
     paddingHorizontal: Spacing.two,
-    paddingVertical: 9,
   },
   roleChipSelected: {
     backgroundColor: Palette.surface,
@@ -367,7 +414,7 @@ const styles = StyleSheet.create({
   roleText: {
     color: Palette.inkMuted,
     fontFamily: Fonts.semibold,
-    fontSize: 10,
+    fontSize: 11,
     textAlign: 'center',
   },
   roleTextSelected: {

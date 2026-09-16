@@ -1,4 +1,5 @@
 import { type ComponentProps, useEffect, useMemo, useState } from 'react';
+import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -26,6 +27,11 @@ const iconNames = {
   people: { ios: 'person.2.fill', android: 'groups', web: 'groups' },
   location: { ios: 'location.fill', android: 'location_on', web: 'location_on' },
   emergency: { ios: 'cross.case.fill', android: 'medical_services', web: 'medical_services' },
+  clock: { ios: 'clock.fill', android: 'schedule', web: 'schedule' },
+  work: { ios: 'figure.run', android: 'fitness_center', web: 'fitness_center' },
+  rest: { ios: 'pause.fill', android: 'pause', web: 'pause' },
+  equipment: { ios: 'sportscourt.fill', android: 'sports_football', web: 'sports_football' },
+  alert: { ios: 'bell.badge.fill', android: 'notifications_active', web: 'notifications_active' },
 } as const;
 
 type SymbolName = ComponentProps<typeof HeatIcon>['name'];
@@ -63,7 +69,7 @@ export function RunnerSignalVisual() {
       <View style={styles.visualTopRow}>
         <View style={styles.livePill}>
           <View style={styles.liveDot} />
-          <Text style={styles.liveText}>Live protection</Text>
+          <Text style={styles.liveText}>Sample athlete signal</Text>
         </View>
         <HeatIcon name={iconNames.shield} size={22} tintColor={Palette.coral} />
       </View>
@@ -111,11 +117,16 @@ export function RunnerSignalVisual() {
 
 export function WbgtVisual() {
   return (
-    <View style={[styles.heroCard, styles.wbgtCard]}>
+    <ExpoLinearGradient
+      colors={['#F5A052', '#FFD28A', '#FFF7E8']}
+      end={{ x: 0.9, y: 1 }}
+      locations={[0, 0.46, 1]}
+      start={{ x: 0.1, y: 0 }}
+      style={[styles.heroCard, styles.wbgtCard]}>
       <View style={styles.wbgtHeader}>
         <View>
-          <Text style={styles.miniLabel}>Example · Frisco, Texas</Text>
-          <Text style={styles.updatedText}>Illustrative conditions</Text>
+          <Text style={styles.miniLabel}>Frisco, Texas</Text>
+          <Text style={styles.updatedText}>Example conditions</Text>
         </View>
         <View style={styles.sunIconWrap}>
           <HeatIcon name={iconNames.heat} size={24} tintColor={Palette.warning} />
@@ -125,32 +136,110 @@ export function WbgtVisual() {
       <View style={styles.wbgtMain}>
         <Text style={styles.wbgtNumber}>84</Text>
         <Text style={styles.degree}>°F WBGT</Text>
-        <View style={styles.zonePill}>
-          <View style={styles.zoneDot} />
-          <Text style={styles.zoneText}>Orange zone</Text>
+      </View>
+
+      <View>
+        <Text style={styles.wbgtZoneTitle}>Orange zone</Text>
+        <Text style={styles.wbgtMessage}>Use the school&apos;s class-specific UIL plan.</Text>
+      </View>
+
+      <View style={styles.wbgtTimingRow}>
+        <WbgtTiming label="Before" value="15 min" />
+        <WbgtTiming label="Recheck" value="30 min" />
+        <WbgtTiming label="If changed" value="Adjust" />
+      </View>
+
+      <View style={styles.wbgtTrend}>
+        <Svg height="52" viewBox="0 0 340 52" width="100%">
+          <Path
+            d="M0 31 C35 33 52 21 76 27 C98 32 105 45 124 29 C145 11 161 43 183 28 C208 12 231 24 249 21 C276 17 295 37 316 24 C326 18 334 11 340 4"
+            fill="none"
+            stroke={Palette.ink}
+            strokeLinecap="round"
+            strokeWidth="2.4"
+          />
+        </Svg>
+      </View>
+    </ExpoLinearGradient>
+  );
+}
+
+function WbgtTiming({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.wbgtTiming}>
+      <Text style={styles.wbgtTimingValue}>{value}</Text>
+      <Text style={styles.wbgtTimingLabel}>{label}</Text>
+    </View>
+  );
+}
+
+export function PracticePlanVisual() {
+  return (
+    <View style={[styles.heroCard, styles.planCard]}>
+      <View style={styles.planHeader}>
+        <View>
+          <Text style={styles.miniLabel}>Orange zone example</Text>
+          <Text style={styles.updatedText}>Coach practice view</Text>
+        </View>
+        <View style={styles.planClock}>
+          <HeatIcon name={iconNames.clock} size={22} tintColor={Palette.warning} />
         </View>
       </View>
 
-      <Text style={styles.wbgtMessage}>Use the school&apos;s class-specific UIL zone plan.</Text>
+      <View style={styles.planRows}>
+        <PlanRow
+          detail="Use the class-specific maximum"
+          icon={iconNames.work}
+          label="Work interval"
+          tone={Palette.warning}
+        />
+        <PlanRow
+          detail="Meet the required minimum"
+          icon={iconNames.rest}
+          label="Rest break"
+          tone={Palette.coralDark}
+        />
+        <PlanRow
+          detail="Unlimited during rest breaks"
+          icon={iconNames.water}
+          label="Water access"
+          tone="#547A8C"
+        />
+        <PlanRow
+          detail="Modify when the plan requires it"
+          icon={iconNames.equipment}
+          label="Equipment"
+          tone={Palette.inkMuted}
+        />
+      </View>
 
-      <View style={styles.wbgtRules}>
-        <WbgtRule index="01" label="Before practice" value="Check within 15 minutes" />
-        <View style={styles.ruleDivider} />
-        <WbgtRule index="02" label="During practice" value="Recheck every 30 minutes" />
-        <View style={styles.ruleDivider} />
-        <WbgtRule index="03" label="If the zone changes" value="Apply UIL modifications" />
+      <View style={styles.planFooter}>
+        <Text style={styles.planFooterTitle}>One source of truth</Text>
+        <Text style={styles.planFooterBody}>The school&apos;s current UIL plan controls every recommendation.</Text>
       </View>
     </View>
   );
 }
 
-function WbgtRule({ index, label, value }: { index: string; label: string; value: string }) {
+function PlanRow({
+  detail,
+  icon,
+  label,
+  tone,
+}: {
+  detail: string;
+  icon: SymbolName;
+  label: string;
+  tone: string;
+}) {
   return (
-    <View style={styles.wbgtRule}>
-      <Text style={styles.ruleIndex}>{index}</Text>
-      <View style={styles.ruleCopy}>
-        <Text style={styles.ruleLabel}>{label}</Text>
-        <Text style={styles.ruleValue}>{value}</Text>
+    <View style={styles.planRow}>
+      <View style={[styles.planRowIcon, { backgroundColor: `${tone}16` }]}>
+        <HeatIcon name={icon} size={19} tintColor={tone} />
+      </View>
+      <View style={styles.planRowCopy}>
+        <Text style={styles.planRowLabel}>{label}</Text>
+        <Text style={styles.planRowDetail}>{detail}</Text>
       </View>
     </View>
   );
@@ -194,6 +283,7 @@ function VitalCard({ alternateData, color, data, icon, label, unit, value, varia
       accessibilityHint="Changes the sample signal trend"
       accessibilityLabel={`${label}, ${value} ${unit}`}
       accessibilityRole="button"
+      accessibilityState={{ selected: active }}
       onPress={toggleSignal}
       style={styles.vitalCardPressable}>
       <Animated.View
@@ -324,37 +414,145 @@ export function SignalsVisual() {
           variant="bars"
         />
       </View>
-      <View style={styles.signalNote}>
-        <View style={styles.signalNoteIcon}>
-          <HeatIcon name={iconNames.shield} size={18} tintColor={Palette.coralDark} />
-        </View>
-        <Text style={styles.signalNoteText}>
-          Sample trends use the athlete&apos;s own baseline—not a diagnosis.
+      <View style={styles.signalFootnote}>
+        <Text style={styles.signalFootnoteTitle}>Illustrative readings</Text>
+        <Text style={styles.signalFootnoteBody}>
+          Each card shows change from this athlete&apos;s baseline. HeatSense flags patterns for human review and does not diagnose.
         </Text>
-      </View>
-
-      <View style={styles.riskEnginePreview}>
-        <View style={styles.riskEngineHeader}>
-          <Text style={styles.riskEngineTitle}>Risk engine preview</Text>
-          <Text style={styles.riskEngineCaption}>Signals combine</Text>
-        </View>
-        <View style={styles.riskTierRow}>
-          <RiskTier color={Palette.safe} label="Normal" />
-          <RiskTier color={Palette.caution} label="Caution" />
-          <RiskTier color={Palette.warning} label="Warning" />
-          <RiskTier color={Palette.coralDark} label="Emergency" />
-        </View>
-        <Text style={styles.collapseRule}>Collapse detection jumps directly to Emergency.</Text>
       </View>
     </View>
   );
 }
 
-function RiskTier({ color, label }: { color: string; label: string }) {
+export function ContextVisual() {
   return (
-    <View style={styles.riskTier}>
-      <View style={[styles.riskTierBar, { backgroundColor: color }]} />
-      <Text style={styles.riskTierLabel}>{label}</Text>
+    <View style={[styles.heroCard, styles.contextCard]}>
+      <View style={styles.contextReading}>
+        <HeatIcon name={iconNames.heart} size={19} tintColor={Palette.coral} />
+        <Text style={styles.contextNumber}>142</Text>
+        <Text style={styles.contextUnit}>bpm in both moments</Text>
+      </View>
+
+      <View style={styles.contextTrace}>
+        <Svg height="68" viewBox="0 0 340 68" width="100%">
+          <Path
+            d="M0 41 L34 41 L47 28 L60 51 L78 37 L104 37 L117 23 L132 53 L150 35 L183 35 L199 20 L214 51 L231 36 L258 36 L273 25 L291 48 L309 34 L340 34"
+            fill="none"
+            stroke={Palette.coral}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="3.5"
+          />
+        </Svg>
+      </View>
+
+      <View style={styles.contextScenarios}>
+        <ContextScenario
+          detail="High movement"
+          icon={iconNames.runner}
+          label="During a sprint"
+          result="Expected exertion"
+          tone={Palette.safe}
+        />
+        <ContextScenario
+          detail="Low movement"
+          icon={iconNames.rest}
+          label="During a water break"
+          result="Recovery needs review"
+          tone={Palette.coralDark}
+        />
+      </View>
+
+      <View style={styles.contextFooter}>
+        <HeatIcon name={iconNames.movement} size={20} tintColor={Palette.ink} />
+        <View style={styles.contextFooterCopy}>
+          <Text style={styles.contextFooterTitle}>Movement changes the meaning</Text>
+          <Text style={styles.contextFooterBody}>The IMU helps separate exertion from stalled recovery.</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function ContextScenario({
+  detail,
+  icon,
+  label,
+  result,
+  tone,
+}: {
+  detail: string;
+  icon: SymbolName;
+  label: string;
+  result: string;
+  tone: string;
+}) {
+  return (
+    <View style={styles.contextScenario}>
+      <View style={[styles.contextScenarioIcon, { backgroundColor: `${tone}18` }]}>
+        <HeatIcon name={icon} size={27} tintColor={tone} />
+      </View>
+      <Text style={styles.contextScenarioLabel}>{label}</Text>
+      <Text style={styles.contextScenarioDetail}>{detail}</Text>
+      <View style={[styles.contextResult, { backgroundColor: `${tone}14` }]}>
+        <Text style={[styles.contextResultText, { color: tone }]}>{result}</Text>
+      </View>
+    </View>
+  );
+}
+
+export function AlertLevelsVisual() {
+  return (
+    <View style={[styles.heroCard, styles.alertCard]}>
+      <View style={styles.alertHeader}>
+        <Text style={styles.miniLabel}>Wristband and app outputs</Text>
+        <HeatIcon name={iconNames.alert} size={22} tintColor={Palette.coralDark} />
+      </View>
+
+      <View style={styles.alertRows}>
+        <AlertRow color={Palette.safe} detail="Routine vitals" label="Normal" message="Home dashboard" />
+        <AlertRow color={Palette.caution} detail="One short buzz" label="Caution" message="Hydrate" />
+        <AlertRow
+          color={Palette.warning}
+          detail="Repeats until acknowledged"
+          label="Warning"
+          message="Take a break"
+        />
+        <AlertRow
+          color={Palette.emergency}
+          detail="Continuous buzz and app alert"
+          label="Emergency"
+          message="Immediate response"
+        />
+      </View>
+
+      <View style={styles.alertFooter}>
+        <HeatIcon name={iconNames.emergency} size={19} tintColor={Palette.emergency} />
+        <Text style={styles.alertFooterText}>Collapse detection bypasses scoring and triggers Emergency.</Text>
+      </View>
+    </View>
+  );
+}
+
+function AlertRow({
+  color,
+  detail,
+  label,
+  message,
+}: {
+  color: string;
+  detail: string;
+  label: string;
+  message: string;
+}) {
+  return (
+    <View style={styles.alertRow}>
+      <View style={[styles.alertRail, { backgroundColor: color }]} />
+      <View style={styles.alertLevelCopy}>
+        <Text style={[styles.alertLevel, { color }]}>{label}</Text>
+        <Text style={styles.alertMessage}>{message}</Text>
+      </View>
+      <Text style={styles.alertDetail}>{detail}</Text>
     </View>
   );
 }
@@ -367,8 +565,8 @@ export function TeamVisual() {
           <HeatIcon name={iconNames.people} size={24} tintColor={Palette.ink} />
         </View>
         <View style={styles.teamCopy}>
-          <Text style={styles.teamTitle}>Example · Liberty High School</Text>
-          <Text style={styles.teamSubtitle}>Varsity soccer · demo team</Text>
+          <Text style={styles.teamTitle}>Liberty High School</Text>
+          <Text style={styles.teamSubtitle}>Varsity soccer sample roster</Text>
         </View>
         <View style={styles.safePill}>
           <Text style={styles.safeText}>Demo</Text>
@@ -385,7 +583,7 @@ export function TeamVisual() {
           tone={Palette.caution}
         />
         <TeamRow
-          detail="Optional wristbands · 3 to review"
+          detail="3 optional wristbands to review"
           icon={iconNames.heart}
           label="Athlete status"
           tone={Palette.coral}
@@ -481,6 +679,7 @@ const styles = StyleSheet.create({
     color: Palette.ink,
     fontFamily: Fonts.extrabold,
     fontSize: 34,
+    fontVariant: ['tabular-nums'],
     letterSpacing: -1.5,
   },
   readoutUnit: {
@@ -519,7 +718,6 @@ const styles = StyleSheet.create({
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
     fontSize: 10,
-    textTransform: 'uppercase',
   },
   footerValue: {
     color: Palette.ink,
@@ -527,7 +725,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   wbgtCard: {
-    backgroundColor: '#FFF4DD',
     justifyContent: 'space-between',
     minHeight: 360,
   },
@@ -558,86 +755,124 @@ const styles = StyleSheet.create({
   wbgtMain: {
     alignItems: 'baseline',
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 7,
-    marginTop: Spacing.four,
   },
   wbgtNumber: {
     color: Palette.ink,
     fontFamily: Fonts.extrabold,
-    fontSize: 76,
+    fontSize: 84,
+    fontVariant: ['tabular-nums'],
     letterSpacing: -5,
-    lineHeight: 82,
+    lineHeight: 90,
   },
   degree: {
     color: Palette.inkMuted,
     fontFamily: Fonts.bold,
     fontSize: 13,
   },
-  zonePill: {
-    alignItems: 'center',
-    backgroundColor: '#FFE2B6',
-    borderRadius: Radius.pill,
-    flexDirection: 'row',
-    gap: 6,
-    marginLeft: 'auto',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  zoneDot: {
-    backgroundColor: Palette.warning,
-    borderRadius: 4,
-    height: 8,
-    width: 8,
-  },
-  zoneText: {
-    color: '#75410D',
-    fontFamily: Fonts.bold,
-    fontSize: 11,
+  wbgtZoneTitle: {
+    color: Palette.ink,
+    fontFamily: Fonts.extrabold,
+    fontSize: 25,
+    letterSpacing: -0.8,
   },
   wbgtMessage: {
     color: Palette.ink,
-    fontFamily: Fonts.semibold,
-    fontSize: 17,
-    lineHeight: 23,
-    marginTop: Spacing.one,
-    maxWidth: 270,
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 3,
+    maxWidth: 260,
   },
-  wbgtRules: {
-    backgroundColor: 'rgba(255,255,255,0.52)',
-    borderRadius: Radius.medium,
-    paddingHorizontal: Spacing.four,
-  },
-  wbgtRule: {
-    alignItems: 'center',
+  wbgtTimingRow: {
     flexDirection: 'row',
-    gap: Spacing.three,
-    minHeight: 52,
+    justifyContent: 'space-between',
   },
-  ruleIndex: {
-    color: Palette.warning,
-    fontFamily: Fonts.bold,
-    fontSize: 11,
-    width: 20,
-  },
-  ruleCopy: {
+  wbgtTiming: {
     flex: 1,
   },
-  ruleLabel: {
+  wbgtTimingValue: {
+    color: Palette.ink,
+    fontFamily: Fonts.bold,
+    fontSize: 16,
+    fontVariant: ['tabular-nums'],
+  },
+  wbgtTimingLabel: {
+    color: 'rgba(27,28,25,0.62)',
+    fontFamily: Fonts.medium,
+    fontSize: 9,
+    marginTop: 2,
+  },
+  wbgtTrend: {
+    marginBottom: -Spacing.four,
+    marginHorizontal: -Spacing.five,
+  },
+  planCard: {
+    justifyContent: 'space-between',
+  },
+  planHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  planClock: {
+    alignItems: 'center',
+    backgroundColor: '#FFF0D5',
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  planRows: {
+    gap: Spacing.two,
+    marginVertical: Spacing.four,
+  },
+  planRow: {
+    alignItems: 'center',
+    borderBottomColor: Palette.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: Spacing.three,
+    minHeight: 58,
+    paddingBottom: Spacing.two,
+  },
+  planRowIcon: {
+    alignItems: 'center',
+    borderRadius: 14,
+    height: 42,
+    justifyContent: 'center',
+    width: 42,
+  },
+  planRowCopy: {
+    flex: 1,
+  },
+  planRowLabel: {
     color: Palette.ink,
     fontFamily: Fonts.semibold,
-    fontSize: 11,
+    fontSize: 12,
   },
-  ruleValue: {
+  planRowDetail: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
     fontSize: 10,
-    marginTop: 2,
+    marginTop: 3,
   },
-  ruleDivider: {
-    backgroundColor: 'rgba(27,28,25,0.12)',
-    height: StyleSheet.hairlineWidth,
-    marginLeft: 32,
+  planFooter: {
+    backgroundColor: Palette.surfaceMuted,
+    borderRadius: Radius.medium,
+    padding: Spacing.four,
+  },
+  planFooterTitle: {
+    color: Palette.ink,
+    fontFamily: Fonts.bold,
+    fontSize: 11,
+  },
+  planFooterBody: {
+    color: Palette.inkMuted,
+    fontFamily: Fonts.medium,
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 3,
   },
   signalGrid: {
     flexDirection: 'row',
@@ -687,6 +922,7 @@ const styles = StyleSheet.create({
     color: Palette.ink,
     fontFamily: Fonts.extrabold,
     fontSize: 25,
+    fontVariant: ['tabular-nums'],
     letterSpacing: -1,
   },
   vitalUnit: {
@@ -701,78 +937,174 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: 132,
   },
-  signalNote: {
-    alignItems: 'center',
-    backgroundColor: Palette.coralSoft,
-    borderRadius: Radius.medium,
-    flexDirection: 'row',
-    gap: Spacing.three,
-    marginTop: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
+  signalFootnote: {
+    borderTopColor: Palette.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: Spacing.four,
+    paddingTop: Spacing.three,
   },
-  signalNoteIcon: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.58)',
-    borderRadius: Radius.pill,
-    height: 34,
-    justifyContent: 'center',
-    width: 34,
-  },
-  signalNoteText: {
-    color: Palette.coralDark,
-    flex: 1,
-    fontFamily: Fonts.semibold,
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  riskEnginePreview: {
-    backgroundColor: Palette.surface,
-    borderColor: Palette.border,
-    borderRadius: Radius.medium,
-    borderWidth: 1,
-    marginTop: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-  },
-  riskEngineHeader: {
-    alignItems: 'baseline',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  riskEngineTitle: {
+  signalFootnoteTitle: {
     color: Palette.ink,
     fontFamily: Fonts.bold,
     fontSize: 11,
   },
-  riskEngineCaption: {
+  signalFootnoteBody: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 9,
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 3,
   },
-  riskTierRow: {
+  contextCard: {
+    justifyContent: 'space-between',
+  },
+  contextReading: {
+    alignItems: 'baseline',
     flexDirection: 'row',
-    gap: 5,
+    gap: 6,
+  },
+  contextNumber: {
+    color: Palette.ink,
+    fontFamily: Fonts.extrabold,
+    fontSize: 44,
+    fontVariant: ['tabular-nums'],
+    letterSpacing: -2,
+  },
+  contextUnit: {
+    color: Palette.inkMuted,
+    fontFamily: Fonts.semibold,
+    fontSize: 11,
+  },
+  contextScenarios: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+    marginVertical: Spacing.four,
+  },
+  contextTrace: {
+    marginHorizontal: -Spacing.five,
     marginTop: Spacing.two,
   },
-  riskTier: {
+  contextScenario: {
+    backgroundColor: Palette.canvas,
+    borderRadius: Radius.medium,
     flex: 1,
-    gap: 4,
+    minHeight: 190,
+    padding: Spacing.four,
   },
-  riskTierBar: {
-    borderRadius: Radius.pill,
-    height: 5,
+  contextScenarioIcon: {
+    alignItems: 'center',
+    borderRadius: 18,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
   },
-  riskTierLabel: {
+  contextScenarioLabel: {
+    color: Palette.ink,
+    fontFamily: Fonts.bold,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: Spacing.three,
+  },
+  contextScenarioDetail: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 8,
+    fontSize: 10,
+    marginTop: 3,
   },
-  collapseRule: {
+  contextResult: {
+    borderRadius: Radius.small,
+    marginTop: 'auto',
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 7,
+  },
+  contextResultText: {
+    fontFamily: Fonts.bold,
+    fontSize: 9,
+    lineHeight: 12,
+  },
+  contextFooter: {
+    alignItems: 'center',
+    borderTopColor: Palette.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: Spacing.three,
+    paddingTop: Spacing.four,
+  },
+  contextFooterCopy: {
+    flex: 1,
+  },
+  contextFooterTitle: {
+    color: Palette.ink,
+    fontFamily: Fonts.bold,
+    fontSize: 11,
+  },
+  contextFooterBody: {
+    color: Palette.inkMuted,
+    fontFamily: Fonts.medium,
+    fontSize: 10,
+    marginTop: 3,
+  },
+  alertCard: {
+    justifyContent: 'flex-start',
+  },
+  alertHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  alertRows: {
+    marginTop: Spacing.four,
+  },
+  alertRow: {
+    alignItems: 'center',
+    borderBottomColor: Palette.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    minHeight: 70,
+  },
+  alertRail: {
+    alignSelf: 'stretch',
+    borderRadius: Radius.pill,
+    marginVertical: 10,
+    width: 5,
+  },
+  alertLevelCopy: {
+    marginLeft: Spacing.three,
+    width: 96,
+  },
+  alertLevel: {
+    fontFamily: Fonts.bold,
+    fontSize: 10,
+  },
+  alertMessage: {
     color: Palette.ink,
     fontFamily: Fonts.semibold,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  alertDetail: {
+    color: Palette.inkMuted,
+    flex: 1,
+    fontFamily: Fonts.medium,
     fontSize: 9,
-    marginTop: Spacing.two,
+    lineHeight: 13,
+    textAlign: 'right',
+  },
+  alertFooter: {
+    alignItems: 'center',
+    backgroundColor: '#FCE9E5',
+    borderRadius: Radius.medium,
+    flexDirection: 'row',
+    gap: Spacing.three,
+    marginTop: 'auto',
+    padding: Spacing.three,
+  },
+  alertFooterText: {
+    color: Palette.emergency,
+    flex: 1,
+    fontFamily: Fonts.semibold,
+    fontSize: 10,
+    lineHeight: 14,
   },
   teamCard: {
     justifyContent: 'flex-start',

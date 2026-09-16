@@ -24,7 +24,11 @@ export default function ReadyScreen() {
       <StatusBar style="dark" />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.shell}>
-          <Pressable accessibilityLabel="Back to onboarding" onPress={() => router.back()} style={styles.backButton}>
+          <Pressable
+            accessibilityLabel="Back to onboarding"
+            accessibilityRole="button"
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}>
             <HeatIcon name={icons.back} size={23} tintColor={Palette.ink} />
           </Pressable>
 
@@ -62,7 +66,10 @@ export default function ReadyScreen() {
             </View>
           </View>
 
-          <Pressable onPress={() => router.back()} style={styles.button}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
             <Text style={styles.buttonText}>Review my choices</Text>
           </Pressable>
         </View>
@@ -216,5 +223,8 @@ const styles = StyleSheet.create({
     color: Palette.surface,
     fontFamily: Fonts.bold,
     fontSize: 14,
+  },
+  buttonPressed: {
+    opacity: 0.7,
   },
 });
