@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Text,
   View,
+  type StyleProp,
+  type ViewStyle,
   useWindowDimensions,
 } from 'react-native';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
@@ -34,28 +36,28 @@ const steps = [
     eyebrow: 'Meet HeatSense',
     title: 'Heat safety, for every athlete.',
     description:
-      'Pair field-wide WBGT guidance with individual athlete signals—without replacing the people responsible for their care.',
+      'Know the field. Notice the athlete. Act before heat becomes an emergency.',
     visual: RunnerSignalVisual,
   },
   {
     eyebrow: 'Field conditions',
     title: 'Know the risk before practice starts.',
     description:
-      'HeatSense translates live conditions into clear UIL-aligned actions for work, rest, hydration, and equipment.',
+      'Live conditions become clear UIL-aligned actions for work, rest, hydration, and equipment.',
     visual: WbgtVisual,
   },
   {
-    eyebrow: 'Individual context',
-    title: 'See the signal behind the number.',
+    eyebrow: 'Optional wristband',
+    title: 'See the athlete behind the weather.',
     description:
-      'An optional wristband adds heart-rate recovery, skin temperature, sweat response, and movement trends.',
+      'Tap any signal to preview how individual trends add context to field-wide WBGT.',
     visual: SignalsVisual,
   },
   {
     eyebrow: 'Ready together',
     title: 'One sideline. One safety picture.',
     description:
-      'Set up your school and team now. Wristbands can be paired later, and the core WBGT experience works without them.',
+      'Choose your role now. School, team, and optional wristband setup come next.',
     visual: TeamVisual,
   },
 ] as const;
@@ -69,6 +71,7 @@ export default function OnboardingScreen() {
   const [role, setRole] = useState<Role>('Coach');
   const step = steps[stepIndex];
   const isFinalStep = stepIndex === steps.length - 1;
+  const isSignalsStep = stepIndex === 2;
   const isCompact = height < 780;
 
   const actionLabel = useMemo(() => {
@@ -133,15 +136,21 @@ export default function OnboardingScreen() {
               exiting={FadeOutLeft.duration(180)}
               key={stepIndex}
               style={styles.story}>
-              <View style={styles.visualWrap}>
-                <Visual />
-              </View>
-
-              <View style={styles.copyBlock}>
-                <Text style={styles.eyebrow}>{step.eyebrow}</Text>
-                <Text style={[styles.title, isCompact && styles.titleCompact]}>{step.title}</Text>
-                <Text style={styles.description}>{step.description}</Text>
-              </View>
+              {isSignalsStep ? (
+                <>
+                  <OnboardingCopy compact={isCompact} step={step} style={styles.signalCopyBlock} />
+                  <View style={styles.visualWrap}>
+                    <Visual />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.visualWrap}>
+                    <Visual />
+                  </View>
+                  <OnboardingCopy compact={isCompact} step={step} />
+                </>
+              )}
 
               {isFinalStep ? <RoleSelector onChange={setRole} value={role} /> : null}
             </Animated.View>
@@ -178,6 +187,24 @@ export default function OnboardingScreen() {
           </View>
         </View>
       </SafeAreaView>
+    </View>
+  );
+}
+
+function OnboardingCopy({
+  compact,
+  step,
+  style,
+}: {
+  compact: boolean;
+  step: (typeof steps)[number];
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View style={[styles.copyBlock, style]}>
+      <Text style={styles.eyebrow}>{step.eyebrow}</Text>
+      <Text style={[styles.title, compact && styles.titleCompact]}>{step.title}</Text>
+      <Text style={styles.description}>{step.description}</Text>
     </View>
   );
 }
@@ -291,21 +318,28 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   copyBlock: {
+    alignItems: 'center',
     marginTop: Spacing.six,
+  },
+  signalCopyBlock: {
+    marginBottom: Spacing.six,
+    marginTop: 0,
   },
   eyebrow: {
     color: Palette.coralDark,
     fontFamily: Fonts.bold,
     fontSize: 13,
+    textAlign: 'center',
   },
   title: {
     color: Palette.ink,
     fontFamily: Fonts.extrabold,
-    fontSize: 34,
+    fontSize: 32,
     letterSpacing: -1.5,
-    lineHeight: 40,
+    lineHeight: 38,
     marginTop: Spacing.two,
     maxWidth: 410,
+    textAlign: 'center',
   },
   titleCompact: {
     fontSize: 30,
@@ -318,6 +352,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginTop: Spacing.three,
     maxWidth: 430,
+    textAlign: 'center',
   },
   roleSection: {
     gap: Spacing.three,
@@ -358,7 +393,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.three,
     paddingBottom: Platform.OS === 'android' ? Spacing.four : Spacing.two,
-    paddingTop: Spacing.three,
+    paddingTop: Spacing.two,
   },
   backButton: {
     alignItems: 'center',
@@ -380,10 +415,10 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     flex: 1,
     flexDirection: 'row',
-    height: 54,
-    justifyContent: 'space-between',
-    paddingLeft: Spacing.five,
-    paddingRight: 7,
+    height: 58,
+    justifyContent: 'center',
+    paddingHorizontal: 56,
+    position: 'relative',
     shadowColor: Palette.coralDark,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
@@ -395,9 +430,9 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: Palette.surface,
-    flexShrink: 1,
     fontFamily: Fonts.bold,
-    fontSize: 14,
+    fontSize: 16,
+    textAlign: 'center',
   },
   primaryButtonIcon: {
     alignItems: 'center',
@@ -405,6 +440,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     height: 40,
     justifyContent: 'center',
+    position: 'absolute',
+    right: 7,
     width: 40,
   },
   buttonPressed: {

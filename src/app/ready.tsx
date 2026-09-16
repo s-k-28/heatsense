@@ -8,7 +8,7 @@ import { Fonts, MaxContentWidth, Palette, Radius, Spacing } from '@/constants/th
 
 const icons = {
   back: { ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' },
-  check: { ios: 'checkmark', android: 'check', web: 'check' },
+  shield: { ios: 'checkmark.shield.fill', android: 'verified_user', web: 'verified_user' },
 } as const;
 
 export default function ReadyScreen() {
@@ -26,17 +26,17 @@ export default function ReadyScreen() {
 
           <View style={styles.content}>
             <View style={styles.successMark}>
-              <HeatIcon name={icons.check} size={34} tintColor={Palette.surface} />
+              <HeatIcon name={icons.shield} size={38} tintColor={Palette.coralDark} />
             </View>
-            <Text style={styles.kicker}>Onboarding complete</Text>
-            <Text style={styles.title}>Your {role.toLowerCase()} workspace is ready.</Text>
+            <Text style={styles.kicker}>Ready for setup</Text>
+            <Text style={styles.title}>Your {role.toLowerCase()} safety workspace starts here.</Text>
             <Text style={styles.body}>
-              The five-tab HeatSense dashboard is the next build step. This checkpoint keeps the onboarding flow testable without pretending unfinished screens are complete.
+              Next, add your school, team, and local practice conditions. Pairing a wristband stays optional.
             </Text>
           </View>
 
           <Pressable onPress={() => router.back()} style={styles.button}>
-            <Text style={styles.buttonText}>Review onboarding</Text>
+            <Text style={styles.buttonText}>Review my choices</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -65,21 +65,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 48,
   },
-  content: { flex: 1, justifyContent: 'center' },
+  content: { alignItems: 'center', flex: 1, justifyContent: 'center' },
   successMark: {
     alignItems: 'center',
-    backgroundColor: Palette.coral,
-    borderRadius: Radius.large,
+    backgroundColor: Palette.coralSoft,
+    borderColor: 'rgba(217, 87, 73, 0.16)',
+    borderRadius: Radius.pill,
+    borderWidth: 1,
     height: 72,
     justifyContent: 'center',
     marginBottom: Spacing.six,
-    transform: [{ rotate: '-5deg' }],
     width: 72,
   },
   kicker: {
     color: Palette.coralDark,
     fontFamily: Fonts.bold,
     fontSize: 13,
+    textAlign: 'center',
   },
   title: {
     color: Palette.ink,
@@ -88,6 +90,8 @@ const styles = StyleSheet.create({
     letterSpacing: -1.5,
     lineHeight: 42,
     marginTop: Spacing.two,
+    maxWidth: 430,
+    textAlign: 'center',
   },
   body: {
     color: Palette.inkMuted,
@@ -95,6 +99,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
     marginTop: Spacing.four,
+    maxWidth: 390,
+    textAlign: 'center',
   },
   button: {
     alignItems: 'center',

@@ -1,5 +1,5 @@
-import { type ComponentProps, useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { type ComponentProps, useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,8 +8,10 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { BarChart, LineChart } from 'react-native-gifted-charts';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { HeatIcon } from '@/components/heat-icon';
@@ -150,7 +152,9 @@ function MiniWeatherStat({ label, value }: { label: string; value: string }) {
 }
 
 type VitalCardProps = {
+  alternateData: number[];
   color: string;
+  data: number[];
   icon: SymbolName;
   label: string;
   unit: string;
@@ -158,74 +162,157 @@ type VitalCardProps = {
   variant: 'line' | 'bars';
 };
 
-function VitalCard({ color, icon, label, unit, value, variant }: VitalCardProps) {
+function VitalCard({ alternateData, color, data, icon, label, unit, value, variant }: VitalCardProps) {
+  const [active, setActive] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const cardScale = useSharedValue(1);
+  const chartData = useMemo(
+    () => (active ? alternateData : data).map((point) => ({ frontColor: color, value: point })),
+    [active, alternateData, color, data]
+  );
+  const animatedCardStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: cardScale.value }],
+  }));
+
+  function toggleSignal() {
+    setActive((current) => !current);
+    if (!reduceMotion) {
+      cardScale.set(withSequence(
+        withTiming(0.975, { duration: 90 }),
+        withSpring(1, { damping: 13, stiffness: 240 })
+      ));
+    }
+  }
+
   return (
-    <View style={styles.vitalCard}>
-      <View style={styles.vitalLabelRow}>
-        <HeatIcon name={icon} size={16} tintColor={color} />
-        <Text style={styles.vitalLabel}>{label}</Text>
-      </View>
-      <View style={styles.vitalValueRow}>
-        <Text style={styles.vitalValue}>{value}</Text>
-        <Text style={styles.vitalUnit}>{unit}</Text>
-      </View>
-      {variant === 'line' ? (
-        <Svg height="48" viewBox="0 0 130 48" width="100%">
-          <Path
-            d="M0 32 L18 31 L28 22 L39 36 L49 25 L62 27 L73 10 L83 36 L95 24 L107 28 L118 16 L130 21"
-            fill="none"
-            stroke={color}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="3"
-          />
-        </Svg>
-      ) : (
-        <View style={styles.barChart}>
-          {[17, 29, 23, 39, 31, 44, 35].map((height, index) => (
-            <View key={`${height}-${index}`} style={[styles.bar, { backgroundColor: color, height }]} />
-          ))}
+    <Pressable
+      accessibilityHint="Changes the sample signal trend"
+      accessibilityLabel={`${label}, ${value} ${unit}`}
+      accessibilityRole="button"
+      onPress={toggleSignal}
+      style={styles.vitalCardPressable}>
+      <Animated.View
+        style={[
+          styles.vitalCard,
+          active && { borderColor: color, borderWidth: 1.5 },
+          animatedCardStyle,
+        ]}>
+        <View style={styles.vitalLabelRow}>
+          <HeatIcon name={icon} size={16} tintColor={color} />
+          <Text style={styles.vitalLabel}>{label}</Text>
+          <View style={[styles.interactionDot, active && { backgroundColor: color }]} />
         </View>
-      )}
-    </View>
+        <View style={styles.vitalValueRow}>
+          <Text style={styles.vitalValue}>{value}</Text>
+          <Text style={styles.vitalUnit}>{unit}</Text>
+        </View>
+        <View pointerEvents="none" style={styles.miniChartClip}>
+          {variant === 'line' ? (
+            <LineChart
+              adjustToWidth
+              animateOnDataChange
+              animationDuration={reduceMotion ? 1 : 520}
+              color={color}
+              curved={false}
+              data={chartData}
+              disableScroll
+              endSpacing={0}
+              height={46}
+              hideDataPoints
+              hideRules
+              hideYAxisText
+              initialSpacing={0}
+              isAnimated
+              key={`line-${active}`}
+              onDataChangeAnimationDuration={reduceMotion ? 1 : 520}
+              parentWidth={126}
+              spacing={18}
+              thickness={3}
+              width={126}
+              xAxisThickness={0}
+              yAxisThickness={0}
+            />
+          ) : (
+            <BarChart
+              adjustToWidth
+              animationDuration={reduceMotion ? 1 : 520}
+              barBorderRadius={5}
+              barWidth={13}
+              data={chartData}
+              endSpacing={0}
+              height={46}
+              hideRules
+              hideYAxisText
+              initialSpacing={0}
+              isAnimated
+              key={`bars-${active}`}
+              maxValue={100}
+              parentWidth={126}
+              spacing={5}
+              width={126}
+              xAxisThickness={0}
+              yAxisThickness={0}
+            />
+          )}
+        </View>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 export function SignalsVisual() {
   return (
-    <View style={styles.signalGrid}>
-      <VitalCard
-        color={Palette.coral}
-        icon={iconNames.heart}
-        label="Heart rate"
-        unit="bpm"
-        value="112"
-        variant="line"
-      />
-      <VitalCard
-        color={Palette.warning}
-        icon={iconNames.heat}
-        label="Skin temp"
-        unit="°F"
-        value="98.2"
-        variant="line"
-      />
-      <VitalCard
-        color="#547A8C"
-        icon={iconNames.water}
-        label="Sweat trend"
-        unit="rising"
-        value="+8%"
-        variant="bars"
-      />
-      <VitalCard
-        color={Palette.safe}
-        icon={iconNames.movement}
-        label="Exertion"
-        unit="moderate"
-        value="62%"
-        variant="bars"
-      />
+    <View>
+      <View style={styles.signalGrid}>
+        <VitalCard
+          alternateData={[48, 66, 42, 82, 50, 76, 58]}
+          color={Palette.coral}
+          data={[42, 45, 68, 39, 61, 55, 73]}
+          icon={iconNames.heart}
+          label="Heart rate"
+          unit="bpm"
+          value="112"
+          variant="line"
+        />
+        <VitalCard
+          alternateData={[47, 50, 58, 55, 70, 64, 78]}
+          color={Palette.warning}
+          data={[44, 46, 52, 49, 60, 56, 64]}
+          icon={iconNames.heat}
+          label="Skin temp"
+          unit="°F"
+          value="98.2"
+          variant="line"
+        />
+        <VitalCard
+          alternateData={[36, 58, 45, 72, 64, 81, 69]}
+          color="#547A8C"
+          data={[28, 51, 39, 65, 54, 76, 62]}
+          icon={iconNames.water}
+          label="Sweat trend"
+          unit="rising"
+          value="+8%"
+          variant="bars"
+        />
+        <VitalCard
+          alternateData={[42, 67, 55, 81, 64, 88, 73]}
+          color={Palette.safe}
+          data={[36, 58, 44, 70, 57, 82, 65]}
+          icon={iconNames.movement}
+          label="Exertion"
+          unit="moderate"
+          value="62%"
+          variant="bars"
+        />
+      </View>
+      <View style={styles.signalNote}>
+        <View style={styles.signalNoteIcon}>
+          <HeatIcon name={iconNames.shield} size={18} tintColor={Palette.coralDark} />
+        </View>
+        <Text style={styles.signalNoteText}>
+          Compared with the athlete&apos;s own baseline—not used as a diagnosis.
+        </Text>
+      </View>
     </View>
   );
 }
@@ -496,14 +583,17 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.three,
   },
+  vitalCardPressable: {
+    flexBasis: '47%',
+    flexGrow: 1,
+  },
   vitalCard: {
     backgroundColor: Palette.surface,
     borderColor: Palette.border,
     borderRadius: Radius.medium,
     borderWidth: 1,
-    flexBasis: '47%',
-    flexGrow: 1,
-    minHeight: 154,
+    minHeight: 164,
+    overflow: 'hidden',
     padding: Spacing.four,
   },
   vitalLabelRow: {
@@ -515,6 +605,13 @@ const styles = StyleSheet.create({
     color: Palette.ink,
     fontFamily: Fonts.semibold,
     fontSize: 12,
+  },
+  interactionDot: {
+    backgroundColor: Palette.border,
+    borderRadius: 3,
+    height: 6,
+    marginLeft: 'auto',
+    width: 6,
   },
   vitalValueRow: {
     alignItems: 'baseline',
@@ -533,17 +630,37 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 9,
   },
-  barChart: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    gap: 5,
-    height: 48,
-    marginTop: 2,
+  miniChartClip: {
+    height: 50,
+    marginLeft: -6,
+    marginTop: 1,
+    overflow: 'hidden',
+    width: 132,
   },
-  bar: {
-    borderRadius: 4,
+  signalNote: {
+    alignItems: 'center',
+    backgroundColor: Palette.coralSoft,
+    borderRadius: Radius.medium,
+    flexDirection: 'row',
+    gap: Spacing.three,
+    marginTop: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+  },
+  signalNoteIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.58)',
+    borderRadius: Radius.pill,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  signalNoteText: {
+    color: Palette.coralDark,
     flex: 1,
-    opacity: 0.78,
+    fontFamily: Fonts.semibold,
+    fontSize: 11,
+    lineHeight: 16,
   },
   teamCard: {
     justifyContent: 'flex-start',
