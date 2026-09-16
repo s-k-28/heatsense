@@ -1,65 +1,77 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import '@/global.css';
 
 import { Platform } from 'react-native';
 
+export const Palette = {
+  canvas: '#F6F3EC',
+  surface: '#FFFDF8',
+  surfaceMuted: '#ECE8DD',
+  ink: '#1B1C19',
+  inkMuted: '#6D7068',
+  border: '#DDD8CC',
+  coral: '#F06F5F',
+  coralDark: '#D95749',
+  coralSoft: '#FBE1DA',
+  peach: '#F4B29F',
+  sage: '#96A99C',
+  safe: '#39765B',
+  caution: '#9A7100',
+  warning: '#C45B18',
+  emergency: '#B42318',
+  white: '#FFFFFF',
+} as const;
+
+// HeatSense intentionally uses one warm visual system across light and dark
+// device preferences. Risk colors communicate safety state, not appearance mode.
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: Palette.ink,
+    background: Palette.canvas,
+    backgroundElement: Palette.surface,
+    backgroundSelected: Palette.coralSoft,
+    textSecondary: Palette.inkMuted,
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: Palette.ink,
+    background: Palette.canvas,
+    backgroundElement: Palette.surface,
+    backgroundSelected: Palette.coralSoft,
+    textSecondary: Palette.inkMuted,
   },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+export const Fonts = {
+  regular: 'Manrope_400Regular',
+  medium: 'Manrope_500Medium',
+  semibold: 'Manrope_600SemiBold',
+  bold: 'Manrope_700Bold',
+  extrabold: 'Manrope_800ExtraBold',
+  mono: Platform.select({ ios: 'ui-monospace', default: 'monospace' }),
+  fallback: Platform.select({ ios: 'System', default: 'sans-serif' }),
+} as const;
 
 export const Spacing = {
   half: 2,
   one: 4,
   two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+  three: 12,
+  four: 16,
+  five: 20,
+  six: 24,
+  seven: 32,
+  eight: 40,
+  nine: 48,
+  ten: 64,
+} as const;
+
+export const Radius = {
+  small: 12,
+  medium: 18,
+  large: 26,
+  pill: 999,
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const MaxContentWidth = 520;

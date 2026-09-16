@@ -1,56 +1,52 @@
-# Welcome to your Expo app 👋
+# HeatSense
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+HeatSense is a heat-safety companion for school athletics. Its primary product is a WBGT compliance and practice-management experience; an optional wristband adds individual athlete context such as heart-rate recovery, skin-temperature trends, sweat response, and movement.
 
-## Get started
+The wristband complements the environmental picture. The app remains useful without hardware and does not present itself as a medical diagnostic device.
 
-1. Install dependencies
+## Current build
 
-   ```bash
-   npm install
-   ```
+The current implementation contains the first production UI slice: a four-page onboarding experience with:
 
-2. Start the app
+- The warm cream and coral HeatSense design system
+- Animated athlete and heart-signal visualization
+- UIL-oriented WBGT risk presentation
+- Reusable icon-led vital cards and miniature charts
+- Coach, athletic trainer, and athlete role selection
+- Working forward, back, skip, and completion navigation
+- Reduced-motion support for the continuous athlete animation
 
-   ```bash
-   npx expo start
-   ```
+The completion screen intentionally marks the five-tab dashboard as the next build step rather than exposing unfinished product screens.
 
-In the output, you'll find options to open the app in a
+## Run locally
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Requirements: Node.js 22.13 or newer and an Expo-compatible iOS Simulator, Android emulator, or Expo Go device.
 
 ```bash
-npm run reset-project
+npm install
+npm run ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Other targets:
 
-### Other setup steps
+```bash
+npm run android
+npm run web
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Verification
 
-## Learn more
+```bash
+npx tsc --noEmit
+npm run lint
+npx expo install --check
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Architecture
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `src/app/` — Expo Router screens and navigation
+- `src/components/onboarding-visuals.tsx` — reusable animated onboarding illustrations and data cards
+- `src/components/heat-icon.tsx` — cross-platform symbol wrapper
+- `src/constants/theme.ts` — HeatSense color, type, spacing, and radius tokens
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Built with Expo 57, React Native, Expo Router, Reanimated, Expo Symbols, and React Native SVG.
