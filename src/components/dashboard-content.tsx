@@ -1,6 +1,9 @@
+import { SegmentedControl } from '@expo/ui/community/segmented-control';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ComponentProps } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { DemoPill, ScreenIntro, SectionHeader, type DashboardRole } from '@/components/dashboard-shell';
@@ -21,7 +24,9 @@ const icons = {
   heart: { ios: 'heart.fill', android: 'favorite', web: 'favorite' },
   location: { ios: 'location.fill', android: 'location_on', web: 'location_on' },
   movement: { ios: 'figure.run', android: 'directions_run', web: 'directions_run' },
+  medical: { ios: 'cross.case.fill', android: 'medical_services', web: 'medical_services' },
   people: { ios: 'person.3.fill', android: 'groups', web: 'groups' },
+  phone: { ios: 'phone.fill', android: 'call', web: 'call' },
   privacy: { ios: 'lock.shield.fill', android: 'privacy_tip', web: 'privacy_tip' },
   recovery: { ios: 'waveform.path.ecg', android: 'monitor_heart', web: 'monitor_heart' },
   school: { ios: 'building.2.fill', android: 'school', web: 'school' },
@@ -34,6 +39,9 @@ const roster = [
   { name: 'Maya Chen', detail: 'Recovery stalled · 6 min', status: 'Review', tone: Palette.warning },
   { name: 'Jordan Lee', detail: 'Hydration break acknowledged', status: 'Caution', tone: Palette.caution },
   { name: 'Avery Davis', detail: 'Signals within baseline', status: 'Normal', tone: Palette.safe },
+  { name: 'Sofia Patel', detail: 'Break completed · 2 min ago', status: 'Normal', tone: Palette.safe },
+  { name: 'Noah Williams', detail: 'No wristband · field plan only', status: 'Normal', tone: Palette.safe },
+  { name: 'Eli Brooks', detail: 'Signals within baseline', status: 'Normal', tone: Palette.safe },
 ];
 
 export function DashboardContent({ role, tab }: { role: DashboardRole; tab: string }) {
@@ -44,7 +52,7 @@ export function DashboardContent({ role, tab }: { role: DashboardRole; tab: stri
 
 function CoachContent({ tab }: { tab: string }) {
   if (tab === 'plan') return <PracticePlanScreen />;
-  if (tab === 'team') return <RosterScreen title="Team status" eyebrow="24 athletes" />;
+  if (tab === 'team') return <RosterScreen title="Team status" eyebrow="24 athletes" variant="coach" />;
   if (tab === 'alerts') return <AlertsScreen />;
   if (tab === 'profile') return <ProfileScreen role="Coach" />;
   return <CoachHome />;
@@ -52,7 +60,7 @@ function CoachContent({ tab }: { tab: string }) {
 
 function TrainerContent({ tab }: { tab: string }) {
   if (tab === 'monitor') return <MonitorScreen />;
-  if (tab === 'athletes') return <RosterScreen title="Athletes to review" eyebrow="Trainer queue" />;
+  if (tab === 'athletes') return <RosterScreen title="Athletes to review" eyebrow="Trainer queue" variant="trainer" />;
   if (tab === 'protocols') return <ProtocolsScreen />;
   if (tab === 'profile') return <ProfileScreen role="Athletic trainer" />;
   return <TrainerHome />;
@@ -197,17 +205,54 @@ function PracticePlanScreen() {
   );
 }
 
-function RosterScreen({ eyebrow, title }: { eyebrow: string; title: string }) {
+function RosterScreen({
+  eyebrow,
+  title,
+  variant,
+}: {
+  eyebrow: string;
+  title: string;
+  variant: 'coach' | 'trainer';
+}) {
+  const [filter, setFilter] = useState<'all' | 'attention' | 'normal'>(variant === 'trainer' ? 'attention' : 'all');
+  const visibleRoster = roster.filter((item) => {
+    if (filter === 'attention') return item.status !== 'Normal';
+    if (filter === 'normal') return item.status === 'Normal';
+    return true;
+  });
+
   return (
     <>
       <ScreenIntro action={<DemoPill />} eyebrow={eyebrow} title={title} />
-      <View style={styles.summaryRow}>
-        <SummaryBlock label="Normal" tone={Palette.safe} value="21" />
-        <SummaryBlock label="Caution" tone={Palette.caution} value="2" />
-        <SummaryBlock label="Review" tone={Palette.warning} value="1" />
+      <View style={styles.teamOverview}>
+        <View style={styles.teamOverviewHeader}>
+          <View>
+            <Text style={styles.teamOverviewValue}>{variant === 'coach' ? '3 need follow-up' : '2 active reviews'}</Text>
+            <Text style={styles.teamOverviewDetail}>{variant === 'coach' ? '21 athletes are within today’s plan' : 'Prioritized by recovery and movement context'}</Text>
+          </View>
+          <View style={styles.teamLivePill}><View style={styles.teamLiveDot} /><Text style={styles.teamLiveText}>Live</Text></View>
+        </View>
+        <View style={styles.distributionTrack}>
+          <View style={[styles.distributionSegment, { backgroundColor: Palette.safe, flex: 21 }]} />
+          <View style={[styles.distributionSegment, { backgroundColor: Palette.caution, flex: 2 }]} />
+          <View style={[styles.distributionSegment, { backgroundColor: Palette.warning, flex: 1 }]} />
+        </View>
+        <View style={styles.distributionLegend}>
+          <DistributionLabel label="Normal" tone={Palette.safe} value="21" />
+          <DistributionLabel label="Caution" tone={Palette.caution} value="2" />
+          <DistributionLabel label="Review" tone={Palette.warning} value="1" />
+        </View>
       </View>
-      <SectionHeader action="Sort: risk" title="Live roster" />
-      <View style={styles.listCard}>{roster.map((item) => <PersonRow key={item.name} {...item} />)}</View>
+      <SectionHeader action={`${visibleRoster.length} shown`} title={variant === 'coach' ? 'Live roster' : 'Review queue'} />
+      <View style={styles.filterRow}>
+        <FilterChip active={filter === 'all'} label="All" onPress={() => setFilter('all')} />
+        <FilterChip active={filter === 'attention'} label="Needs attention" onPress={() => setFilter('attention')} />
+        <FilterChip active={filter === 'normal'} label="Normal" onPress={() => setFilter('normal')} />
+      </View>
+      <View style={styles.listCard}>
+        {visibleRoster.map((item) => <PersonRow key={item.name} {...item} />)}
+        {filter === 'all' ? <Text style={styles.rosterFooter}>Showing 6 of 24 athletes · sorted by risk</Text> : null}
+      </View>
       <Text style={styles.disclaimer}>Individual wristband signals appear only for athletes who have paired a device and shared session data.</Text>
     </>
   );
@@ -260,13 +305,45 @@ function MonitorScreen() {
 }
 
 function ProtocolsScreen() {
+  const [protocol, setProtocol] = useState<'immediate' | 'recovery'>('immediate');
+  const immediate = protocol === 'immediate';
+
   return (
     <>
-      <ScreenIntro eyebrow="Field reference" title="Response protocols" />
+      <ScreenIntro title="Response protocols" />
+      <LinearGradient colors={['#B42318', '#D95749']} style={styles.protocolEmergency}>
+        <View style={styles.protocolEmergencyIcon}><HeatIcon name={icons.medical} size={22} tintColor={Palette.emergency} /></View>
+        <View style={styles.flexOne}>
+          <Text style={styles.protocolEmergencyLabel}>Collapse, confusion, or loss of consciousness</Text>
+          <Text style={styles.protocolEmergencyTitle}>Activate the emergency action plan now.</Text>
+        </View>
+      </LinearGradient>
+      <SegmentedControl
+        appearance="light"
+        onValueChange={(value) => setProtocol(value === 'Recovery check' ? 'recovery' : 'immediate')}
+        selectedIndex={immediate ? 0 : 1}
+        style={styles.nativeSegmentedControl}
+        values={['Immediate response', 'Recovery check']}
+      />
       <View style={styles.protocolCard}>
-        <ProtocolStep index="1" title="Stop activity" body="Move the athlete to shade or a cooled area." tone={Palette.emergency} />
-        <ProtocolStep index="2" title="Assess immediately" body="Check responsiveness and follow school emergency procedures." tone={Palette.warning} />
-        <ProtocolStep index="3" title="Escalate when needed" body="Call emergency services for collapse or suspected heat stroke." tone={Palette.caution} last />
+        {immediate ? (
+          <>
+            <ProtocolStep index="1" title="Stop activity" body="Move the athlete to shade or a cooled area." tone={Palette.emergency} />
+            <ProtocolStep index="2" title="Assess immediately" body="Check responsiveness and follow school emergency procedures." tone={Palette.warning} />
+            <ProtocolStep index="3" title="Escalate when needed" body="Call emergency services for collapse or suspected heat stroke." tone={Palette.caution} last />
+          </>
+        ) : (
+          <>
+            <ProtocolStep index="1" title="Stay with the athlete" body="Continue supervision and do not allow a return to activity." tone={Palette.warning} />
+            <ProtocolStep index="2" title="Track recovery" body="Document symptoms, cooling steps, and the athlete’s response." tone={Palette.caution} />
+            <ProtocolStep index="3" title="Follow clearance policy" body="Use district and medical guidance before any return to play." tone={Palette.safe} last />
+          </>
+        )}
+      </View>
+      <View style={styles.eapAction}>
+        <View style={styles.eapActionIcon}><HeatIcon name={icons.phone} size={19} tintColor={Palette.surface} /></View>
+        <View style={styles.flexOne}><Text style={styles.eapActionTitle}>Emergency contacts</Text><Text style={styles.eapActionDetail}>911 · campus office · district EAP</Text></View>
+        <HeatIcon name={icons.arrow} size={17} tintColor={Palette.inkMuted} />
       </View>
       <View style={styles.protocolNotice}>
         <HeatIcon name={icons.book} size={20} tintColor={Palette.ink} />
@@ -297,12 +374,26 @@ function AthleteStatusScreen() {
 }
 
 function SessionsScreen() {
+  const [period, setPeriod] = useState<'week' | 'month'>('week');
+
   return (
     <>
-      <ScreenIntro action={<DemoPill />} eyebrow="Personal history" title="Sessions" />
+      <ScreenIntro action={<DemoPill />} title="Sessions" />
+      <SegmentedControl
+        appearance="light"
+        onValueChange={(value) => setPeriod(value === '4 weeks' ? 'month' : 'week')}
+        selectedIndex={period === 'week' ? 0 : 1}
+        style={styles.nativeSegmentedControl}
+        values={['7 days', '4 weeks']}
+      />
       <View style={styles.weeklyCard}>
-        <View style={styles.weeklyHeader}><View><Text style={styles.cardLabel}>Last 7 days</Text><Text style={styles.weeklyTitle}>Recovery pattern</Text></View><Text style={styles.weeklyStatus}>Stable</Text></View>
+        <View style={styles.weeklyHeader}><View><Text style={styles.cardLabel}>{period === 'week' ? 'Last 7 days' : 'Last 4 weeks'}</Text><Text style={styles.weeklyTitle}>Recovery pattern</Text></View><Text style={styles.weeklyStatus}>Stable</Text></View>
         <Trend color={Palette.coral} large />
+        <View style={styles.sessionStats}>
+          <MiniMetric label="Sessions" value={period === 'week' ? '3' : '11'} />
+          <MiniMetric label="Avg. recovery" value={period === 'week' ? '8 min' : '9 min'} />
+          <MiniMetric label="Alerts" value={period === 'week' ? '0' : '1'} />
+        </View>
       </View>
       <SectionHeader title="Recent" />
       <View style={styles.listCard}>
@@ -315,34 +406,87 @@ function SessionsScreen() {
 }
 
 function LearnScreen() {
+  const [openGuide, setOpenGuide] = useState<string | null>('speak-up');
+  const reducedMotion = useReducedMotion();
+
   return (
     <>
-      <ScreenIntro eyebrow="Know the signs" title="Heat safety guide" />
-      <GuideCard icon={icons.sun} title="What WBGT means" body="How heat, humidity, wind, and sunlight shape the field-wide practice plan." tone={Palette.warning} />
-      <GuideCard icon={icons.droplet} title="Hydration and recovery" body="Why scheduled breaks matter before you feel thirsty or overheated." tone="#547A8C" />
-      <GuideCard icon={icons.warning} title="When to speak up" body="Tell an adult immediately about dizziness, confusion, nausea, weakness, or unusual behavior." tone={Palette.emergency} />
+      <ScreenIntro title="Heat safety guide" />
+      <View style={styles.learnAlert}>
+        <HeatIcon name={icons.warning} size={24} tintColor={Palette.emergency} />
+        <View style={styles.flexOne}><Text style={styles.learnAlertTitle}>Stop and tell an adult</Text><Text style={styles.learnAlertBody}>Dizziness, confusion, fainting, or unusual behavior should never wait.</Text></View>
+      </View>
+      <GuideCard
+        body="How heat, humidity, wind, and sunlight shape the field-wide practice plan."
+        detail="WBGT sets the team-wide safety plan. Follow the coach’s work, rest, water, and equipment instructions."
+        expanded={openGuide === 'wbgt'}
+        icon={icons.sun}
+        onPress={() => setOpenGuide(openGuide === 'wbgt' ? null : 'wbgt')}
+        reducedMotion={reducedMotion}
+        title="What WBGT means"
+        tone={Palette.warning}
+      />
+      <GuideCard
+        body="Why scheduled breaks matter before you feel thirsty or overheated."
+        detail="Use every scheduled break. Drink water, move to shade when available, and notice whether your heart rate is settling."
+        expanded={openGuide === 'hydration'}
+        icon={icons.droplet}
+        onPress={() => setOpenGuide(openGuide === 'hydration' ? null : 'hydration')}
+        reducedMotion={reducedMotion}
+        title="Hydration and recovery"
+        tone="#547A8C"
+      />
+      <GuideCard
+        body="Tell an adult immediately about dizziness, confusion, nausea, weakness, or unusual behavior."
+        detail="Do not try to push through symptoms. Stop activity, find a coach or trainer, and stay with a teammate who needs help."
+        expanded={openGuide === 'speak-up'}
+        icon={icons.warning}
+        onPress={() => setOpenGuide(openGuide === 'speak-up' ? null : 'speak-up')}
+        reducedMotion={reducedMotion}
+        title="When to speak up"
+        tone={Palette.emergency}
+      />
     </>
   );
 }
 
 function ProfileScreen({ role }: { role: string }) {
+  const isAthlete = role === 'Athlete';
+  const isCoach = role === 'Coach';
+  const name = isAthlete ? 'Maya Chen' : isCoach ? 'Coach Rivera' : 'Alex Thompson';
+  const initials = isAthlete ? 'MC' : isCoach ? 'CR' : 'AT';
+
   return (
     <>
-      <ScreenIntro eyebrow="Account and workspace" title="Profile" />
-      <View style={styles.profileHero}>
-        <View style={styles.avatar}><Text style={styles.avatarText}>{role === 'Athlete' ? 'MC' : role === 'Coach' ? 'CR' : 'AT'}</Text></View>
-        <View style={styles.flexOne}><Text style={styles.profileName}>{role === 'Athlete' ? 'Maya Chen' : role === 'Coach' ? 'Coach Rivera' : 'Alex Thompson'}</Text><Text style={styles.profileRole}>{role} · Liberty High School</Text></View>
+      <ScreenIntro title="Profile" />
+      <View style={styles.profileIdentity}>
+        <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
+        <View style={styles.flexOne}><Text style={styles.profileName}>{name}</Text><Text style={styles.profileRole}>{role} · Liberty High School</Text></View>
+        <View style={styles.profileEdit}><Text style={styles.profileEditText}>Edit</Text></View>
       </View>
+      <View style={styles.profileMetrics}>
+        <ProfileMetric label={isAthlete ? 'Sessions' : isCoach ? 'Athletes' : 'Reviews'} value={isAthlete ? '12' : isCoach ? '24' : '2'} />
+        <ProfileMetric label={isAthlete ? 'This week' : 'Teams'} value={isAthlete ? '3' : '1'} />
+        <ProfileMetric label="Status" value="Active" />
+      </View>
+      <LinearGradient colors={isAthlete ? ['#DDEBE1', '#F3EFE3'] : ['#FBE4DE', '#F3EFE3']} style={styles.profileConnection}>
+        <HeatIcon name={isAthlete ? icons.band : icons.people} size={25} tintColor={isAthlete ? Palette.safe : Palette.coralDark} />
+        <View style={styles.flexOne}>
+          <Text style={styles.profileConnectionTitle}>{isAthlete ? 'HeatSense Band connected' : 'Individual signals enabled'}</Text>
+          <Text style={styles.profileConnectionDetail}>{isAthlete ? 'Last synced 2 minutes ago' : '18 athletes have shared wristband data'}</Text>
+        </View>
+        <HeatIcon name={icons.arrow} size={17} tintColor={Palette.inkMuted} />
+      </LinearGradient>
       <SectionHeader title="Workspace" />
       <View style={styles.listCard}>
-        <SettingRow icon={icons.school} label="School and team" value="Liberty soccer" />
-        <SettingRow icon={icons.alert} label="Alert preferences" value="On" />
-        <SettingRow icon={icons.band} label="Wristband" value={role === 'Athlete' ? 'Paired' : 'Optional'} />
+        <SettingRow detail="Liberty High School" icon={icons.school} label="School and team" value="Soccer" />
+        <SettingRow detail="Warnings and emergencies" icon={icons.alert} label="Alert preferences" value="On" />
+        <SettingRow detail={isAthlete ? 'Optional personal signals' : 'Athlete device access'} icon={icons.band} label="Wristband" value={isAthlete ? 'Paired' : 'Manage'} />
       </View>
       <SectionHeader title="Privacy and data" />
       <View style={styles.listCard}>
-        <SettingRow icon={icons.privacy} label="Data permissions" value="Review" />
-        <SettingRow icon={icons.book} label="Safety and limitations" value="Read" />
+        <SettingRow detail={isAthlete ? 'Coach and athletic trainer' : 'Role-based team access'} icon={icons.privacy} label="Data permissions" value="Review" />
+        <SettingRow detail="What HeatSense can and cannot tell you" icon={icons.book} label="Safety and limitations" value="Read" />
       </View>
     </>
   );
@@ -371,7 +515,19 @@ function MetricTile({ icon, label, tone, value }: { icon: IconName; label: strin
 
 function SignalCard({ icon, label, tone, value }: { icon: IconName; label: string; tone: string; value: string }) { return <View style={styles.signalCard}><View style={styles.signalTop}><HeatIcon name={icon} size={18} tintColor={tone} /><Text style={styles.signalLabel}>{label}</Text></View><Text style={styles.signalValue}>{value}</Text><View style={styles.tinyBars}>{[13, 23, 17, 31, 22, 36].map((height, index) => <View key={index} style={[styles.tinyBar, { backgroundColor: tone, height }]} />)}</View></View>; }
 
-function SummaryBlock({ label, tone, value }: { label: string; tone: string; value: string }) { return <View style={styles.summaryBlock}><Text style={[styles.summaryValue, { color: tone }]}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>; }
+function DistributionLabel({ label, tone, value }: { label: string; tone: string; value: string }) { return <View style={styles.distributionLabel}><View style={[styles.distributionDot, { backgroundColor: tone }]} /><Text style={styles.distributionText}>{label}</Text><Text style={styles.distributionValue}>{value}</Text></View>; }
+
+function FilterChip({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.filterChip, active && styles.filterChipActive, pressed && styles.pressed]}>
+      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
 
 function TimelineRow({ detail, last, time, title, tone }: { detail: string; last?: boolean; time: string; title: string; tone: string }) { return <View style={styles.timelineRow}><Text style={styles.timelineTime}>{time}</Text><View style={styles.timelineTrack}><View style={[styles.timelineDot, { backgroundColor: tone }]} />{!last ? <View style={styles.timelineLine} /> : null}</View><View style={styles.timelineCopy}><Text style={styles.timelineTitle}>{title}</Text><Text style={styles.timelineDetail}>{detail}</Text></View></View>; }
 
@@ -381,9 +537,58 @@ function ProtocolStep({ body, index, last, title, tone }: { body: string; index:
 
 function SessionRow({ date, detail, title }: { date: string; detail: string; title: string }) { return <View style={styles.sessionRow}><View style={styles.sessionDate}><Text style={styles.sessionDateText}>{date}</Text></View><View style={styles.flexOne}><Text style={styles.personName}>{title}</Text><Text style={styles.personDetail}>{detail}</Text></View><HeatIcon name={icons.arrow} size={17} tintColor={Palette.inkMuted} /></View>; }
 
-function GuideCard({ body, icon, title, tone }: { body: string; icon: IconName; title: string; tone: string }) { return <View style={styles.guideCard}><View style={[styles.guideIcon, { backgroundColor: `${tone}18` }]}><HeatIcon name={icon} size={22} tintColor={tone} /></View><View style={styles.flexOne}><Text style={styles.guideTitle}>{title}</Text><Text style={styles.guideBody}>{body}</Text></View><HeatIcon name={icons.arrow} size={17} tintColor={Palette.inkMuted} /></View>; }
+function GuideCard({
+  body,
+  detail,
+  expanded,
+  icon,
+  onPress,
+  reducedMotion,
+  title,
+  tone,
+}: {
+  body: string;
+  detail: string;
+  expanded: boolean;
+  icon: IconName;
+  onPress: () => void;
+  reducedMotion: boolean;
+  title: string;
+  tone: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.guideCard, expanded && styles.guideCardExpanded, pressed && styles.pressed]}>
+      <View style={styles.guideTopline}>
+        <View style={[styles.guideIcon, { backgroundColor: `${tone}18` }]}><HeatIcon name={icon} size={22} tintColor={tone} /></View>
+        <View style={styles.flexOne}><Text style={styles.guideTitle}>{title}</Text><Text style={styles.guideBody}>{body}</Text></View>
+        <View style={[styles.guideDisclosure, expanded && styles.guideDisclosureExpanded]}><HeatIcon name={icons.arrow} size={17} tintColor={Palette.inkMuted} /></View>
+      </View>
+      {expanded ? (
+        <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(180)} style={styles.guideDetail}>
+          <View style={[styles.guideDetailRule, { backgroundColor: tone }]} />
+          <Text style={styles.guideDetailText}>{detail}</Text>
+        </Animated.View>
+      ) : null}
+    </Pressable>
+  );
+}
 
-function SettingRow({ icon, label, value }: { icon: IconName; label: string; value: string }) { return <View style={styles.settingRow}><View style={styles.settingIcon}><HeatIcon name={icon} size={18} tintColor={Palette.ink} /></View><Text style={styles.settingLabel}>{label}</Text><Text style={styles.settingValue}>{value}</Text><HeatIcon name={icons.arrow} size={16} tintColor={Palette.inkMuted} /></View>; }
+function ProfileMetric({ label, value }: { label: string; value: string }) { return <View style={styles.profileMetric}><Text style={styles.profileMetricValue}>{value}</Text><Text style={styles.profileMetricLabel}>{label}</Text></View>; }
+
+function SettingRow({ detail, icon, label, value }: { detail: string; icon: IconName; label: string; value: string }) {
+  return (
+    <View style={styles.settingRow}>
+      <HeatIcon name={icon} size={19} tintColor={Palette.ink} />
+      <View style={styles.flexOne}><Text style={styles.settingLabel}>{label}</Text><Text style={styles.settingDetail}>{detail}</Text></View>
+      <Text style={styles.settingValue}>{value}</Text>
+      <HeatIcon name={icons.arrow} size={16} tintColor={Palette.inkMuted} />
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   flexOne: { flex: 1 },
@@ -412,6 +617,26 @@ const styles = StyleSheet.create({
   statusPill: { alignItems: 'center', borderRadius: Radius.pill, flexDirection: 'row', gap: 5, paddingHorizontal: 9, paddingVertical: 6 },
   statusDot: { borderRadius: 4, height: 6, width: 6 },
   statusText: { fontFamily: Fonts.bold, fontSize: 9 },
+  teamOverview: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.four },
+  teamOverviewHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
+  teamOverviewValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 20, letterSpacing: -0.4 },
+  teamOverviewDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 10, lineHeight: 15, marginTop: 3 },
+  teamLivePill: { alignItems: 'center', backgroundColor: '#E7EFE9', borderRadius: Radius.pill, flexDirection: 'row', gap: 5, paddingHorizontal: 9, paddingVertical: 6 },
+  teamLiveDot: { backgroundColor: Palette.safe, borderRadius: 4, height: 7, width: 7 },
+  teamLiveText: { color: Palette.safe, fontFamily: Fonts.bold, fontSize: 9 },
+  distributionTrack: { flexDirection: 'row', gap: 3, height: 10, marginTop: Spacing.four, overflow: 'hidden' },
+  distributionSegment: { borderRadius: Radius.pill, minWidth: 8 },
+  distributionLegend: { flexDirection: 'row', gap: Spacing.four, marginTop: Spacing.three },
+  distributionLabel: { alignItems: 'center', flexDirection: 'row', gap: 5 },
+  distributionDot: { borderRadius: 4, height: 7, width: 7 },
+  distributionText: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9 },
+  distributionValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 9 },
+  filterRow: { flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.three },
+  filterChip: { alignItems: 'center', borderColor: Palette.border, borderRadius: Radius.pill, borderWidth: 1, justifyContent: 'center', minHeight: 35, paddingHorizontal: Spacing.three },
+  filterChipActive: { backgroundColor: Palette.ink, borderColor: Palette.ink },
+  filterChipText: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 10 },
+  filterChipTextActive: { color: Palette.surface, fontFamily: Fonts.bold },
+  rosterFooter: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9, paddingHorizontal: Spacing.four, paddingVertical: Spacing.three, textAlign: 'center' },
   triageCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.five },
   triageHeader: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three },
   triageIcon: { alignItems: 'center', backgroundColor: Palette.warning, borderRadius: 20, height: 42, justifyContent: 'center', width: 42 },
@@ -482,13 +707,22 @@ const styles = StyleSheet.create({
   signalValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 24, marginTop: Spacing.four },
   tinyBars: { alignItems: 'flex-end', flexDirection: 'row', gap: 5, height: 38, marginTop: Spacing.three },
   tinyBar: { borderRadius: Radius.pill, flex: 1, opacity: 0.9 },
-  protocolCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.four },
+  protocolEmergency: { alignItems: 'center', borderRadius: Radius.large, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, padding: Spacing.four },
+  protocolEmergencyIcon: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 21, height: 44, justifyContent: 'center', width: 44 },
+  protocolEmergencyLabel: { color: 'rgba(255,253,248,0.78)', fontFamily: Fonts.semibold, fontSize: 9, lineHeight: 13 },
+  protocolEmergencyTitle: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 15, lineHeight: 19, marginTop: 3 },
+  nativeSegmentedControl: { height: 40, marginTop: Spacing.four, width: '100%' },
+  protocolCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.three, padding: Spacing.four },
   protocolRow: { alignItems: 'flex-start', flexDirection: 'row', gap: Spacing.three },
   protocolIndex: { alignItems: 'center', borderRadius: 18, height: 36, justifyContent: 'center', width: 36 },
   protocolIndexText: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 13 },
   protocolTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 14 },
   protocolBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 17, marginTop: 4 },
   protocolDivider: { backgroundColor: Palette.border, height: StyleSheet.hairlineWidth, marginVertical: Spacing.four },
+  eapAction: { alignItems: 'center', backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.three, padding: Spacing.three },
+  eapActionIcon: { alignItems: 'center', backgroundColor: Palette.emergency, borderRadius: 18, height: 38, justifyContent: 'center', width: 38 },
+  eapActionTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12 },
+  eapActionDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9, marginTop: 2 },
   protocolNotice: { alignItems: 'flex-start', backgroundColor: Palette.surfaceMuted, borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.four, padding: Spacing.four },
   protocolNoticeText: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.medium, fontSize: 10, lineHeight: 15 },
   statusHero: { alignItems: 'center', backgroundColor: '#E7EFE9', borderRadius: Radius.large, marginTop: Spacing.five, padding: Spacing.six },
@@ -498,17 +732,38 @@ const styles = StyleSheet.create({
   sessionRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 76, paddingHorizontal: Spacing.four },
   sessionDate: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: 14, height: 42, justifyContent: 'center', width: 50 },
   sessionDateText: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 9 },
-  guideCard: { alignItems: 'center', backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.four, minHeight: 122, padding: Spacing.four },
+  sessionStats: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', marginTop: Spacing.three, paddingTop: Spacing.four },
+  learnAlert: { alignItems: 'flex-start', backgroundColor: '#FBE4DE', borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, padding: Spacing.four },
+  learnAlertTitle: { color: Palette.emergency, fontFamily: Fonts.bold, fontSize: 13 },
+  learnAlertBody: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 10, lineHeight: 15, marginTop: 3 },
+  guideCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.three, minHeight: 112, padding: Spacing.four },
+  guideCardExpanded: { borderColor: '#CFC7B8' },
+  guideTopline: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three },
   guideIcon: { alignItems: 'center', borderRadius: 22, height: 46, justifyContent: 'center', width: 46 },
   guideTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 14 },
   guideBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 10, lineHeight: 15, marginTop: 4 },
-  profileHero: { alignItems: 'center', backgroundColor: '#E8EBE5', borderRadius: Radius.large, flexDirection: 'row', gap: Spacing.four, marginTop: Spacing.five, padding: Spacing.five },
+  guideDisclosure: { transform: [{ rotate: '0deg' }] },
+  guideDisclosureExpanded: { transform: [{ rotate: '90deg' }] },
+  guideDetail: { flexDirection: 'row', gap: Spacing.three, marginLeft: 58, marginTop: Spacing.three, paddingTop: Spacing.three },
+  guideDetailRule: { borderRadius: Radius.pill, width: 3 },
+  guideDetailText: { color: Palette.ink, flex: 1, fontFamily: Fonts.medium, fontSize: 10, lineHeight: 16 },
+  profileIdentity: { alignItems: 'center', flexDirection: 'row', gap: Spacing.four, marginTop: Spacing.five, paddingHorizontal: Spacing.two },
   avatar: { alignItems: 'center', backgroundColor: Palette.coral, borderRadius: 28, height: 56, justifyContent: 'center', width: 56 },
   avatarText: { color: Palette.surface, fontFamily: Fonts.extrabold, fontSize: 17 },
   profileName: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 17 },
   profileRole: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, marginTop: 3 },
-  settingRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 64, paddingHorizontal: Spacing.four },
-  settingIcon: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: 16, height: 36, justifyContent: 'center', width: 36 },
-  settingLabel: { color: Palette.ink, flex: 1, fontFamily: Fonts.semibold, fontSize: 12 },
+  profileEdit: { alignItems: 'center', borderColor: Palette.ink, borderRadius: Radius.pill, borderWidth: 1, justifyContent: 'center', minHeight: 34, paddingHorizontal: Spacing.three },
+  profileEditText: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 10 },
+  profileMetrics: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, flexDirection: 'row', marginTop: Spacing.five, overflow: 'hidden' },
+  profileMetric: { alignItems: 'center', borderRightColor: Palette.border, borderRightWidth: StyleSheet.hairlineWidth, flex: 1, justifyContent: 'center', minHeight: 78 },
+  profileMetricValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 20 },
+  profileMetricLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9, marginTop: 3 },
+  profileConnection: { alignItems: 'center', borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.three, padding: Spacing.four },
+  profileConnectionTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12 },
+  profileConnectionDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9, marginTop: 3 },
+  settingRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 72, paddingHorizontal: Spacing.four, paddingVertical: Spacing.three },
+  settingLabel: { color: Palette.ink, fontFamily: Fonts.semibold, fontSize: 12 },
+  settingDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9, lineHeight: 13, marginTop: 2 },
   settingValue: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 10 },
+  pressed: { opacity: 0.68 },
 });

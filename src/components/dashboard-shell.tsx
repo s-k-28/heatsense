@@ -57,13 +57,13 @@ export function ScreenIntro({
   title,
 }: {
   action?: ReactNode;
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
 }) {
   return (
     <View style={styles.screenIntro}>
       <View style={styles.screenIntroCopy}>
-        <Text style={styles.screenEyebrow}>{eyebrow}</Text>
+        {eyebrow ? <Text style={styles.screenEyebrow}>{eyebrow}</Text> : null}
         <Text style={styles.screenTitle}>{title}</Text>
       </View>
       {action}
