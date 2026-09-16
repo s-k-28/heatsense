@@ -1,11 +1,11 @@
 import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_600SemiBold,
-  DMSans_700Bold,
-  DMSans_800ExtraBold,
+  AtkinsonHyperlegibleNext_400Regular,
+  AtkinsonHyperlegibleNext_500Medium,
+  AtkinsonHyperlegibleNext_600SemiBold,
+  AtkinsonHyperlegibleNext_700Bold,
+  AtkinsonHyperlegibleNext_800ExtraBold,
   useFonts,
-} from '@expo-google-fonts/dm-sans';
+} from '@expo-google-fonts/atkinson-hyperlegible-next';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -16,11 +16,11 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_600SemiBold,
-    DMSans_700Bold,
-    DMSans_800ExtraBold,
+    AtkinsonHyperlegibleNext_400Regular,
+    AtkinsonHyperlegibleNext_500Medium,
+    AtkinsonHyperlegibleNext_600SemiBold,
+    AtkinsonHyperlegibleNext_700Bold,
+    AtkinsonHyperlegibleNext_800ExtraBold,
   });
 
   useEffect(() => {

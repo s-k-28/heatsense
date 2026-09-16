@@ -43,11 +43,11 @@ export const Colors = {
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 export const Fonts = {
-  regular: 'DMSans_400Regular',
-  medium: 'DMSans_500Medium',
-  semibold: 'DMSans_600SemiBold',
-  bold: 'DMSans_700Bold',
-  extrabold: 'DMSans_800ExtraBold',
+  regular: 'AtkinsonHyperlegibleNext_400Regular',
+  medium: 'AtkinsonHyperlegibleNext_500Medium',
+  semibold: 'AtkinsonHyperlegibleNext_600SemiBold',
+  bold: 'AtkinsonHyperlegibleNext_700Bold',
+  extrabold: 'AtkinsonHyperlegibleNext_800ExtraBold',
   mono: Platform.select({ ios: 'ui-monospace', default: 'monospace' }),
   fallback: Platform.select({ ios: 'System', default: 'sans-serif' }),
 } as const;
@@ -71,6 +71,25 @@ export const Radius = {
   medium: 18,
   large: 26,
   pill: 999,
+} as const;
+
+export const Motion = {
+  instant: 140,
+  quick: 220,
+  settle: 520,
+  ambient: 860,
+} as const;
+
+export const TypeScale = {
+  micro: 10,
+  caption: 12,
+  bodySmall: 14,
+  body: 16,
+  titleSmall: 20,
+  title: 25,
+  displaySmall: 31,
+  display: 39,
+  metric: 56,
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;

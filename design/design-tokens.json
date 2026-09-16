@@ -1,0 +1,76 @@
+{
+  "$schema": "https://schemas.tokens.studio/theme.json",
+  "meta": {
+    "name": "HeatSense Outdoor Safety",
+    "version": "1.0.0",
+    "description": "Shared React Native and Figma tokens for the HeatSense cream-and-coral system. Risk colors are semantic and must not be repurposed decoratively."
+  },
+  "color": {
+    "canvas": { "$type": "color", "$value": "#F6F3EC" },
+    "surface": { "$type": "color", "$value": "#FFFDF8" },
+    "surfaceMuted": { "$type": "color", "$value": "#ECE8DD" },
+    "ink": { "$type": "color", "$value": "#1B1C19" },
+    "inkMuted": { "$type": "color", "$value": "#6D7068" },
+    "border": { "$type": "color", "$value": "#DDD8CC" },
+    "coral": { "$type": "color", "$value": "#F06F5F" },
+    "coralDark": { "$type": "color", "$value": "#D95749" },
+    "coralSoft": { "$type": "color", "$value": "#FBE1DA" },
+    "peach": { "$type": "color", "$value": "#F4B29F" },
+    "safe": { "$type": "color", "$value": "#39765B" },
+    "caution": { "$type": "color", "$value": "#9A7100" },
+    "warning": { "$type": "color", "$value": "#C45B18" },
+    "emergency": { "$type": "color", "$value": "#B42318" }
+  },
+  "font": {
+    "family": {
+      "interface": { "$type": "fontFamily", "$value": "Atkinson Hyperlegible Next" }
+    },
+    "weight": {
+      "regular": { "$type": "fontWeight", "$value": "400" },
+      "medium": { "$type": "fontWeight", "$value": "500" },
+      "semibold": { "$type": "fontWeight", "$value": "600" },
+      "bold": { "$type": "fontWeight", "$value": "700" },
+      "extrabold": { "$type": "fontWeight", "$value": "800" }
+    },
+    "size": {
+      "micro": { "$type": "dimension", "$value": "10px" },
+      "caption": { "$type": "dimension", "$value": "12px" },
+      "bodySmall": { "$type": "dimension", "$value": "14px" },
+      "body": { "$type": "dimension", "$value": "16px" },
+      "titleSmall": { "$type": "dimension", "$value": "20px" },
+      "title": { "$type": "dimension", "$value": "25px" },
+      "displaySmall": { "$type": "dimension", "$value": "31px" },
+      "display": { "$type": "dimension", "$value": "39px" },
+      "metric": { "$type": "dimension", "$value": "56px" }
+    }
+  },
+  "space": {
+    "1": { "$type": "dimension", "$value": "4px" },
+    "2": { "$type": "dimension", "$value": "8px" },
+    "3": { "$type": "dimension", "$value": "12px" },
+    "4": { "$type": "dimension", "$value": "16px" },
+    "5": { "$type": "dimension", "$value": "20px" },
+    "6": { "$type": "dimension", "$value": "24px" },
+    "7": { "$type": "dimension", "$value": "32px" },
+    "8": { "$type": "dimension", "$value": "40px" },
+    "9": { "$type": "dimension", "$value": "48px" },
+    "10": { "$type": "dimension", "$value": "64px" }
+  },
+  "radius": {
+    "small": { "$type": "borderRadius", "$value": "12px" },
+    "medium": { "$type": "borderRadius", "$value": "18px" },
+    "large": { "$type": "borderRadius", "$value": "26px" },
+    "pill": { "$type": "borderRadius", "$value": "999px" }
+  },
+  "motion": {
+    "instant": { "$type": "duration", "$value": "140ms" },
+    "quick": { "$type": "duration", "$value": "220ms" },
+    "settle": { "$type": "duration", "$value": "520ms" },
+    "ambient": { "$type": "duration", "$value": "860ms" }
+  },
+  "size": {
+    "touchTarget": { "$type": "dimension", "$value": "48px" },
+    "button": { "$type": "dimension", "$value": "56px" },
+    "contentMax": { "$type": "dimension", "$value": "520px" }
+  }
+}
