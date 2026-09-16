@@ -6,7 +6,6 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withDelay,
-  withRepeat,
   withSequence,
   withSpring,
   withTiming,
@@ -26,6 +25,7 @@ const iconNames = {
   shield: { ios: 'shield.lefthalf.filled', android: 'health_and_safety', web: 'health_and_safety' },
   people: { ios: 'person.2.fill', android: 'groups', web: 'groups' },
   location: { ios: 'location.fill', android: 'location_on', web: 'location_on' },
+  emergency: { ios: 'cross.case.fill', android: 'medical_services', web: 'medical_services' },
 } as const;
 
 type SymbolName = ComponentProps<typeof HeatIcon>['name'];
@@ -37,14 +37,16 @@ export function RunnerSignalVisual() {
 
   useEffect(() => {
     runnerX.value = withDelay(
-      250,
-      withTiming(1, { duration: reduceMotion ? 1 : 1650, easing: Easing.out(Easing.cubic) })
+      160,
+      withTiming(1, { duration: reduceMotion ? 1 : 860, easing: Easing.out(Easing.cubic) })
     );
     if (!reduceMotion) {
-      runnerY.value = withRepeat(
-        withSequence(withTiming(-5, { duration: 280 }), withTiming(2, { duration: 280 })),
-        -1,
-        true
+      runnerY.value = withDelay(
+        320,
+        withSequence(
+          withTiming(-4, { duration: 150, easing: Easing.out(Easing.quad) }),
+          withSpring(0, { damping: 20, stiffness: 280 })
+        )
       );
     }
   }, [reduceMotion, runnerX, runnerY]);
@@ -57,7 +59,7 @@ export function RunnerSignalVisual() {
   }));
 
   return (
-    <View style={styles.heroCard}>
+    <View style={[styles.heroCard, styles.runnerCard]}>
       <View style={styles.visualTopRow}>
         <View style={styles.livePill}>
           <View style={styles.liveDot} />
@@ -100,8 +102,8 @@ export function RunnerSignalVisual() {
       </View>
 
       <View style={styles.visualFooter}>
-        <Text style={styles.footerLabel}>Environment + athlete</Text>
-        <Text style={styles.footerValue}>One clear safety picture</Text>
+        <Text style={styles.footerLabel}>Primary protection</Text>
+        <Text style={styles.footerValue}>WBGT guidance works without a wristband.</Text>
       </View>
     </View>
   );
@@ -112,8 +114,8 @@ export function WbgtVisual() {
     <View style={[styles.heroCard, styles.wbgtCard]}>
       <View style={styles.wbgtHeader}>
         <View>
-          <Text style={styles.miniLabel}>Frisco, Texas</Text>
-          <Text style={styles.updatedText}>Updated just now</Text>
+          <Text style={styles.miniLabel}>Example · Frisco, Texas</Text>
+          <Text style={styles.updatedText}>Illustrative conditions</Text>
         </View>
         <View style={styles.sunIconWrap}>
           <HeatIcon name={iconNames.heat} size={24} tintColor={Palette.warning} />
@@ -129,24 +131,27 @@ export function WbgtVisual() {
         </View>
       </View>
 
-      <Text style={styles.wbgtMessage}>Modify practice and increase recovery time.</Text>
+      <Text style={styles.wbgtMessage}>Use the school&apos;s class-specific UIL zone plan.</Text>
 
-      <View style={styles.wbgtStats}>
-        <MiniWeatherStat label="Humidity" value="58%" />
-        <View style={styles.statDivider} />
-        <MiniWeatherStat label="Next break" value="08 min" />
-        <View style={styles.statDivider} />
-        <MiniWeatherStat label="Hydration" value="Ready" />
+      <View style={styles.wbgtRules}>
+        <WbgtRule index="01" label="Before practice" value="Check within 15 minutes" />
+        <View style={styles.ruleDivider} />
+        <WbgtRule index="02" label="During practice" value="Recheck every 30 minutes" />
+        <View style={styles.ruleDivider} />
+        <WbgtRule index="03" label="If the zone changes" value="Apply UIL modifications" />
       </View>
     </View>
   );
 }
 
-function MiniWeatherStat({ label, value }: { label: string; value: string }) {
+function WbgtRule({ index, label, value }: { index: string; label: string; value: string }) {
   return (
-    <View style={styles.weatherStat}>
-      <Text style={styles.weatherValue}>{value}</Text>
-      <Text style={styles.weatherLabel}>{label}</Text>
+    <View style={styles.wbgtRule}>
+      <Text style={styles.ruleIndex}>{index}</Text>
+      <View style={styles.ruleCopy}>
+        <Text style={styles.ruleLabel}>{label}</Text>
+        <Text style={styles.ruleValue}>{value}</Text>
+      </View>
     </View>
   );
 }
@@ -179,7 +184,7 @@ function VitalCard({ alternateData, color, data, icon, label, unit, value, varia
     if (!reduceMotion) {
       cardScale.set(withSequence(
         withTiming(0.975, { duration: 90 }),
-        withSpring(1, { damping: 13, stiffness: 240 })
+        withSpring(1, { damping: 20, stiffness: 280 })
       ));
     }
   }
@@ -198,7 +203,21 @@ function VitalCard({ alternateData, color, data, icon, label, unit, value, varia
           animatedCardStyle,
         ]}>
         <View style={styles.vitalLabelRow}>
-          <HeatIcon name={icon} size={16} tintColor={color} />
+          <HeatIcon
+            animationSpec={
+              reduceMotion
+                ? undefined
+                : {
+                    effect: { type: 'scale', wholeSymbol: true },
+                    repeatCount: 1,
+                    speed: 0.45,
+                  }
+            }
+            key={`${label}-${active}`}
+            name={icon}
+            size={16}
+            tintColor={color}
+          />
           <Text style={styles.vitalLabel}>{label}</Text>
           <View style={[styles.interactionDot, active && { backgroundColor: color }]} />
         </View>
@@ -262,16 +281,16 @@ function VitalCard({ alternateData, color, data, icon, label, unit, value, varia
 
 export function SignalsVisual() {
   return (
-    <View>
+    <View style={styles.signalsVisual}>
       <View style={styles.signalGrid}>
         <VitalCard
           alternateData={[48, 66, 42, 82, 50, 76, 58]}
           color={Palette.coral}
           data={[42, 45, 68, 39, 61, 55, 73]}
           icon={iconNames.heart}
-          label="Heart rate"
+          label="HR recovery"
           unit="bpm"
-          value="112"
+          value="+18"
           variant="line"
         />
         <VitalCard
@@ -279,9 +298,9 @@ export function SignalsVisual() {
           color={Palette.warning}
           data={[44, 46, 52, 49, 60, 56, 64]}
           icon={iconNames.heat}
-          label="Skin temp"
-          unit="°F"
-          value="98.2"
+          label="Skin trend"
+          unit="°F / 5m"
+          value="+0.7"
           variant="line"
         />
         <VitalCard
@@ -290,7 +309,7 @@ export function SignalsVisual() {
           data={[28, 51, 39, 65, 54, 76, 62]}
           icon={iconNames.water}
           label="Sweat trend"
-          unit="rising"
+          unit="baseline"
           value="+8%"
           variant="bars"
         />
@@ -300,7 +319,7 @@ export function SignalsVisual() {
           data={[36, 58, 44, 70, 57, 82, 65]}
           icon={iconNames.movement}
           label="Exertion"
-          unit="moderate"
+          unit="movement"
           value="62%"
           variant="bars"
         />
@@ -310,9 +329,32 @@ export function SignalsVisual() {
           <HeatIcon name={iconNames.shield} size={18} tintColor={Palette.coralDark} />
         </View>
         <Text style={styles.signalNoteText}>
-          Compared with the athlete&apos;s own baseline—not used as a diagnosis.
+          Sample trends use the athlete&apos;s own baseline—not a diagnosis.
         </Text>
       </View>
+
+      <View style={styles.riskEnginePreview}>
+        <View style={styles.riskEngineHeader}>
+          <Text style={styles.riskEngineTitle}>Risk engine preview</Text>
+          <Text style={styles.riskEngineCaption}>Signals combine</Text>
+        </View>
+        <View style={styles.riskTierRow}>
+          <RiskTier color={Palette.safe} label="Normal" />
+          <RiskTier color={Palette.caution} label="Caution" />
+          <RiskTier color={Palette.warning} label="Warning" />
+          <RiskTier color={Palette.coralDark} label="Emergency" />
+        </View>
+        <Text style={styles.collapseRule}>Collapse detection jumps directly to Emergency.</Text>
+      </View>
+    </View>
+  );
+}
+
+function RiskTier({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={styles.riskTier}>
+      <View style={[styles.riskTierBar, { backgroundColor: color }]} />
+      <Text style={styles.riskTierLabel}>{label}</Text>
     </View>
   );
 }
@@ -325,11 +367,11 @@ export function TeamVisual() {
           <HeatIcon name={iconNames.people} size={24} tintColor={Palette.ink} />
         </View>
         <View style={styles.teamCopy}>
-          <Text style={styles.teamTitle}>Liberty High School</Text>
-          <Text style={styles.teamSubtitle}>Varsity soccer · 24 athletes</Text>
+          <Text style={styles.teamTitle}>Example · Liberty High School</Text>
+          <Text style={styles.teamSubtitle}>Varsity soccer · demo team</Text>
         </View>
         <View style={styles.safePill}>
-          <Text style={styles.safeText}>Ready</Text>
+          <Text style={styles.safeText}>Demo</Text>
         </View>
       </View>
 
@@ -337,22 +379,28 @@ export function TeamVisual() {
 
       <View style={styles.teamRows}>
         <TeamRow
-          detail="WBGT 81°F · Yellow zone"
+          detail="Class-specific UIL zone"
           icon={iconNames.location}
           label="Practice conditions"
           tone={Palette.caution}
         />
         <TeamRow
-          detail="21 normal · 3 need review"
+          detail="Optional wristbands · 3 to review"
           icon={iconNames.heart}
           label="Athlete status"
           tone={Palette.coral}
         />
         <TeamRow
-          detail="Every 20 minutes"
+          detail="Unlimited during rest breaks"
           icon={iconNames.water}
           label="Hydration plan"
           tone="#547A8C"
+        />
+        <TeamRow
+          detail="Rapid-cooling equipment ready"
+          icon={iconNames.emergency}
+          label="Emergency readiness"
+          tone={Palette.coralDark}
         />
       </View>
     </View>
@@ -390,13 +438,13 @@ const styles = StyleSheet.create({
     borderColor: Palette.border,
     borderRadius: Radius.large,
     borderWidth: 1,
+    flex: 1,
     minHeight: 326,
     overflow: 'hidden',
     padding: Spacing.five,
-    shadowColor: '#45372E',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.08,
-    shadowRadius: 28,
+  },
+  runnerCard: {
+    minHeight: 360,
   },
   visualTopRow: {
     alignItems: 'center',
@@ -441,6 +489,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   signalCanvas: {
+    flex: 1,
     height: 150,
     justifyContent: 'center',
     marginHorizontal: -Spacing.five,
@@ -455,28 +504,32 @@ const styles = StyleSheet.create({
     height: 70,
     justifyContent: 'center',
     left: '50%',
+    marginTop: -58,
     position: 'absolute',
-    top: 15,
+    top: '50%',
     width: 70,
   },
   visualFooter: {
     borderTopColor: Palette.border,
     borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 4,
+    gap: 3,
     paddingTop: Spacing.four,
   },
   footerLabel: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 12,
+    fontSize: 10,
+    textTransform: 'uppercase',
   },
   footerValue: {
     color: Palette.ink,
     fontFamily: Fonts.bold,
-    fontSize: 15,
+    fontSize: 13,
   },
   wbgtCard: {
     backgroundColor: '#FFF4DD',
+    justifyContent: 'space-between',
+    minHeight: 360,
   },
   wbgtHeader: {
     alignItems: 'flex-start',
@@ -550,38 +603,49 @@ const styles = StyleSheet.create({
     marginTop: Spacing.one,
     maxWidth: 270,
   },
-  wbgtStats: {
-    alignItems: 'center',
+  wbgtRules: {
     backgroundColor: 'rgba(255,255,255,0.52)',
     borderRadius: Radius.medium,
-    flexDirection: 'row',
-    marginTop: 'auto',
-    paddingVertical: Spacing.four,
+    paddingHorizontal: Spacing.four,
   },
-  weatherStat: {
+  wbgtRule: {
     alignItems: 'center',
-    flex: 1,
-    gap: 3,
+    flexDirection: 'row',
+    gap: Spacing.three,
+    minHeight: 52,
   },
-  weatherValue: {
-    color: Palette.ink,
+  ruleIndex: {
+    color: Palette.warning,
     fontFamily: Fonts.bold,
-    fontSize: 14,
+    fontSize: 11,
+    width: 20,
   },
-  weatherLabel: {
+  ruleCopy: {
+    flex: 1,
+  },
+  ruleLabel: {
+    color: Palette.ink,
+    fontFamily: Fonts.semibold,
+    fontSize: 11,
+  },
+  ruleValue: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
     fontSize: 10,
+    marginTop: 2,
   },
-  statDivider: {
+  ruleDivider: {
     backgroundColor: 'rgba(27,28,25,0.12)',
-    height: 28,
-    width: StyleSheet.hairlineWidth,
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 32,
   },
   signalGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.three,
+  },
+  signalsVisual: {
+    flex: 1,
   },
   vitalCardPressable: {
     flexBasis: '47%',
@@ -662,6 +726,54 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
   },
+  riskEnginePreview: {
+    backgroundColor: Palette.surface,
+    borderColor: Palette.border,
+    borderRadius: Radius.medium,
+    borderWidth: 1,
+    marginTop: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+  },
+  riskEngineHeader: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  riskEngineTitle: {
+    color: Palette.ink,
+    fontFamily: Fonts.bold,
+    fontSize: 11,
+  },
+  riskEngineCaption: {
+    color: Palette.inkMuted,
+    fontFamily: Fonts.medium,
+    fontSize: 9,
+  },
+  riskTierRow: {
+    flexDirection: 'row',
+    gap: 5,
+    marginTop: Spacing.two,
+  },
+  riskTier: {
+    flex: 1,
+    gap: 4,
+  },
+  riskTierBar: {
+    borderRadius: Radius.pill,
+    height: 5,
+  },
+  riskTierLabel: {
+    color: Palette.inkMuted,
+    fontFamily: Fonts.medium,
+    fontSize: 8,
+  },
+  collapseRule: {
+    color: Palette.ink,
+    fontFamily: Fonts.semibold,
+    fontSize: 9,
+    marginTop: Spacing.two,
+  },
   teamCard: {
     justifyContent: 'flex-start',
   },
@@ -709,7 +821,8 @@ const styles = StyleSheet.create({
     marginVertical: Spacing.five,
   },
   teamRows: {
-    gap: Spacing.four,
+    flex: 1,
+    justifyContent: 'space-evenly',
   },
   teamRow: {
     alignItems: 'center',

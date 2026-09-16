@@ -12,7 +12,7 @@ import {
   type ViewStyle,
   useWindowDimensions,
 } from 'react-native';
-import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HeatIcon } from '@/components/heat-icon';
@@ -33,14 +33,14 @@ const icons = {
 
 const steps = [
   {
-    eyebrow: 'Meet HeatSense',
+    eyebrow: 'WBGT + athlete context',
     title: 'Heat safety, for every athlete.',
     description:
       'Know the field. Notice the athlete. Act before heat becomes an emergency.',
     visual: RunnerSignalVisual,
   },
   {
-    eyebrow: 'Field conditions',
+    eyebrow: 'UIL practice guidance',
     title: 'Know the risk before practice starts.',
     description:
       'Live conditions become clear UIL-aligned actions for work, rest, hydration, and equipment.',
@@ -54,7 +54,7 @@ const steps = [
     visual: SignalsVisual,
   },
   {
-    eyebrow: 'Ready together',
+    eyebrow: 'Team setup',
     title: 'One sideline. One safety picture.',
     description:
       'Choose your role now. School, team, and optional wristband setup come next.',
@@ -71,7 +71,6 @@ export default function OnboardingScreen() {
   const [role, setRole] = useState<Role>('Coach');
   const step = steps[stepIndex];
   const isFinalStep = stepIndex === steps.length - 1;
-  const isSignalsStep = stepIndex === 2;
   const isCompact = height < 780;
 
   const actionLabel = useMemo(() => {
@@ -132,25 +131,14 @@ export default function OnboardingScreen() {
             contentContainerStyle={[styles.scrollContent, isCompact && styles.scrollContentCompact]}
             showsVerticalScrollIndicator={false}>
             <Animated.View
-              entering={FadeInRight.duration(330)}
-              exiting={FadeOutLeft.duration(180)}
+              entering={FadeIn.duration(220)}
+              exiting={FadeOut.duration(140)}
               key={stepIndex}
               style={styles.story}>
-              {isSignalsStep ? (
-                <>
-                  <OnboardingCopy compact={isCompact} step={step} style={styles.signalCopyBlock} />
-                  <View style={styles.visualWrap}>
-                    <Visual />
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.visualWrap}>
-                    <Visual />
-                  </View>
-                  <OnboardingCopy compact={isCompact} step={step} />
-                </>
-              )}
+              <OnboardingCopy compact={isCompact} step={step} />
+              <View style={styles.visualWrap}>
+                <Visual />
+              </View>
 
               {isFinalStep ? <RoleSelector onChange={setRole} value={role} /> : null}
             </Animated.View>
@@ -270,7 +258,6 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     height: 36,
     justifyContent: 'center',
-    transform: [{ rotate: '-4deg' }],
     width: 36,
   },
   brandName: {
@@ -305,8 +292,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: Spacing.four,
-    paddingTop: Spacing.six,
+    paddingBottom: Spacing.three,
+    paddingTop: Spacing.five,
   },
   scrollContentCompact: {
     paddingTop: Spacing.four,
@@ -315,48 +302,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   visualWrap: {
+    flex: 1,
+    marginTop: Spacing.five,
     width: '100%',
   },
   copyBlock: {
-    alignItems: 'center',
-    marginTop: Spacing.six,
-  },
-  signalCopyBlock: {
-    marginBottom: Spacing.six,
-    marginTop: 0,
+    alignItems: 'flex-start',
   },
   eyebrow: {
     color: Palette.coralDark,
     fontFamily: Fonts.bold,
     fontSize: 13,
-    textAlign: 'center',
   },
   title: {
     color: Palette.ink,
     fontFamily: Fonts.extrabold,
-    fontSize: 32,
-    letterSpacing: -1.5,
-    lineHeight: 38,
+    fontSize: 29,
+    letterSpacing: -1.1,
+    lineHeight: 34,
     marginTop: Spacing.two,
     maxWidth: 410,
-    textAlign: 'center',
   },
   titleCompact: {
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 27,
+    lineHeight: 32,
   },
   description: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: Spacing.three,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: Spacing.two,
     maxWidth: 430,
-    textAlign: 'center',
   },
   roleSection: {
-    gap: Spacing.three,
-    marginTop: Spacing.five,
+    gap: Spacing.two,
+    marginTop: Spacing.four,
   },
   rolePrompt: {
     color: Palette.ink,
@@ -364,29 +345,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   roleRow: {
+    backgroundColor: Palette.surfaceMuted,
+    borderRadius: Radius.medium,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
+    gap: 3,
+    padding: 4,
   },
   roleChip: {
-    backgroundColor: Palette.surface,
-    borderColor: Palette.border,
-    borderRadius: Radius.pill,
+    alignItems: 'center',
+    borderColor: 'transparent',
+    borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: 10,
+    flex: 1,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 9,
   },
   roleChipSelected: {
-    backgroundColor: Palette.ink,
-    borderColor: Palette.ink,
+    backgroundColor: Palette.surface,
+    borderColor: Palette.border,
   },
   roleText: {
     color: Palette.inkMuted,
     fontFamily: Fonts.semibold,
-    fontSize: 11,
+    fontSize: 10,
+    textAlign: 'center',
   },
   roleTextSelected: {
-    color: Palette.surface,
+    color: Palette.ink,
   },
   actionBar: {
     alignItems: 'center',
@@ -419,14 +404,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 56,
     position: 'relative',
-    shadowColor: Palette.coralDark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
   },
   primaryButtonPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.99 }],
+    opacity: 0.82,
   },
   primaryButtonText: {
     color: Palette.surface,
