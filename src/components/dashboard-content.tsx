@@ -1,5 +1,6 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -156,14 +157,14 @@ function AthleteHome() {
         </View>
       </View>
       <SectionHeader action="All sessions" title="Recent practice" />
-      <View style={styles.sessionFeature}>
+      <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/detail', params: { kind: 'session' } })} style={({ pressed }) => [styles.sessionFeature, pressed && styles.pressed]}>
         <View style={styles.sessionIcon}><HeatIcon name={icons.movement} size={24} tintColor={Palette.ink} /></View>
         <View style={styles.flexOne}>
           <Text style={styles.sessionTitle}>Varsity conditioning</Text>
           <Text style={styles.sessionMeta}>Monday · 4:10–5:22 PM</Text>
         </View>
         <HeatIcon name={icons.arrow} size={17} tintColor={Palette.inkMuted} />
-      </View>
+      </Pressable>
     </>
   );
 }
@@ -268,7 +269,7 @@ function AlertsScreen() {
         </View>
         <Text style={styles.emergencyTitle}>Maya needs a recovery check.</Text>
         <Text style={styles.emergencyBody}>Elevated heart rate and rising skin trend continued through a low-movement break.</Text>
-        <View style={styles.emergencyAction}><Text style={styles.emergencyActionText}>Acknowledge and locate</Text></View>
+        <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/detail', params: { kind: 'alert' } })} style={({ pressed }) => [styles.emergencyAction, pressed && styles.pressed]}><Text style={styles.emergencyActionText}>Acknowledge and locate</Text></Pressable>
       </LinearGradient>
       <SectionHeader title="Earlier today" />
       <View style={styles.listCard}>
@@ -498,7 +499,7 @@ function Rule({ icon, label, value }: { icon: IconName; label: string; value: st
 }
 
 function PersonRow({ detail, name, status, tone }: { detail: string; name: string; status: string; tone: string }) {
-  return <View style={styles.personRow}><View style={[styles.personAvatar, { backgroundColor: `${tone}1A` }]}><Text style={[styles.personInitials, { color: tone }]}>{name.split(' ').map((part) => part[0]).join('')}</Text></View><View style={styles.flexOne}><Text style={styles.personName}>{name}</Text><Text style={styles.personDetail}>{detail}</Text></View><StatusPill label={status} tone={tone} /></View>;
+  return <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/detail', params: { kind: 'athlete', name } })} style={({ pressed }) => [styles.personRow, pressed && styles.pressed]}><View style={[styles.personAvatar, { backgroundColor: `${tone}1A` }]}><Text style={[styles.personInitials, { color: tone }]}>{name.split(' ').map((part) => part[0]).join('')}</Text></View><View style={styles.flexOne}><Text style={styles.personName}>{name}</Text><Text style={styles.personDetail}>{detail}</Text></View><StatusPill label={status} tone={tone} /></Pressable>;
 }
 
 function StatusPill({ label, tone }: { label: string; tone: string }) {
@@ -565,7 +566,7 @@ function AlertHistoryRow({ detail, time, title, tone }: { detail: string; time: 
 
 function ProtocolStep({ body, index, last, title, tone }: { body: string; index: string; last?: boolean; title: string; tone: string }) { return <View style={styles.protocolRow}><View style={[styles.protocolIndex, { backgroundColor: tone }]}><Text style={styles.protocolIndexText}>{index}</Text></View><View style={styles.flexOne}><Text style={styles.protocolTitle}>{title}</Text><Text style={styles.protocolBody}>{body}</Text>{!last ? <View style={styles.protocolDivider} /> : null}</View></View>; }
 
-function SessionRow({ date, detail, title }: { date: string; detail: string; title: string }) { return <View style={styles.sessionRow}><View style={styles.sessionDate}><Text style={styles.sessionDateText}>{date}</Text></View><View style={styles.flexOne}><Text style={styles.personName}>{title}</Text><Text style={styles.personDetail}>{detail}</Text></View><HeatIcon name={icons.arrow} size={17} tintColor={Palette.inkMuted} /></View>; }
+function SessionRow({ date, detail, title }: { date: string; detail: string; title: string }) { return <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/detail', params: { kind: 'session', title } })} style={({ pressed }) => [styles.sessionRow, pressed && styles.pressed]}><View style={styles.sessionDate}><Text style={styles.sessionDateText}>{date}</Text></View><View style={styles.flexOne}><Text style={styles.personName}>{title}</Text><Text style={styles.personDetail}>{detail}</Text></View><HeatIcon name={icons.arrow} size={17} tintColor={Palette.inkMuted} /></Pressable>; }
 
 function GuideCard({
   body,

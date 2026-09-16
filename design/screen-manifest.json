@@ -1,9 +1,9 @@
 {
   "meta": {
     "product": "HeatSense",
-    "version": "0.8-ui",
+    "version": "0.9-ui",
     "device": "iPhone 17 Pro Max",
-    "figmaPages": ["00 Foundations", "01 Onboarding", "02 Coach", "03 Athletic Trainer", "04 Athlete", "05 System States"]
+    "figmaPages": ["00 Foundations", "01 Onboarding", "02 Coach", "03 Athletic Trainer", "04 Athlete", "05 System States", "06 Details"]
   },
   "screens": [
     { "page": "01 Onboarding", "name": "01 Welcome", "route": "/?step=1" },
@@ -35,6 +35,9 @@
     { "page": "05 System States", "name": "02 Empty team", "route": "/dashboard?role=coach&tab=team&state=empty-team" },
     { "page": "05 System States", "name": "03 Pair wristband", "route": "/dashboard?role=athlete&tab=profile&state=pairing" },
     { "page": "05 System States", "name": "04 No wristband", "route": "/dashboard?role=athlete&tab=status&state=no-band" },
-    { "page": "05 System States", "name": "05 Alert acknowledged", "route": "/dashboard?role=coach&tab=alerts&state=alert-acknowledged" }
+    { "page": "05 System States", "name": "05 Alert acknowledged", "route": "/dashboard?role=coach&tab=alerts&state=alert-acknowledged" },
+    { "page": "06 Details", "name": "01 Athlete review", "route": "/detail?kind=athlete&name=Maya%20Chen" },
+    { "page": "06 Details", "name": "02 Alert response", "route": "/detail?kind=alert" },
+    { "page": "06 Details", "name": "03 Session analysis", "route": "/detail?kind=session" }
   ]
 }
