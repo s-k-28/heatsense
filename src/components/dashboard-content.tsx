@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { DemoPill, ScreenIntro, SectionHeader, type DashboardRole } from '@/components/dashboard-shell';
+import { ScreenIntro, SectionHeader, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
 import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
 
@@ -52,7 +52,7 @@ export function DashboardContent({ role, tab }: { role: DashboardRole; tab: stri
 
 function CoachContent({ tab }: { tab: string }) {
   if (tab === 'plan') return <PracticePlanScreen />;
-  if (tab === 'team') return <RosterScreen title="Team status" eyebrow="24 athletes" variant="coach" />;
+  if (tab === 'team') return <RosterScreen title="Team status" variant="coach" />;
   if (tab === 'alerts') return <AlertsScreen />;
   if (tab === 'profile') return <ProfileScreen role="Coach" />;
   return <CoachHome />;
@@ -60,7 +60,7 @@ function CoachContent({ tab }: { tab: string }) {
 
 function TrainerContent({ tab }: { tab: string }) {
   if (tab === 'monitor') return <MonitorScreen />;
-  if (tab === 'athletes') return <RosterScreen title="Athletes to review" eyebrow="Trainer queue" variant="trainer" />;
+  if (tab === 'athletes') return <RosterScreen title="Athletes to review" variant="trainer" />;
   if (tab === 'protocols') return <ProtocolsScreen />;
   if (tab === 'profile') return <ProfileScreen role="Athletic trainer" />;
   return <TrainerHome />;
@@ -77,7 +77,7 @@ function AthleteContent({ tab }: { tab: string }) {
 function CoachHome() {
   return (
     <>
-      <ScreenIntro action={<DemoPill />} eyebrow="Liberty soccer · Frisco" title="Practice is in the Orange zone." />
+      <ScreenIntro title="Practice is in the Orange zone." />
       <RiskHero mode="coach" />
       <SectionHeader action="Full plan" title="Today’s adjustments" />
       <View style={styles.ruleStrip}>
@@ -94,7 +94,7 @@ function CoachHome() {
 function TrainerHome() {
   return (
     <>
-      <ScreenIntro action={<DemoPill />} eyebrow="Sideline monitor" title="Two athletes need review." />
+      <ScreenIntro title="Two athletes need review." />
       <View style={styles.triageCard}>
         <View style={styles.triageHeader}>
           <View style={styles.triageIcon}><HeatIcon name={icons.recovery} size={23} tintColor={Palette.surface} /></View>
@@ -104,7 +104,7 @@ function TrainerHome() {
           </View>
           <StatusPill label="Warning" tone={Palette.warning} />
         </View>
-        <Trend color={Palette.warning} />
+        <Trend color={Palette.warning} variant="recovery" />
         <Text style={styles.triageSummary}>Heart rate remains elevated while movement is low during the water break.</Text>
         <View style={styles.triageMetrics}>
           <MiniMetric label="HR recovery" value="+24 bpm" />
@@ -121,7 +121,8 @@ function TrainerHome() {
 function AthleteHome() {
   return (
     <>
-      <ScreenIntro action={<DemoPill />} eyebrow="Tuesday · practice day" title="Hi, Maya." />
+      <ScreenIntro title="Hi, Maya." />
+      <Text style={styles.contextLine}>Tuesday · Varsity practice at 4:10 PM</Text>
       <View style={styles.bentoGrid}>
         <LinearGradient colors={['#F49778', '#F7C3A8', '#FFF6E7']} style={styles.bentoPrimary}>
           <View style={styles.bentoTopline}>
@@ -193,7 +194,7 @@ function RiskHero({ mode }: { mode: 'coach' }) {
 function PracticePlanScreen() {
   return (
     <>
-      <ScreenIntro action={<DemoPill />} eyebrow="UIL-aligned plan" title="Varsity soccer · today" />
+      <ScreenIntro title="Today’s varsity soccer plan" />
       <RiskHero mode="coach" />
       <SectionHeader title="Practice timeline" />
       <View style={styles.timelineCard}>
@@ -206,11 +207,9 @@ function PracticePlanScreen() {
 }
 
 function RosterScreen({
-  eyebrow,
   title,
   variant,
 }: {
-  eyebrow: string;
   title: string;
   variant: 'coach' | 'trainer';
 }) {
@@ -223,7 +222,7 @@ function RosterScreen({
 
   return (
     <>
-      <ScreenIntro action={<DemoPill />} eyebrow={eyebrow} title={title} />
+      <ScreenIntro title={title} />
       <View style={styles.teamOverview}>
         <View style={styles.teamOverviewHeader}>
           <View>
@@ -261,7 +260,7 @@ function RosterScreen({
 function AlertsScreen() {
   return (
     <>
-      <ScreenIntro action={<DemoPill />} eyebrow="Acknowledgement required" title="Alerts" />
+      <ScreenIntro title="Alerts" />
       <LinearGradient colors={['#C94A37', '#E66A50']} style={styles.emergencyCard}>
         <View style={styles.emergencyTopline}>
           <HeatIcon name={icons.warning} size={24} tintColor={Palette.surface} />
@@ -283,13 +282,14 @@ function AlertsScreen() {
 function MonitorScreen() {
   return (
     <>
-      <ScreenIntro action={<DemoPill />} eyebrow="Optional wristband" title="Maya’s live signals" />
+      <ScreenIntro title="Maya’s live signals" />
+      <Text style={styles.contextLine}>Optional wristband · compared with Maya’s personal baseline</Text>
       <View style={styles.monitorCard}>
         <View style={styles.monitorHeader}>
           <View><Text style={styles.cardLabel}>Heart-rate recovery</Text><Text style={styles.monitorValue}>142 <Text style={styles.monitorUnit}>bpm</Text></Text></View>
           <StatusPill label="Review" tone={Palette.warning} />
         </View>
-        <Trend color={Palette.coral} large />
+        <Trend color={Palette.coral} large leftLabel="Break started" rightLabel="Now" variant="recovery" />
         <Text style={styles.monitorInterpretation}>Elevated for 6 minutes while movement remains low.</Text>
       </View>
       <SectionHeader title="Supporting context" />
@@ -356,7 +356,8 @@ function ProtocolsScreen() {
 function AthleteStatusScreen() {
   return (
     <>
-      <ScreenIntro action={<DemoPill />} eyebrow="Personal baseline" title="My status" />
+      <ScreenIntro title="My status" />
+      <Text style={styles.contextLine}>Compared with your personal baseline</Text>
       <View style={styles.statusHero}>
         <View style={styles.statusRing}><HeatIcon name={icons.check} size={42} tintColor={Palette.safe} /></View>
         <Text style={styles.statusHeroTitle}>Signals are within your usual range.</Text>
@@ -378,7 +379,7 @@ function SessionsScreen() {
 
   return (
     <>
-      <ScreenIntro action={<DemoPill />} title="Sessions" />
+      <ScreenIntro title="Sessions" />
       <SegmentedControl
         appearance="light"
         onValueChange={(value) => setPeriod(value === '4 weeks' ? 'month' : 'week')}
@@ -388,7 +389,7 @@ function SessionsScreen() {
       />
       <View style={styles.weeklyCard}>
         <View style={styles.weeklyHeader}><View><Text style={styles.cardLabel}>{period === 'week' ? 'Last 7 days' : 'Last 4 weeks'}</Text><Text style={styles.weeklyTitle}>Recovery pattern</Text></View><Text style={styles.weeklyStatus}>Stable</Text></View>
-        <Trend color={Palette.coral} large />
+        <Trend color={Palette.coral} large leftLabel={period === 'week' ? 'Sep 9' : 'Aug 19'} rightLabel="Today" variant="stable" />
         <View style={styles.sessionStats}>
           <MiniMetric label="Sessions" value={period === 'week' ? '3' : '11'} />
           <MiniMetric label="Avg. recovery" value={period === 'week' ? '8 min' : '9 min'} />
@@ -504,9 +505,38 @@ function StatusPill({ label, tone }: { label: string; tone: string }) {
   return <View style={[styles.statusPill, { backgroundColor: `${tone}16` }]}><View style={[styles.statusDot, { backgroundColor: tone }]} /><Text style={[styles.statusText, { color: tone }]}>{label}</Text></View>;
 }
 
-function Trend({ color, compact, large }: { color: string; compact?: boolean; large?: boolean }) {
+function Trend({
+  color,
+  compact,
+  large,
+  leftLabel,
+  rightLabel,
+  variant = 'wbgt',
+}: {
+  color: string;
+  compact?: boolean;
+  large?: boolean;
+  leftLabel?: string;
+  rightLabel?: string;
+  variant?: 'recovery' | 'stable' | 'wbgt';
+}) {
   const height = compact ? 45 : large ? 112 : 82;
-  return <View style={[styles.trend, { height }]}><Svg height="100%" viewBox="0 0 340 100" width="100%"><Path d="M2 68 C24 66, 30 54, 51 59 S79 82, 98 56 S127 35, 144 50 S174 76, 192 42 S221 20, 240 39 S273 69, 291 43 S322 27, 338 31" fill="none" stroke={color} strokeLinecap="round" strokeWidth="4" /><Circle cx="338" cy="31" fill={Palette.surface} r="7" stroke={color} strokeWidth="4" /></Svg></View>;
+  const path = variant === 'recovery'
+    ? 'M2 32 C28 28, 46 18, 67 29 S103 62, 126 51 S157 35, 178 46 S214 76, 239 61 S272 43, 294 51 S322 63, 338 58'
+    : variant === 'stable'
+      ? 'M2 57 C29 50, 50 55, 71 46 S107 40, 132 49 S166 61, 192 50 S224 43, 248 48 S278 58, 303 47 S327 43, 338 45'
+      : 'M2 68 C24 66, 30 54, 51 59 S79 82, 98 56 S127 35, 144 50 S174 76, 192 42 S221 20, 240 39 S273 69, 291 43 S322 27, 338 31';
+  const hasLabels = Boolean(leftLabel || rightLabel);
+
+  return (
+    <View style={[styles.trend, { height }]}>
+      <Svg height={hasLabels ? height - 18 : '100%'} viewBox="0 0 340 100" width="100%">
+        <Path d={path} fill="none" stroke={color} strokeLinecap="round" strokeWidth="4" />
+        <Circle cx="338" cy={variant === 'recovery' ? '58' : variant === 'stable' ? '45' : '31'} fill={Palette.surface} r="7" stroke={color} strokeWidth="4" />
+      </Svg>
+      {hasLabels ? <View style={styles.trendLabels}><Text style={styles.trendLabel}>{leftLabel}</Text><Text style={styles.trendLabel}>{rightLabel}</Text></View> : null}
+    </View>
+  );
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) { return <View style={styles.miniMetric}><Text style={styles.miniMetricValue}>{value}</Text><Text style={styles.miniMetricLabel}>{label}</Text></View>; }
@@ -592,6 +622,7 @@ function SettingRow({ detail, icon, label, value }: { detail: string; icon: Icon
 
 const styles = StyleSheet.create({
   flexOne: { flex: 1 },
+  contextLine: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 16, marginTop: Spacing.two },
   riskHero: { borderRadius: Radius.large, marginTop: Spacing.five, minHeight: 278, overflow: 'hidden', padding: Spacing.five },
   riskTopline: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   riskLocation: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13 },
@@ -604,6 +635,8 @@ const styles = StyleSheet.create({
   riskZone: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 17, marginTop: 3 },
   riskMessage: { color: 'rgba(27,28,25,0.76)', fontFamily: Fonts.medium, fontSize: 12, lineHeight: 17, marginTop: Spacing.three, maxWidth: 290 },
   trend: { justifyContent: 'center', marginTop: Spacing.two, overflow: 'hidden', width: '100%' },
+  trendLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  trendLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9 },
   ruleStrip: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, flexDirection: 'row', overflow: 'hidden' },
   rule: { alignItems: 'flex-start', borderRightColor: Palette.border, borderRightWidth: StyleSheet.hairlineWidth, flex: 1, minHeight: 112, padding: Spacing.three },
   ruleLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9, marginTop: Spacing.two },

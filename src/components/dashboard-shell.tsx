@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 
 import { HeatIcon } from '@/components/heat-icon';
-import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
+import { Fonts, Palette, Spacing } from '@/constants/theme';
 
 export type DashboardRole = 'coach' | 'trainer' | 'athlete';
 
@@ -76,15 +76,6 @@ export function SectionHeader({ action, title }: { action?: string; title: strin
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {action ? <Text style={styles.sectionAction}>{action}</Text> : null}
-    </View>
-  );
-}
-
-export function DemoPill() {
-  return (
-    <View style={styles.demoPill}>
-      <View style={styles.demoDot} />
-      <Text style={styles.demoText}>Demo data</Text>
     </View>
   );
 }
@@ -226,17 +217,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 17 },
   sectionAction: { color: Palette.coralDark, fontFamily: Fonts.semibold, fontSize: 12 },
-  demoPill: {
-    alignItems: 'center',
-    backgroundColor: Palette.surfaceMuted,
-    borderRadius: Radius.pill,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  demoDot: { backgroundColor: Palette.coral, borderRadius: 4, height: 7, width: 7 },
-  demoText: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 10 },
   dockShadow: {
     bottom: 8,
     left: Spacing.five,
