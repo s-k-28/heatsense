@@ -234,7 +234,7 @@ function PlanRow({
 }) {
   return (
     <View style={styles.planRow}>
-      <View style={[styles.planRowIcon, { backgroundColor: `${tone}16` }]}>
+      <View style={styles.planRowIcon}>
         <HeatIcon name={icon} size={19} tintColor={tone} />
       </View>
       <View style={styles.planRowCopy}>
@@ -618,7 +618,7 @@ function TeamRow({
 }) {
   return (
     <View style={styles.teamRow}>
-      <View style={[styles.rowIcon, { backgroundColor: `${tone}18` }]}>
+      <View style={styles.rowIcon}>
         <HeatIcon name={icon} size={18} tintColor={tone} />
       </View>
       <View style={styles.teamCopy}>
@@ -817,8 +817,6 @@ const styles = StyleSheet.create({
   },
   planClock: {
     alignItems: 'center',
-    backgroundColor: '#FFF0D5',
-    borderRadius: 22,
     height: 44,
     justifyContent: 'center',
     width: 44,
@@ -838,10 +836,9 @@ const styles = StyleSheet.create({
   },
   planRowIcon: {
     alignItems: 'center',
-    borderRadius: 14,
-    height: 42,
+    height: 34,
     justifyContent: 'center',
-    width: 42,
+    width: 30,
   },
   planRowCopy: {
     flex: 1,
@@ -1045,7 +1042,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   alertCard: {
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
   },
   alertHeader: {
     alignItems: 'center',
@@ -1053,6 +1050,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   alertRows: {
+    flex: 1,
+    justifyContent: 'space-evenly',
     marginTop: Spacing.four,
   },
   alertRow: {
@@ -1060,7 +1059,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Palette.border,
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    minHeight: 70,
+    minHeight: 78,
   },
   alertRail: {
     alignSelf: 'stretch',
@@ -1092,12 +1091,11 @@ const styles = StyleSheet.create({
   },
   alertFooter: {
     alignItems: 'center',
-    backgroundColor: '#FCE9E5',
-    borderRadius: Radius.medium,
+    borderTopColor: Palette.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: Spacing.three,
-    marginTop: 'auto',
-    padding: Spacing.three,
+    paddingTop: Spacing.four,
   },
   alertFooterText: {
     color: Palette.emergency,
@@ -1116,11 +1114,9 @@ const styles = StyleSheet.create({
   },
   teamIcon: {
     alignItems: 'center',
-    backgroundColor: Palette.surfaceMuted,
-    borderRadius: 18,
-    height: 48,
+    height: 38,
     justifyContent: 'center',
-    width: 48,
+    width: 34,
   },
   teamCopy: {
     flex: 1,
@@ -1163,10 +1159,9 @@ const styles = StyleSheet.create({
   },
   rowIcon: {
     alignItems: 'center',
-    borderRadius: 14,
-    height: 42,
+    height: 32,
     justifyContent: 'center',
-    width: 42,
+    width: 28,
   },
   rowLabel: {
     color: Palette.ink,

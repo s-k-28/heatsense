@@ -44,7 +44,7 @@ const icons = {
 
 const steps = [
   {
-    eyebrow: 'WBGT + athlete context',
+    eyebrow: '',
     title: 'Heat safety, for every athlete.',
     description:
       'Know the field. Notice the athlete. Act before heat becomes an emergency.',
@@ -58,34 +58,34 @@ const steps = [
     visual: WbgtVisual,
   },
   {
-    eyebrow: 'Practice adjustments',
+    eyebrow: '',
     title: 'Turn the zone into a practice plan.',
     description:
       'HeatSense keeps the work, rest, water, and equipment rules in one coach-ready view.',
     visual: PracticePlanVisual,
   },
   {
-    eyebrow: 'Athlete signals',
+    eyebrow: '',
     title: 'Four signals. One personal baseline.',
     description: 'Available when an optional HeatSense wristband is paired.',
     visual: SignalsVisual,
   },
   {
-    eyebrow: 'Movement context',
+    eyebrow: '',
     title: 'The same heart rate can mean different things.',
     description:
       'Movement shows whether an elevated heart rate happened during exertion or while recovery stalled.',
     visual: ContextVisual,
   },
   {
-    eyebrow: 'Alert behavior',
+    eyebrow: '',
     title: 'Make rising risk hard to miss.',
     description:
       'Combined signals move through four levels. Collapse detection goes directly to Emergency.',
     visual: AlertLevelsVisual,
   },
   {
-    eyebrow: 'Team setup',
+    eyebrow: '',
     title: 'One sideline. One safety picture.',
     description:
       'Choose your role now. School, team, and optional wristband setup come next.',
@@ -244,7 +244,7 @@ function OnboardingCopy({
 }) {
   return (
     <View style={[styles.copyBlock, style]}>
-      <Text style={styles.eyebrow}>{step.eyebrow}</Text>
+      {step.eyebrow ? <Text style={styles.eyebrow}>{step.eyebrow}</Text> : null}
       <Text style={[styles.title, compact && styles.titleCompact]}>{step.title}</Text>
       <Text style={styles.description}>{step.description}</Text>
     </View>
