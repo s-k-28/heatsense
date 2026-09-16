@@ -12,7 +12,7 @@ This document keeps interface work tied to the HeatSense product instead of drif
 
 - Warm cream canvas (`#F6F3EC`), warm-white surfaces (`#FFFDF8`), coral primary accent (`#F06F5F`), near-black text (`#1B1C19`).
 - Color carries meaning: green is normal, amber is caution, orange is warning, and coral/red is emergency.
-- DM Sans is the product typeface. Use a restrained weight hierarchy instead of many display styles.
+- Atkinson Hyperlegible Next is the product typeface. Its differentiated letterforms support quick reading in outdoor conditions; use a restrained weight hierarchy instead of many display styles.
 - Use native symbols with consistent optical size. Do not place unrelated emoji, glossy 3D icons, or mismatched illustration styles in the interface.
 - Cards exist to group real controls or related information. Do not add a card only to fill space.
 - Negative space must reveal hierarchy. If a region feels empty, first remove forced expansion or add missing product information; never add decorative metrics.
@@ -58,6 +58,18 @@ Before a screen is accepted:
 | 6 | Explain alerts | Normal, Caution, Warning, Emergency, and the collapse override |
 | 7 | Establish the user context | School/team example, hydration and emergency readiness, role selection |
 | Completion | Begin real setup | School and team required; wristband pairing optional |
+
+## Role workspaces
+
+All roles use the same five-item floating dock geometry and design tokens. Labels and information priority change because the work changes, not to create three disconnected apps.
+
+| Role | Five tabs | Home-screen priority |
+| --- | --- | --- |
+| Coach | Home, Plan, Team, Alerts, Profile | Current WBGT, required practice adjustments, roster exceptions |
+| Athletic trainer | Home, Monitor, Athletes, Protocols, Profile | Triage, personal-baseline signal context, response protocol |
+| Athlete | Home, My Status, Sessions, Learn, Profile | Personal heat context, scheduled breaks, recovery trend, education |
+
+The first 70% mockup includes 15 role screens: five per role. Every screen uses explicitly labeled demo data until live weather, team, and optional wearable integrations are connected.
 
 ## Reference set
 

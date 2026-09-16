@@ -19,6 +19,8 @@ export default function ReadyScreen() {
   const router = useRouter();
   const { role = 'Coach' } = useLocalSearchParams<{ role?: string }>();
 
+  const dashboardRole = role === 'Athlete' ? 'athlete' : role === 'Athletic trainer' ? 'trainer' : 'coach';
+
   return (
     <View style={styles.screen}>
       <StatusBar style="dark" />
@@ -68,9 +70,9 @@ export default function ReadyScreen() {
 
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.back()}
+            onPress={() => router.replace(`/dashboard?role=${dashboardRole}` as never)}
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
-            <Text style={styles.buttonText}>Review my choices</Text>
+            <Text style={styles.buttonText}>Open my workspace</Text>
           </Pressable>
         </View>
       </SafeAreaView>
