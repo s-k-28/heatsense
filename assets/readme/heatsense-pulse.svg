@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title description">
+  <title id="title">HeatSense</title>
+  <description id="description">An animated warm cream and coral banner for HeatSense, a WBGT-first heat safety app.</description>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFDF8"/>
+      <stop offset="0.62" stop-color="#F6F3EC"/>
+      <stop offset="1" stop-color="#FBE1DA"/>
+    </linearGradient>
+    <linearGradient id="pulse" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F06F5F"/>
+      <stop offset="1" stop-color="#D95749"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#3B3028" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="320" rx="34" fill="url(#background)"/>
+  <circle cx="1020" cy="74" r="150" fill="#F4B29F" opacity="0.20"/>
+  <circle cx="1114" cy="262" r="110" fill="#96A99C" opacity="0.13"/>
+  <g transform="translate(76 60)">
+    <rect width="62" height="62" rx="20" fill="#F06F5F" filter="url(#softShadow)"/>
+    <path d="M30 14v22a10 10 0 1 0 6 0V14a3 3 0 0 0-6 0Zm3 39a6 6 0 0 1-3-11V18h6v24a6 6 0 0 1-3 11Z" fill="#FFFDF8"/>
+    <path d="M44 17h9M45 25h11M44 33h9" stroke="#FFFDF8" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+  </g>
+  <text x="164" y="108" fill="#1B1C19" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="54" font-weight="800" letter-spacing="-2">HeatSense</text>
+  <text x="78" y="166" fill="#6D7068" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="23" font-weight="600">Know the field. Notice the athlete. Act early.</text>
+  <text x="78" y="204" fill="#6D7068" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="17">WBGT-first heat safety for school athletics</text>
+  <path d="M78 260 H325 L350 222 L382 286 L417 246 H525 L548 212 L575 269 L606 244 H850 L875 228 L905 260 H1122" fill="none" stroke="#DDD8CC" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M78 260 H325 L350 222 L382 286 L417 246 H525 L548 212 L575 269 L606 244 H850 L875 228 L905 260 H1122" fill="none" stroke="url(#pulse)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="180 1100">
+    <animate attributeName="stroke-dashoffset" values="1280;0" dur="4.2s" repeatCount="indefinite"/>
+  </path>
+</svg>
