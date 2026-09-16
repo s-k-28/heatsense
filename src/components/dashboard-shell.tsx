@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ComponentProps, ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 
 import { HeatIcon } from '@/components/heat-icon';
 import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
@@ -97,6 +98,8 @@ export function BottomDock({
   onChange: (tab: string) => void;
   tabs: DashboardTab[];
 }) {
+  const reducedMotion = useReducedMotion();
+
   return (
     <View style={styles.dockShadow}>
       <View style={styles.dock}>
@@ -111,21 +114,30 @@ export function BottomDock({
               onPress={() => onChange(tab.id)}
               style={({ pressed }) => [styles.dockItem, pressed && styles.pressed]}>
               {active ? (
-                <LinearGradient
-                  colors={[Palette.coral, '#ED866D']}
-                  end={{ x: 1, y: 1 }}
-                  start={{ x: 0, y: 0 }}
-                  style={styles.activeIcon}>
-                  <HeatIcon name={tab.icon} size={19} tintColor={Palette.surface} />
-                </LinearGradient>
+                <Animated.View
+                  entering={reducedMotion ? undefined : FadeIn.duration(180)}
+                  style={styles.activeTabPill}>
+                  <LinearGradient
+                    colors={['#FCE9E3', '#F6C7B8']}
+                    end={{ x: 1, y: 1 }}
+                    start={{ x: 0, y: 0 }}
+                    style={styles.activeTabGradient}>
+                    <HeatIcon name={tab.icon} size={19} tintColor={Palette.coralDark} />
+                    <Text numberOfLines={1} style={[styles.dockLabel, styles.dockLabelActive]}>
+                      {tab.label}
+                    </Text>
+                  </LinearGradient>
+                </Animated.View>
               ) : (
-                <View style={styles.inactiveIcon}>
-                  <HeatIcon name={tab.icon} size={19} tintColor={Palette.inkMuted} />
+                <View style={styles.inactiveTab}>
+                  <View style={styles.inactiveIcon}>
+                    <HeatIcon name={tab.icon} size={19} tintColor={Palette.inkMuted} />
+                  </View>
+                  <Text numberOfLines={1} style={styles.dockLabel}>
+                    {tab.label}
+                  </Text>
                 </View>
               )}
-              <Text numberOfLines={1} style={[styles.dockLabel, active && styles.dockLabelActive]}>
-                {tab.label}
-              </Text>
             </Pressable>
           );
         })}
@@ -251,14 +263,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 56,
     minWidth: 48,
+    paddingHorizontal: 2,
   },
-  activeIcon: {
-    alignItems: 'center',
-    borderRadius: 15,
-    height: 31,
-    justifyContent: 'center',
-    width: 42,
+  activeTabPill: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    width: '100%',
   },
+  activeTabGradient: { alignItems: 'center', borderRadius: 22, justifyContent: 'center', minHeight: 52 },
+  inactiveTab: { alignItems: 'center', justifyContent: 'center', minHeight: 52, width: '100%' },
   inactiveIcon: { alignItems: 'center', height: 31, justifyContent: 'center', width: 42 },
   dockLabel: {
     color: Palette.inkMuted,
@@ -268,6 +281,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: 'center',
   },
-  dockLabelActive: { color: Palette.coralDark, fontFamily: Fonts.bold },
+  dockLabelActive: { color: Palette.coralDark, fontFamily: Fonts.bold, marginTop: 1 },
   pressed: { opacity: 0.66 },
 });
