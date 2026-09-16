@@ -19,6 +19,8 @@ HeatSense adapts interaction and information patterns from these references. It 
 | Health education | [Withings Health Mate flow](https://www.pinterest.com/pin/2674081024819499/) | Progressive disclosure and topic grouping instead of a wall of articles | Athlete education uses one urgent symptom callout and expandable, action-oriented guides |
 | Bottom navigation | User-provided 11-style navigation reference | Detached five-item dock, outline icons, active capsule, generous touch areas | Warm cream surface with coral-to-peach active treatment; role-specific labels with identical geometry |
 | Athlete home | User-provided orange activity dashboard reference | Asymmetric bento summary, one larger recent-activity module, compact weekly bars, detached dock | Today’s WBGT exposure, hydration/recovery, personal status, and recent practice sessions; no calories or generic fitness goals |
+| Device discovery | [Bluetooth discovery app](https://www.pinterest.com/pin/103512491420195182/) | One visible discovery process, nearby device result, and a single pairing action | HeatSense explains that pairing is optional, uses restrained search rings, and keeps sharing controls explicit |
+| Incomplete and offline states | [Healthcare progress state](https://www.pinterest.com/pin/373798837846099800/) and [weather concepts](https://www.pinterest.com/pin/594686325842569633/) | Preserve context while clearly showing what is stale, incomplete, or still usable | Stale WBGT never masquerades as live guidance; empty roster and no-band states lead with the next useful task rather than generic illustrations |
 
 ## Search vocabulary
 

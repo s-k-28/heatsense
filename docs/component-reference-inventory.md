@@ -16,7 +16,7 @@ This inventory makes the reference workflow repeatable: inspect a real product p
 | Profile and settings | [Profile search board](https://www.pinterest.com/search/pins/?q=health%20app%20profile%20settings%20ui%20mobile), [health profile](https://www.pinterest.com/pin/335870084732012938/), and [medical profile](https://www.pinterest.com/pin/26036504091923599/) | Identity, role, school/team, alert preferences, pairing, and data permissions | Redesigned; generic icon bubbles removed |
 | Bottom navigation | User-provided five-tab navigation reference | Role-specific labels with one shared detached geometry | Implemented; test native glass only after reduced-transparency fallback |
 | Role setup | Air-quality gradient hierarchy plus flat checklist patterns | Coach, trainer, and athlete receive genuinely different required tasks | Redesigned and visually verified |
-| Empty, loading, offline, and error states | Native Apple Health/system patterns | Weather unavailable, no team members, no paired band, lost BLE, stale reading | Not yet designed; required before mockup reaches 70% completeness |
+| System and device states | [Bluetooth discovery](https://www.pinterest.com/pin/103512491420195182/), [health progress state](https://www.pinterest.com/pin/373798837846099800/), and [weather concepts](https://www.pinterest.com/pin/594686325842569633/) | Stale weather, empty team, band discovery, no-band mode, and alert follow-up | Implemented and simulator-verified; lost connection and permission-denied states remain |
 
 ## Review questions
 

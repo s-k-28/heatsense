@@ -1,9 +1,9 @@
 {
   "meta": {
     "product": "HeatSense",
-    "version": "0.7-ui",
+    "version": "0.8-ui",
     "device": "iPhone 17 Pro Max",
-    "figmaPages": ["00 Foundations", "01 Onboarding", "02 Coach", "03 Athletic Trainer", "04 Athlete"]
+    "figmaPages": ["00 Foundations", "01 Onboarding", "02 Coach", "03 Athletic Trainer", "04 Athlete", "05 System States"]
   },
   "screens": [
     { "page": "01 Onboarding", "name": "01 Welcome", "route": "/?step=1" },
@@ -30,6 +30,11 @@
     { "page": "04 Athlete", "name": "02 My Status", "route": "/dashboard?role=athlete&tab=status" },
     { "page": "04 Athlete", "name": "03 Sessions", "route": "/dashboard?role=athlete&tab=sessions" },
     { "page": "04 Athlete", "name": "04 Learn", "route": "/dashboard?role=athlete&tab=learn" },
-    { "page": "04 Athlete", "name": "05 Profile", "route": "/dashboard?role=athlete&tab=profile" }
+    { "page": "04 Athlete", "name": "05 Profile", "route": "/dashboard?role=athlete&tab=profile" },
+    { "page": "05 System States", "name": "01 Weather stale", "route": "/dashboard?role=coach&tab=home&state=weather-stale" },
+    { "page": "05 System States", "name": "02 Empty team", "route": "/dashboard?role=coach&tab=team&state=empty-team" },
+    { "page": "05 System States", "name": "03 Pair wristband", "route": "/dashboard?role=athlete&tab=profile&state=pairing" },
+    { "page": "05 System States", "name": "04 No wristband", "route": "/dashboard?role=athlete&tab=status&state=no-band" },
+    { "page": "05 System States", "name": "05 Alert acknowledged", "route": "/dashboard?role=coach&tab=alerts&state=alert-acknowledged" }
   ]
 }

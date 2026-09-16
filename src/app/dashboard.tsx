@@ -6,6 +6,7 @@ import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DashboardContent } from '@/components/dashboard-content';
+import { DashboardState, type DashboardReviewState } from '@/components/dashboard-states';
 import {
   BottomDock,
   DashboardHeader,
@@ -64,7 +65,7 @@ function normalizeRole(value?: string): DashboardRole {
 }
 
 export default function DashboardScreen() {
-  const params = useLocalSearchParams<{ role?: string; tab?: string }>();
+  const params = useLocalSearchParams<{ role?: string; state?: string; tab?: string }>();
   const role = normalizeRole(params.role);
   const tabs = roleTabs[role];
   const requestedTab = tabs.some((item) => item.id === params.tab) ? params.tab! : 'home';
@@ -75,7 +76,10 @@ export default function DashboardScreen() {
     : requestedTab;
 
   const identity = roleIdentity[role];
-  const contentKey = useMemo(() => `${role}-${activeTab}`, [activeTab, role]);
+  const reviewState = ['weather-stale', 'empty-team', 'pairing', 'no-band', 'alert-acknowledged'].includes(params.state ?? '')
+    ? params.state as DashboardReviewState
+    : null;
+  const contentKey = useMemo(() => `${role}-${activeTab}-${reviewState ?? 'default'}`, [activeTab, reviewState, role]);
 
   return (
     <View style={styles.screen}>
@@ -98,7 +102,7 @@ export default function DashboardScreen() {
             key={contentKey}
             showsVerticalScrollIndicator={false}>
             <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(Motion.quick)} key={contentKey}>
-              <DashboardContent role={role} tab={activeTab} />
+              {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent role={role} tab={activeTab} />}
             </Animated.View>
           </ScrollView>
           <BottomDock
