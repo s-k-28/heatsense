@@ -14,7 +14,8 @@ The current implementation contains the first production UI slice: a four-page o
 - Reusable icon-led vital cards and miniature charts
 - Coach, athletic trainer, and athlete role selection
 - Working forward, back, skip, and completion navigation
-- Reduced-motion support for the continuous athlete animation
+- Reduced-motion support for purposeful chart and athlete transitions
+- A documented PRD-to-interface review contract in `docs/ui-product-contract.md`
 
 The completion screen intentionally marks the five-tab dashboard as the next build step rather than exposing unfinished product screens.
 
