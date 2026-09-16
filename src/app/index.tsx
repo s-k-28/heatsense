@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -97,9 +97,14 @@ type Role = 'Coach' | 'Athletic trainer' | 'Athlete';
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ role?: string; step?: string }>();
   const { height } = useWindowDimensions();
-  const [stepIndex, setStepIndex] = useState(0);
-  const [role, setRole] = useState<Role>('Coach');
+  const requestedStep = Number.parseInt(params.step ?? '1', 10) - 1;
+  const initialStep = Number.isFinite(requestedStep) ? Math.max(0, Math.min(requestedStep, steps.length - 1)) : 0;
+  const initialRole: Role = params.role === 'Athlete' || params.role === 'Athletic trainer' ? params.role : 'Coach';
+  const [manualStep, setManualStep] = useState({ sourceStep: initialStep, value: initialStep });
+  const [role, setRole] = useState<Role>(initialRole);
+  const stepIndex = manualStep.sourceStep === initialStep ? manualStep.value : initialStep;
   const step = steps[stepIndex];
   const isFinalStep = stepIndex === steps.length - 1;
   const isCompact = height < 780;
@@ -116,11 +121,11 @@ export default function OnboardingScreen() {
       router.push({ pathname: '/ready', params: { role } });
       return;
     }
-    setStepIndex((current) => Math.min(current + 1, steps.length - 1));
+    setManualStep({ sourceStep: initialStep, value: Math.min(stepIndex + 1, steps.length - 1) });
   }
 
   function goBack() {
-    setStepIndex((current) => Math.max(current - 1, 0));
+    setManualStep({ sourceStep: initialStep, value: Math.max(stepIndex - 1, 0) });
   }
 
   const Visual = step.visual;
@@ -143,7 +148,7 @@ export default function OnboardingScreen() {
                 accessibilityLabel="Skip introduction"
                 accessibilityRole="button"
                 hitSlop={10}
-                onPress={() => setStepIndex(steps.length - 1)}
+                onPress={() => setManualStep({ sourceStep: initialStep, value: steps.length - 1 })}
                 style={({ pressed }) => [styles.skipButton, pressed && styles.buttonPressed]}>
                 <Text style={styles.skipText}>Skip</Text>
               </Pressable>

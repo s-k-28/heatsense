@@ -1053,8 +1053,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   alertRows: {
-    flex: 1,
-    justifyContent: 'center',
     marginTop: Spacing.four,
   },
   alertRow: {
@@ -1098,7 +1096,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.medium,
     flexDirection: 'row',
     gap: Spacing.three,
-    marginTop: Spacing.four,
+    marginTop: 'auto',
     padding: Spacing.three,
   },
   alertFooterText: {

@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DashboardContent } from '@/components/dashboard-content';
@@ -11,7 +12,7 @@ import {
   type DashboardRole,
   type DashboardTab,
 } from '@/components/dashboard-shell';
-import { MaxContentWidth, Palette, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Motion, Palette, Spacing } from '@/constants/theme';
 
 const icons = {
   alert: { ios: 'bell.badge.fill', android: 'notifications_active', web: 'notifications_active' },
@@ -67,7 +68,11 @@ export default function DashboardScreen() {
   const role = normalizeRole(params.role);
   const tabs = roleTabs[role];
   const requestedTab = tabs.some((item) => item.id === params.tab) ? params.tab! : 'home';
-  const [activeTab, setActiveTab] = useState(requestedTab);
+  const [manualSelection, setManualSelection] = useState({ role, sourceTab: requestedTab, value: requestedTab });
+  const reducedMotion = useReducedMotion();
+  const activeTab = manualSelection.role === role && manualSelection.sourceTab === requestedTab
+    ? manualSelection.value
+    : requestedTab;
 
   const identity = roleIdentity[role];
   const contentKey = useMemo(() => `${role}-${activeTab}`, [activeTab, role]);
@@ -77,14 +82,30 @@ export default function DashboardScreen() {
       <StatusBar style="dark" />
       <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
         <View style={styles.shell}>
-          <DashboardHeader eyebrow={identity.eyebrow} name={identity.name} onNotifications={() => setActiveTab(role === 'athlete' ? 'status' : role === 'coach' ? 'alerts' : 'monitor')} />
+          <DashboardHeader
+            eyebrow={identity.eyebrow}
+            name={identity.name}
+            onNotifications={() =>
+              setManualSelection({
+                role,
+                sourceTab: requestedTab,
+                value: role === 'athlete' ? 'status' : role === 'coach' ? 'alerts' : 'monitor',
+              })
+            }
+          />
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             key={contentKey}
             showsVerticalScrollIndicator={false}>
-            <DashboardContent role={role} tab={activeTab} />
+            <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(Motion.quick)} key={contentKey}>
+              <DashboardContent role={role} tab={activeTab} />
+            </Animated.View>
           </ScrollView>
-          <BottomDock activeTab={activeTab} onChange={setActiveTab} tabs={tabs} />
+          <BottomDock
+            activeTab={activeTab}
+            onChange={(value) => setManualSelection({ role, sourceTab: requestedTab, value })}
+            tabs={tabs}
+          />
         </View>
       </SafeAreaView>
     </View>

@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "product": "HeatSense",
+    "version": "0.7-ui",
+    "device": "iPhone 17 Pro Max",
+    "figmaPages": ["00 Foundations", "01 Onboarding", "02 Coach", "03 Athletic Trainer", "04 Athlete"]
+  },
+  "screens": [
+    { "page": "01 Onboarding", "name": "01 Welcome", "route": "/?step=1" },
+    { "page": "01 Onboarding", "name": "02 WBGT risk", "route": "/?step=2" },
+    { "page": "01 Onboarding", "name": "03 Practice plan", "route": "/?step=3" },
+    { "page": "01 Onboarding", "name": "04 Athlete signals", "route": "/?step=4" },
+    { "page": "01 Onboarding", "name": "05 Movement context", "route": "/?step=5" },
+    { "page": "01 Onboarding", "name": "06 Alert behavior", "route": "/?step=6" },
+    { "page": "01 Onboarding", "name": "07 Role selection", "route": "/?step=7" },
+    { "page": "01 Onboarding", "name": "08 Coach setup", "route": "/ready?role=Coach" },
+    { "page": "01 Onboarding", "name": "09 Trainer setup", "route": "/ready?role=Athletic%20trainer" },
+    { "page": "01 Onboarding", "name": "10 Athlete setup", "route": "/ready?role=Athlete" },
+    { "page": "02 Coach", "name": "01 Home", "route": "/dashboard?role=coach&tab=home" },
+    { "page": "02 Coach", "name": "02 Practice plan", "route": "/dashboard?role=coach&tab=plan" },
+    { "page": "02 Coach", "name": "03 Team", "route": "/dashboard?role=coach&tab=team" },
+    { "page": "02 Coach", "name": "04 Alerts", "route": "/dashboard?role=coach&tab=alerts" },
+    { "page": "02 Coach", "name": "05 Profile", "route": "/dashboard?role=coach&tab=profile" },
+    { "page": "03 Athletic Trainer", "name": "01 Home", "route": "/dashboard?role=trainer&tab=home" },
+    { "page": "03 Athletic Trainer", "name": "02 Monitor", "route": "/dashboard?role=trainer&tab=monitor" },
+    { "page": "03 Athletic Trainer", "name": "03 Athletes", "route": "/dashboard?role=trainer&tab=athletes" },
+    { "page": "03 Athletic Trainer", "name": "04 Protocols", "route": "/dashboard?role=trainer&tab=protocols" },
+    { "page": "03 Athletic Trainer", "name": "05 Profile", "route": "/dashboard?role=trainer&tab=profile" },
+    { "page": "04 Athlete", "name": "01 Home", "route": "/dashboard?role=athlete&tab=home" },
+    { "page": "04 Athlete", "name": "02 My Status", "route": "/dashboard?role=athlete&tab=status" },
+    { "page": "04 Athlete", "name": "03 Sessions", "route": "/dashboard?role=athlete&tab=sessions" },
+    { "page": "04 Athlete", "name": "04 Learn", "route": "/dashboard?role=athlete&tab=learn" },
+    { "page": "04 Athlete", "name": "05 Profile", "route": "/dashboard?role=athlete&tab=profile" }
+  ]
+}
