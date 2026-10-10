@@ -1,10 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { type ComponentProps, useEffect } from 'react';
+import { type ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { ScreenIntro, SectionHeader } from '@/components/dashboard-shell';
+import FlameLogo from '@/components/FlameLogo';
 import { HeatIcon } from '@/components/heat-icon';
+import WristbandIllustration from '@/components/WristbandIllustration';
 import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
 
 const icons = {
@@ -13,6 +14,7 @@ const icons = {
   band: { ios: 'applewatch', android: 'watch', web: 'watch' },
   check: { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },
   cloud: { ios: 'wifi.exclamationmark', android: 'wifi_off', web: 'wifi_off' },
+  forward: { ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' },
   people: { ios: 'person.3.fill', android: 'groups', web: 'groups' },
   plus: { ios: 'plus', android: 'add', web: 'add' },
   shield: { ios: 'lock.shield.fill', android: 'privacy_tip', web: 'privacy_tip' },
@@ -72,24 +74,23 @@ function EmptyTeamState() {
 }
 
 function PairingState() {
-  const progress = useSharedValue(0);
-  const reduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    progress.value = reduceMotion ? 0.55 : withRepeat(withTiming(1, { duration: 1500 }), -1, false);
-  }, [progress, reduceMotion]);
-
-  const outerRing = useAnimatedStyle(() => ({ opacity: 0.32 - progress.value * 0.24, transform: [{ scale: 0.82 + progress.value * 0.38 }] }));
-  const innerRing = useAnimatedStyle(() => ({ opacity: 0.42 - progress.value * 0.2, transform: [{ scale: 0.92 + progress.value * 0.2 }] }));
-
   return (
     <>
-      <ScreenIntro title="Pair a HeatSense Band." />
+      <View style={styles.wristbandHero}>
+        <View style={styles.wristbandHeroTop}>
+          <Text style={styles.wristbandHeroKicker}>Meet</Text>
+          <Pressable accessibilityLabel="Learn more about the band" accessibilityRole="button" style={styles.wristbandHeroButton}>
+            <HeatIcon name={icons.forward} size={16} tintColor={Palette.ink} />
+          </Pressable>
+        </View>
+        <Text style={styles.wristbandHeroTitle}>Your HeatSense{'\n'}Band</Text>
+        <View style={styles.wristbandHeroArt}>
+          <WristbandIllustration size={200} />
+        </View>
+      </View>
       <Text style={styles.introBody}>Keep the band close to this phone. Pairing adds personal trends; the team’s WBGT plan works without it.</Text>
       <View style={styles.pairingStage}>
-        <Animated.View style={[styles.pairingRingOuter, outerRing]} />
-        <Animated.View style={[styles.pairingRingInner, innerRing]} />
-        <View style={styles.watchCore}><HeatIcon name={icons.band} size={58} tintColor={Palette.safe} /></View>
+        <View style={styles.watchCore}><FlameLogo size={44} /></View>
         <Text style={styles.scanningLabel}>Searching nearby</Text>
       </View>
       <View style={styles.deviceRow}>
@@ -172,20 +173,45 @@ function TimelineRow({ detail, label, pending, time }: { detail: string; label: 
 const styles = StyleSheet.create({
   flexOne: { flex: 1 },
   introBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 18, marginTop: Spacing.three, maxWidth: 380 },
+  wristbandHero: {
+    backgroundColor: '#14120F',
+    borderRadius: Radius.large,
+    overflow: 'hidden',
+    padding: Spacing.five,
+  },
+  wristbandHeroTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  wristbandHeroKicker: { color: 'rgba(255,255,255,0.6)', fontFamily: Fonts.uiRegular, fontSize: 13 },
+  wristbandHeroButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 18,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  wristbandHeroTitle: {
+    color: '#FFFFFF',
+    fontFamily: Fonts.uiRegular,
+    fontSize: 32,
+    letterSpacing: 0,
+    lineHeight: 38,
+    marginTop: Spacing.four,
+  },
+  wristbandHeroArt: { alignItems: 'center', marginTop: Spacing.five },
   weatherPanel: { borderRadius: Radius.large, marginTop: Spacing.five, minHeight: 300, padding: Spacing.five },
   panelTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   stalePill: { alignItems: 'center', backgroundColor: 'rgba(255,253,248,0.7)', borderRadius: Radius.pill, flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingVertical: 7 },
-  staleText: { color: Palette.warning, fontFamily: Fonts.bold, fontSize: 9 },
-  mutedLabel: { color: 'rgba(27,28,25,0.66)', fontFamily: Fonts.semibold, fontSize: 10 },
+  staleText: { color: Palette.warning, fontFamily: Fonts.bold, fontSize: 11 },
+  mutedLabel: { color: 'rgba(27,28,25,0.66)', fontFamily: Fonts.semibold, fontSize: 12 },
   weatherValue: { color: Palette.inkMuted, fontFamily: Fonts.extrabold, fontSize: 80, letterSpacing: -5, lineHeight: 86, marginTop: Spacing.five },
   weatherUnit: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 11 },
   weatherRule: { backgroundColor: 'rgba(27,28,25,0.16)', height: 1, marginTop: 'auto' },
   weatherInstruction: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13, lineHeight: 18, marginTop: Spacing.four, maxWidth: 300 },
-  supportText: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 10, lineHeight: 15, marginTop: Spacing.three, paddingHorizontal: Spacing.two, textAlign: 'center' },
+  supportText: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: Spacing.three, paddingHorizontal: Spacing.two, textAlign: 'center' },
   invitePanel: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.five },
-  inviteLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 10, marginTop: Spacing.five },
+  inviteLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, marginTop: Spacing.five },
   inviteCode: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 35, letterSpacing: 2, marginTop: 3 },
-  inviteDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 10, marginTop: 3 },
+  inviteDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, marginTop: 3 },
   flatList: { borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1 },
   checklistRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 62 },
   checkCircle: { borderColor: Palette.border, borderRadius: 10, borderWidth: 1, height: 20, width: 20 },
@@ -194,14 +220,14 @@ const styles = StyleSheet.create({
   pairingStage: { alignItems: 'center', height: 260, justifyContent: 'center', marginTop: Spacing.four },
   pairingRingOuter: { borderColor: '#9CCDB7', borderRadius: 100, borderWidth: 1, height: 200, position: 'absolute', width: 200 },
   pairingRingInner: { borderColor: '#75B99C', borderRadius: 75, borderWidth: 1, height: 150, position: 'absolute', width: 150 },
-  watchCore: { alignItems: 'center', backgroundColor: '#E5F0E9', borderRadius: 55, height: 110, justifyContent: 'center', width: 110 },
-  scanningLabel: { bottom: 5, color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 10, position: 'absolute' },
+  watchCore: { alignItems: 'center', backgroundColor: 'rgba(76,155,118,0.16)', borderRadius: 55, height: 110, justifyContent: 'center', width: 110 },
+  scanningLabel: { bottom: 5, color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 12, position: 'absolute' },
   deviceRow: { alignItems: 'center', backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, flexDirection: 'row', gap: Spacing.three, minHeight: 76, paddingHorizontal: Spacing.four },
   deviceTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12 },
-  deviceDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9, lineHeight: 13, marginTop: 3 },
+  deviceDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 13, marginTop: 3 },
   nearbyDot: { backgroundColor: Palette.safe, borderRadius: 5, height: 10, width: 10 },
   privacyRow: { alignItems: 'flex-start', flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.four, paddingHorizontal: Spacing.two },
-  privacyText: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.medium, fontSize: 10, lineHeight: 15 },
+  privacyText: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15 },
   noBandHero: { borderRadius: Radius.large, marginTop: Spacing.five, minHeight: 300, padding: Spacing.five },
   noBandMetric: { alignItems: 'baseline', flexDirection: 'row', marginTop: Spacing.five },
   noBandValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 76, letterSpacing: -4 },
@@ -209,17 +235,17 @@ const styles = StyleSheet.create({
   noBandZone: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 24, marginTop: 'auto' },
   noBandGuidance: { color: 'rgba(27,28,25,0.76)', fontFamily: Fonts.medium, fontSize: 11, lineHeight: 16, marginTop: Spacing.two, maxWidth: 300 },
   optionalBandRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, minHeight: 78, paddingHorizontal: Spacing.two },
-  ackBanner: { alignItems: 'flex-start', backgroundColor: '#E4EFE8', borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, padding: Spacing.four },
+  ackBanner: { alignItems: 'flex-start', backgroundColor: 'rgba(76,155,118,0.16)', borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, padding: Spacing.four },
   ackTitle: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 15 },
-  ackBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 10, lineHeight: 15, marginTop: 3 },
+  ackBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: 3 },
   incidentSummary: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.five, paddingBottom: Spacing.four, paddingHorizontal: Spacing.two },
   incidentName: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 16 },
-  warningStatus: { backgroundColor: '#FFF0DE', borderRadius: Radius.pill, paddingHorizontal: 11, paddingVertical: 6 },
-  warningStatusText: { color: Palette.warning, fontFamily: Fonts.bold, fontSize: 9 },
+  warningStatus: { backgroundColor: 'rgba(224,124,62,0.18)', borderRadius: Radius.pill, paddingHorizontal: 11, paddingVertical: 6 },
+  warningStatusText: { color: Palette.warning, fontFamily: Fonts.bold, fontSize: 11 },
   timelineRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 72 },
   timelineMarker: { backgroundColor: Palette.safe, borderRadius: 5, height: 10, width: 10 },
   timelineMarkerPending: { backgroundColor: Palette.caution },
-  timelineTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9 },
+  timelineTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
   primaryAction: { alignItems: 'center', backgroundColor: Palette.ink, borderRadius: Radius.pill, flexDirection: 'row', gap: Spacing.two, justifyContent: 'center', marginTop: Spacing.five, minHeight: 52 },
   primaryActionSecondary: { backgroundColor: Palette.surface, borderColor: Palette.border, borderWidth: 1 },
   primaryActionText: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 13 },

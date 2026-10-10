@@ -15,6 +15,7 @@ import { BarChart, LineChart } from 'react-native-gifted-charts';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { HeatIcon } from '@/components/heat-icon';
+import WristbandIllustration from '@/components/WristbandIllustration';
 import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
 
 const iconNames = {
@@ -35,6 +36,27 @@ const iconNames = {
 } as const;
 
 type SymbolName = ComponentProps<typeof HeatIcon>['name'];
+
+export function WristbandVisual() {
+  return (
+    <View style={[styles.heroCard, styles.wristbandCard]}>
+      <View style={styles.visualTopRow}>
+        <View style={styles.livePill}>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveText}>The HeatSense Band</Text>
+        </View>
+        <HeatIcon name={iconNames.shield} size={22} tintColor={Palette.coral} />
+      </View>
+      <View style={styles.wristbandArt}>
+        <WristbandIllustration size={230} />
+      </View>
+      <View style={styles.visualFooter}>
+        <Text style={styles.footerLabel}>Optional, not required</Text>
+        <Text style={styles.footerValue}>Adds personal heart-rate, skin, and recovery trends.</Text>
+      </View>
+    </View>
+  );
+}
 
 export function RunnerSignalVisual() {
   const runnerX = useSharedValue(0);
@@ -644,6 +666,15 @@ const styles = StyleSheet.create({
   runnerCard: {
     minHeight: 360,
   },
+  wristbandCard: {
+    backgroundColor: Palette.canvas,
+    minHeight: 360,
+  },
+  wristbandArt: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
   visualTopRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -717,7 +748,7 @@ const styles = StyleSheet.create({
   footerLabel: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 10,
+    fontSize: 12,
   },
   footerValue: {
     color: Palette.ink,
@@ -746,7 +777,7 @@ const styles = StyleSheet.create({
   },
   sunIconWrap: {
     alignItems: 'center',
-    backgroundColor: '#FFE8B5',
+    backgroundColor: 'rgba(224,124,62,0.2)',
     borderRadius: Radius.pill,
     height: 44,
     justifyContent: 'center',
@@ -800,7 +831,7 @@ const styles = StyleSheet.create({
   wbgtTimingLabel: {
     color: 'rgba(27,28,25,0.62)',
     fontFamily: Fonts.medium,
-    fontSize: 9,
+    fontSize: 11,
     marginTop: 2,
   },
   wbgtTrend: {
@@ -851,7 +882,7 @@ const styles = StyleSheet.create({
   planRowDetail: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 3,
   },
   planFooter: {
@@ -867,7 +898,7 @@ const styles = StyleSheet.create({
   planFooterBody: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 10,
+    fontSize: 12,
     lineHeight: 15,
     marginTop: 3,
   },
@@ -925,7 +956,7 @@ const styles = StyleSheet.create({
   vitalUnit: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 9,
+    fontSize: 11,
   },
   miniChartClip: {
     height: 50,
@@ -948,7 +979,7 @@ const styles = StyleSheet.create({
   signalFootnoteBody: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 10,
+    fontSize: 12,
     lineHeight: 15,
     marginTop: 3,
   },
@@ -1005,7 +1036,7 @@ const styles = StyleSheet.create({
   contextScenarioDetail: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 3,
   },
   contextResult: {
@@ -1016,7 +1047,7 @@ const styles = StyleSheet.create({
   },
   contextResultText: {
     fontFamily: Fonts.bold,
-    fontSize: 9,
+    fontSize: 11,
     lineHeight: 12,
   },
   contextFooter: {
@@ -1038,7 +1069,7 @@ const styles = StyleSheet.create({
   contextFooterBody: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 3,
   },
   alertCard: {
@@ -1073,7 +1104,7 @@ const styles = StyleSheet.create({
   },
   alertLevel: {
     fontFamily: Fonts.bold,
-    fontSize: 10,
+    fontSize: 12,
   },
   alertMessage: {
     color: Palette.ink,
@@ -1085,7 +1116,7 @@ const styles = StyleSheet.create({
     color: Palette.inkMuted,
     flex: 1,
     fontFamily: Fonts.medium,
-    fontSize: 9,
+    fontSize: 11,
     lineHeight: 13,
     textAlign: 'right',
   },
@@ -1101,7 +1132,7 @@ const styles = StyleSheet.create({
     color: Palette.emergency,
     flex: 1,
     fontFamily: Fonts.semibold,
-    fontSize: 10,
+    fontSize: 12,
     lineHeight: 14,
   },
   teamCard: {
@@ -1141,7 +1172,7 @@ const styles = StyleSheet.create({
   safeText: {
     color: Palette.safe,
     fontFamily: Fonts.bold,
-    fontSize: 10,
+    fontSize: 12,
   },
   teamDivider: {
     backgroundColor: Palette.border,
@@ -1171,7 +1202,7 @@ const styles = StyleSheet.create({
   rowDetail: {
     color: Palette.inkMuted,
     fontFamily: Fonts.medium,
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 3,
   },
   statusDot: {
