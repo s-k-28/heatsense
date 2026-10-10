@@ -99,7 +99,7 @@ export default function ReadyScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.shell}>
           <Pressable
@@ -179,26 +179,26 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingTop: Spacing.six },
   kicker: { color: Palette.coralDark, fontFamily: Fonts.bold, fontSize: 12 },
   title: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 31, letterSpacing: -1.1, lineHeight: 36, marginTop: Spacing.two, maxWidth: 430 },
-  body: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 13, lineHeight: 19, marginTop: Spacing.three, maxWidth: 430 },
+  body: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 14, lineHeight: 20, marginTop: Spacing.three, maxWidth: 430 },
   preview: { borderRadius: Radius.large, marginTop: Spacing.five, minHeight: 142, overflow: 'hidden', padding: Spacing.four },
   previewTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  previewLabel: { color: 'rgba(27,28,25,0.72)', fontFamily: Fonts.semibold, fontSize: 10 },
+  previewLabel: { color: 'rgba(27,28,25,0.72)', fontFamily: Fonts.semibold, fontSize: 12 },
   previewMetric: { alignItems: 'flex-end', flexDirection: 'row', marginTop: Spacing.three },
   previewValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 45, letterSpacing: -2, lineHeight: 47 },
-  previewUnit: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 11, marginBottom: 7, marginLeft: 7 },
-  previewDetail: { color: 'rgba(27,28,25,0.72)', fontFamily: Fonts.semibold, fontSize: 10, marginTop: 2 },
+  previewUnit: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12, marginBottom: 7, marginLeft: 7 },
+  previewDetail: { color: 'rgba(27,28,25,0.72)', fontFamily: Fonts.semibold, fontSize: 12, marginTop: 2 },
   setupHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.five },
   setupTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 16 },
-  setupTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 10 },
+  setupTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12 },
   setupList: { borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1, marginTop: Spacing.three },
   setupRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 67, paddingVertical: Spacing.two },
   setupRowLast: { borderBottomWidth: 0 },
-  stepNumber: { color: Palette.coralDark, fontFamily: Fonts.bold, fontSize: 10, width: 20 },
+  stepNumber: { color: Palette.coralDark, fontFamily: Fonts.bold, fontSize: 12, width: 22 },
   rowCopy: { flex: 1 },
-  rowLabel: { color: Palette.ink, fontFamily: Fonts.semibold, fontSize: 12 },
-  rowDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9, lineHeight: 13, marginTop: 3 },
-  requiredText: { color: Palette.ink, fontFamily: Fonts.semibold, fontSize: 9 },
-  optionalText: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 9 },
+  rowLabel: { color: Palette.ink, fontFamily: Fonts.semibold, fontSize: 13 },
+  rowDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 15, marginTop: 3 },
+  requiredText: { color: Palette.ink, fontFamily: Fonts.semibold, fontSize: 11 },
+  optionalText: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
   button: { alignItems: 'center', backgroundColor: Palette.ink, borderRadius: Radius.pill, flexDirection: 'row', gap: Spacing.two, height: 54, justifyContent: 'center' },
   buttonText: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 14 },
   buttonPressed: { opacity: 0.7 },

@@ -28,10 +28,10 @@ import {
   AlertLevelsVisual,
   ContextVisual,
   PracticePlanVisual,
-  RunnerSignalVisual,
   SignalsVisual,
   TeamVisual,
   WbgtVisual,
+  WristbandVisual,
 } from '@/components/onboarding-visuals';
 import { Fonts, MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
 
@@ -44,11 +44,10 @@ const icons = {
 
 const steps = [
   {
-    eyebrow: '',
-    title: 'Heat safety, for every athlete.',
-    description:
-      'Know the field. Notice the athlete. Act before heat becomes an emergency.',
-    visual: RunnerSignalVisual,
+    eyebrow: 'HeatSense',
+    title: 'Before it becomes an emergency.',
+    description: 'Know the field. Notice the athlete. Act early.',
+    visual: WristbandVisual,
   },
   {
     eyebrow: 'UIL practice guidance',
@@ -132,7 +131,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
         <View style={styles.shell}>
           <View style={styles.topBar}>
@@ -174,7 +173,7 @@ export default function OnboardingScreen() {
               exiting={FadeOut.duration(140)}
               key={stepIndex}
               style={styles.story}>
-              <OnboardingCopy compact={isCompact} step={step} />
+              <OnboardingCopy compact={isCompact} isHero={stepIndex === 0} step={step} />
               <View style={styles.visualWrap}>
                 <Visual />
               </View>
@@ -235,17 +234,19 @@ function ProgressSegment({ active }: { active: boolean }) {
 
 function OnboardingCopy({
   compact,
+  isHero,
   step,
   style,
 }: {
   compact: boolean;
+  isHero: boolean;
   step: (typeof steps)[number];
   style?: StyleProp<ViewStyle>;
 }) {
   return (
     <View style={[styles.copyBlock, style]}>
       {step.eyebrow ? <Text style={styles.eyebrow}>{step.eyebrow}</Text> : null}
-      <Text style={[styles.title, compact && styles.titleCompact]}>{step.title}</Text>
+      <Text style={[styles.title, isHero && styles.heroTitle, compact && styles.titleCompact]}>{step.title}</Text>
       <Text style={styles.description}>{step.description}</Text>
     </View>
   );
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
   },
   brandName: {
     color: Palette.ink,
-    fontFamily: Fonts.extrabold,
+    fontFamily: Fonts.uiExtrabold,
     fontSize: 18,
     letterSpacing: -0.6,
   },
@@ -327,7 +328,7 @@ const styles = StyleSheet.create({
   },
   skipText: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.semibold,
+    fontFamily: Fonts.uiSemibold,
     fontSize: 13,
   },
   progressRow: {
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.border,
     borderRadius: Radius.pill,
     flex: 1,
-    height: 4,
+    height: 9,
   },
   scrollContent: {
     flexGrow: 1,
@@ -362,17 +363,25 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: Palette.coralDark,
-    fontFamily: Fonts.bold,
-    fontSize: 13,
+    fontFamily: Fonts.uiBold,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   title: {
     color: Palette.ink,
-    fontFamily: Fonts.extrabold,
+    fontFamily: Fonts.uiExtrabold,
     fontSize: 29,
     letterSpacing: -1.1,
     lineHeight: 34,
     marginTop: Spacing.two,
     maxWidth: 410,
+  },
+  heroTitle: {
+    fontFamily: Fonts.ctaItalicSemibold,
+    fontSize: 34,
+    letterSpacing: 0,
+    lineHeight: 39,
   },
   titleCompact: {
     fontSize: 27,
@@ -380,7 +389,7 @@ const styles = StyleSheet.create({
   },
   description: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontFamily: Fonts.uiMedium,
     fontSize: 14,
     lineHeight: 20,
     marginTop: Spacing.two,
@@ -392,7 +401,7 @@ const styles = StyleSheet.create({
   },
   rolePrompt: {
     color: Palette.ink,
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.uiBold,
     fontSize: 12,
   },
   roleRow: {
@@ -418,8 +427,8 @@ const styles = StyleSheet.create({
   },
   roleText: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.semibold,
-    fontSize: 11,
+    fontFamily: Fonts.uiSemibold,
+    fontSize: 13,
     textAlign: 'center',
   },
   roleTextSelected: {
@@ -462,7 +471,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: Palette.surface,
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.uiBold,
     fontSize: 16,
     textAlign: 'center',
   },

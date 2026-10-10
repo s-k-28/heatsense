@@ -2,7 +2,6 @@ import { useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DashboardContent } from '@/components/dashboard-content';
@@ -13,7 +12,7 @@ import {
   type DashboardRole,
   type DashboardTab,
 } from '@/components/dashboard-shell';
-import { MaxContentWidth, Motion, Palette, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Palette, Spacing } from '@/constants/theme';
 
 const icons = {
   alert: { ios: 'bell.badge.fill', android: 'notifications_active', web: 'notifications_active' },
@@ -70,7 +69,6 @@ export default function DashboardScreen() {
   const tabs = roleTabs[role];
   const requestedTab = tabs.some((item) => item.id === params.tab) ? params.tab! : 'home';
   const [manualSelection, setManualSelection] = useState({ role, sourceTab: requestedTab, value: requestedTab });
-  const reducedMotion = useReducedMotion();
   const activeTab = manualSelection.role === role && manualSelection.sourceTab === requestedTab
     ? manualSelection.value
     : requestedTab;
@@ -83,27 +81,15 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
         <View style={styles.shell}>
-          <DashboardHeader
-            eyebrow={identity.eyebrow}
-            name={identity.name}
-            onNotifications={() =>
-              setManualSelection({
-                role,
-                sourceTab: requestedTab,
-                value: role === 'athlete' ? 'status' : role === 'coach' ? 'alerts' : 'monitor',
-              })
-            }
-          />
+          <DashboardHeader eyebrow={identity.eyebrow} name={identity.name} />
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             key={contentKey}
             showsVerticalScrollIndicator={false}>
-            <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(Motion.quick)} key={contentKey}>
-              {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent role={role} tab={activeTab} />}
-            </Animated.View>
+            {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent role={role} tab={activeTab} />}
           </ScrollView>
           <BottomDock
             activeTab={activeTab}
