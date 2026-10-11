@@ -169,7 +169,7 @@ function AthleteHome() {
   );
 }
 
-function RiskHero({ mode }: { mode: 'coach' }) {
+export function RiskHero({ mode }: { mode: 'coach' }) {
   return (
     <LinearGradient colors={['#F28A69', '#F7B78D', '#FFF2D9']} end={{ x: 0.9, y: 1 }} start={{ x: 0, y: 0 }} style={styles.riskHero}>
       <View style={styles.riskTopline}>
