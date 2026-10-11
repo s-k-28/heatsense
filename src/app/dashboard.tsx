@@ -6,6 +6,7 @@ import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DashboardContent } from '@/components/dashboard-content';
+import { CoachWorkspace } from '@/components/coach/coach-workspace';
 import { DashboardState, type DashboardReviewState } from '@/components/dashboard-states';
 import {
   BottomDock,
@@ -81,6 +82,10 @@ export default function DashboardScreen() {
     : null;
   const contentKey = useMemo(() => `${role}-${activeTab}-${reviewState ?? 'default'}`, [activeTab, reviewState, role]);
 
+  if (role === 'coach') {
+    return <CoachWorkspace activeTab={activeTab} reviewState={reviewState} onTabChange={(value) => setManualSelection({ role, sourceTab: requestedTab, value })} />;
+  }
+
   return (
     <View style={styles.screen}>
       <StatusBar style="dark" />
@@ -93,7 +98,7 @@ export default function DashboardScreen() {
               setManualSelection({
                 role,
                 sourceTab: requestedTab,
-                value: role === 'athlete' ? 'status' : role === 'coach' ? 'alerts' : 'monitor',
+                value: role === 'athlete' ? 'status' : 'monitor',
               })
             }
           />

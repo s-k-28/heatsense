@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -95,7 +95,14 @@ const steps = [
 
 type Role = 'Coach' | 'Athletic trainer' | 'Athlete';
 
-export default function OnboardingScreen() {
+// The welcome screen is the app's entry; the step-by-step onboarding stays reachable at /?step=N.
+export default function OnboardingRoute() {
+  const { step } = useLocalSearchParams<{ step?: string }>();
+  if (step === undefined) return <Redirect href="/welcome" />;
+  return <OnboardingScreen />;
+}
+
+function OnboardingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ role?: string; step?: string }>();
   const { height } = useWindowDimensions();
