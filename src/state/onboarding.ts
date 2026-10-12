@@ -36,3 +36,31 @@ export function setTeamChoice(teamChoice: TeamChoice | null) {
 export function useTeamChoice() {
   return useSyncExternalStore(subscribe, () => state.teamChoice, () => state.teamChoice);
 }
+
+// Create-a-team details. This is a local draft only: no team exists on a server
+// until a backend accepts it. Dropdowns stay null until the coach picks a value.
+export type TeamDraft = { school: string; teamName: string; sport: string | null; level: string | null };
+
+let teamDraft: TeamDraft = { school: '', teamName: '', sport: null, level: null };
+
+export function setTeamDraft(update: Partial<TeamDraft>) {
+  teamDraft = { ...teamDraft, ...update };
+  listeners.forEach((listener) => listener());
+}
+
+export function useTeamDraft() {
+  return useSyncExternalStore(subscribe, () => teamDraft, () => teamDraft);
+}
+
+// The id of the team created from the draft, so returning to the Invite screen
+// reuses the same team (and its active code) instead of creating another.
+let teamId: string | null = null;
+
+export function setTeamId(id: string) {
+  teamId = id;
+  listeners.forEach((listener) => listener());
+}
+
+export function getTeamId() {
+  return teamId;
+}
