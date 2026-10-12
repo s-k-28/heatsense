@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { MobileViewport } from '@/components/mobile-viewport';
 
-// Temporary placeholder for the Create Team and Join Team screens.
+// Temporary placeholder for the Join Team screen (Create Team lives in team/create.tsx).
 export default function TeamPlaceholder() {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   return (
