@@ -10,9 +10,11 @@ This document keeps interface work tied to the HeatSense product instead of drif
 
 ## Visual system
 
-- Warm cream canvas (`#F6F3EC`), warm-white surfaces (`#FFFDF8`), coral primary accent (`#F06F5F`), near-black text (`#1B1C19`).
+- Coach workspace (September 16 rebuild): graphite canvas (`#0C0E11`), raised charcoal (`#171A1F`), pure-white primary text, bright warm-gray secondary text, and cool blue (`#8BB8FF`) for controls. Bold Barlow Condensed is used for headings and numerals outside the locked hero; Inter semibold/bold is used for body text and controls. Tokens live in `src/constants/coach-theme.ts`.
+- Onboarding, trainer, and athlete workspaces retain the warm cream canvas (`#F6F3EC`), warm-white surfaces (`#FFFDF8`), coral primary accent (`#F06F5F`), and near-black text (`#1B1C19`).
 - Color carries meaning: green is normal, amber is caution, orange is warning, and coral/red is emergency.
-- Atkinson Hyperlegible Next is the product typeface. Its differentiated letterforms support quick reading in outdoor conditions; use a restrained weight hierarchy instead of many display styles.
+- The approved orange WBGT hero is locked: original gradient, Atkinson Hyperlegible Next type, black 84°F reading, sun badge, guidance, and squiggle chart. Home and Plan reuse the original `RiskHero` component without restyling it.
+- The dark recheck card sits below the locked hero, so typography and countdown improvements never change the approved card. Shared athlete/alert/session detail screens use the dark workspace treatment.
 - Use native symbols with consistent optical size. Do not place unrelated emoji, glossy 3D icons, or mismatched illustration styles in the interface.
 - Cards exist to group real controls or related information. Do not add a card only to fill space.
 - Negative space must reveal hierarchy. If a region feels empty, first remove forced expansion or add missing product information; never add decorative metrics.
@@ -23,6 +25,9 @@ This document keeps interface work tied to the HeatSense product instead of drif
 - Prefer short ease-out transitions and damped springs. Avoid looping bounce, glow, parallax, or scale effects without a product state change.
 - Respect reduced-motion settings.
 - A selected signal must remain understandable after the animation ends through a persistent border or state marker.
+- Countdown and roster bars use the same `WorkspaceProgress` component: 12-point rounded tracks, white rounded fills, a soft glow, and reduced-motion-aware Reanimated updates. Roster proportions are identified by explicit Normal/Caution/Review labels and counts, not fill color.
+- Section titles share `WorkspaceSectionTitle`: bold white display type and one blue vertical marker. Non-hero text is at least 13 points with semibold body weight and bright metadata.
+- The sample 30-minute recheck uses absolute timestamps, clamps at zero, and shows an overdue state. It does not silently restart or mark a new reading as taken. Review-avatar pulses and all transitions respect reduced motion.
 
 ## Data and claims
 
@@ -61,7 +66,18 @@ Before a screen is accepted:
 
 ## Role workspaces
 
-All roles use the same five-item floating dock geometry and design tokens. Labels and information priority change because the work changes, not to create three disconnected apps.
+All roles use five-item floating navigation. Labels and information priority change because the work changes. Coach-specific dark tokens are separate from the existing warm theme.
+
+The coach rebuild preserves five-item navigation and content priority, with a dark floating dock and animated blue active marker. Its Plan, Team, Alerts, and Profile screens use the same dark tokens. The trainer and athlete workspaces retain their existing presentation.
+
+For coach preview and verification:
+
+```bash
+npm run web
+node --test scripts/check-coach-countdown.mjs
+```
+
+Open `/dashboard?role=coach`. The existing 84°F / Orange sample classification and 20/10-minute practice adjustments are unchanged. All current values are explicitly sample data; no live weather, wearable, or school policy service is connected. `npm install` and `npm run web` copy the installed Skia CanvasKit file into `public/` automatically.
 
 | Role | Five tabs | Home-screen priority |
 | --- | --- | --- |

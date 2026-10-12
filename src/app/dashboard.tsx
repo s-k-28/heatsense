@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DashboardContent } from '@/components/dashboard-content';
+import { CoachWorkspace } from '@/components/coach/coach-workspace';
 import { DashboardState, type DashboardReviewState } from '@/components/dashboard-states';
 import {
   BottomDock,
@@ -78,6 +79,10 @@ export default function DashboardScreen() {
     ? params.state as DashboardReviewState
     : null;
   const contentKey = useMemo(() => `${role}-${activeTab}-${reviewState ?? 'default'}`, [activeTab, reviewState, role]);
+
+  if (role === 'coach') {
+    return <CoachWorkspace activeTab={activeTab} reviewState={reviewState} onTabChange={(value) => setManualSelection({ role, sourceTab: requestedTab, value })} />;
+  }
 
   return (
     <View style={styles.screen}>

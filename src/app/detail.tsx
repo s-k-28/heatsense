@@ -7,7 +7,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { HeatIcon } from '@/components/heat-icon';
-import { Fonts, MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { CoachColors as C, CoachFonts as F } from '@/constants/coach-theme';
+import { WorkspaceSectionTitle } from '@/components/coach/workspace-ui';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+
+const Fonts = { ...F, regular: F.semibold, medium: F.semibold, extrabold: F.display };
+const Palette = {
+  canvas: C.background, surface: C.surface, surfaceMuted: C.raised,
+  ink: C.text, inkMuted: C.secondary, border: C.line,
+  coral: C.accent, coralDark: C.accent, warning: C.orange,
+  caution: C.yellow, safe: C.green, emergency: C.red,
+};
 
 const icons = {
   alert: { ios: 'exclamationmark.triangle.fill', android: 'warning', web: 'warning' },
@@ -26,6 +37,7 @@ type DetailKind = 'alert' | 'athlete' | 'session';
 type IconName = ComponentProps<typeof HeatIcon>['name'];
 
 export default function DetailScreen() {
+  const reducedMotion = useReducedMotion();
   const params = useLocalSearchParams<{ kind?: string; name?: string; title?: string }>();
   const kind: DetailKind = params.kind === 'alert' || params.kind === 'session' ? params.kind : 'athlete';
 
@@ -36,7 +48,9 @@ export default function DetailScreen() {
         <View style={styles.shell}>
           <DetailHeader />
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <Animated.View entering={reducedMotion ? undefined : FadeInDown.duration(260)}><Text style={styles.pageMeta}>SAMPLE DATA</Text>
             {kind === 'alert' ? <AlertDetail /> : kind === 'session' ? <SessionDetail title={params.title} /> : <AthleteDetail name={params.name} />}
+            </Animated.View>
           </ScrollView>
         </View>
       </SafeAreaView>
@@ -96,9 +110,9 @@ function AthleteDetail({ name = 'Maya Chen' }: { name?: string }) {
 function AlertDetail() {
   return (
     <>
-      <LinearGradient colors={['#C84433', '#E56B52']} style={styles.alertHero}>
+      <LinearGradient colors={[C.raised, C.surface]} style={styles.alertHero}>
         <View style={styles.alertTopline}>
-          <HeatIcon name={icons.alert} size={25} tintColor={Palette.surface} />
+          <HeatIcon name={icons.alert} size={25} tintColor={C.text} />
           <Text style={styles.alertTime}>Sent 2:14 PM</Text>
         </View>
         <Text style={styles.alertTitle}>Recovery check needed</Text>
@@ -132,7 +146,7 @@ function SessionDetail({ title = 'Varsity conditioning' }: { title?: string }) {
       <Text style={styles.pageTitle}>{title}</Text>
       <Text style={styles.pageMeta}>September 15 · 4:10–5:22 PM · Memorial Stadium</Text>
 
-      <LinearGradient colors={['#F29A72', '#F8C596', '#FFF2D9']} style={styles.sessionHero}>
+      <LinearGradient colors={[C.raised, C.surface]} style={styles.sessionHero}>
         <View style={styles.sessionTopline}><Text style={styles.sessionHeroLabel}>Peak field condition</Text><HeatIcon name={icons.sun} size={21} tintColor={Palette.ink} /></View>
         <View style={styles.sessionMetric}><Text style={styles.sessionValue}>84</Text><Text style={styles.sessionUnit}>°F WBGT</Text></View>
         <Text style={styles.sessionZone}>Orange zone · 38 minutes</Text>
@@ -168,15 +182,15 @@ function SignalChart({ color, stable }: { color: string; stable?: boolean }) {
   return <View style={styles.chart}><Svg height="100%" viewBox="0 0 340 90" width="100%"><Path d={path} fill="none" stroke={color} strokeLinecap="round" strokeWidth="4" /><Circle cx="337" cy={stable ? '45' : '55'} fill={Palette.surface} r="7" stroke={color} strokeWidth="4" /></Svg></View>;
 }
 
-function SectionTitle({ title }: { title: string }) { return <Text style={styles.sectionTitle}>{title}</Text>; }
+function SectionTitle({ title }: { title: string }) { return <View style={styles.sectionTitle}><WorkspaceSectionTitle title={title} /></View>; }
 
-function Status({ label, tone }: { label: string; tone: string }) { return <View style={[styles.status, { backgroundColor: `${tone}16` }]}><View style={[styles.statusDot, { backgroundColor: tone }]} /><Text style={[styles.statusText, { color: tone }]}>{label}</Text></View>; }
+function Status({ label, tone }: { label: string; tone: string }) { return <View style={[styles.status, { backgroundColor: tone }]}><View style={[styles.statusDot, { backgroundColor: C.background }]} /><Text style={[styles.statusText, { color: C.background }]}>{label}</Text></View>; }
 
 function MetricRow({ icon, label, tone, value }: { icon: IconName; label: string; tone: string; value: string }) { return <View style={styles.metricRow}><HeatIcon name={icon} size={19} tintColor={tone} /><Text style={styles.metricRowLabel}>{label}</Text><Text style={styles.metricRowValue}>{value}</Text></View>; }
 
 function TimelineRow({ detail, label, time, tone }: { detail: string; label: string; time: string; tone: string }) { return <View style={styles.timelineRow}><View style={[styles.timelineDot, { backgroundColor: tone }]} /><View style={styles.flexOne}><Text style={styles.timelineLabel}>{label}</Text><Text style={styles.timelineDetail}>{detail}</Text></View><Text style={styles.timelineTime}>{time}</Text></View>; }
 
-function PrimaryAction({ icon, label }: { icon: typeof icons.location; label: string }) { return <Pressable accessibilityRole="button" style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}><Text style={styles.primaryActionText}>{label}</Text><HeatIcon name={icon} size={18} tintColor={Palette.surface} /></Pressable>; }
+function PrimaryAction({ icon, label }: { icon: typeof icons.location; label: string }) { return <Pressable accessibilityRole="button" style={({ pressed }) => [styles.primaryAction, pressed && styles.pressed]}><Text style={styles.primaryActionText}>{label}</Text><HeatIcon name={icon} size={18} tintColor={C.text} /></Pressable>; }
 
 function ReasonRow({ label, value }: { label: string; value: string }) { return <View style={styles.reasonRow}><Text style={styles.reasonLabel}>{label}</Text><Text style={styles.reasonValue}>{value}</Text></View>; }
 
@@ -194,69 +208,69 @@ const styles = StyleSheet.create({
   backButton: { alignItems: 'center', backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: 22, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
   headerTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 14 },
   headerSpacer: { width: 44 },
-  titleRow: { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between' },
+  titleRow: { flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between' },
   pageTitle: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 31, letterSpacing: -1, lineHeight: 37 },
-  pageMeta: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: 4 },
+  pageMeta: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 13, lineHeight: 19, marginTop: 4 },
   status: { alignItems: 'center', borderRadius: Radius.pill, flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingVertical: 7 },
   statusDot: { borderRadius: 4, height: 7, width: 7 },
-  statusText: { fontFamily: Fonts.bold, fontSize: 11 },
+  statusText: { fontFamily: Fonts.bold, fontSize: 13 },
   signalPanel: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.five },
-  panelHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
-  metricLabel: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 11 },
-  metricValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 38, letterSpacing: -1.5, marginTop: 4 },
-  metricUnit: { color: Palette.inkMuted, fontFamily: Fonts.bold, fontSize: 11 },
-  elapsed: { color: Palette.warning, fontFamily: Fonts.bold, fontSize: 11 },
+  panelHeader: { flexWrap: 'wrap', gap: 12, alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
+  metricLabel: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 13 },
+  metricValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 38, letterSpacing: -1.5, marginTop: 4 , fontVariant: ['tabular-nums']},
+  metricUnit: { color: Palette.inkMuted, fontFamily: Fonts.bold, fontSize: 13 },
+  elapsed: { color: Palette.warning, fontFamily: Fonts.bold, fontSize: 13 },
   chart: { height: 120, marginTop: Spacing.two },
   chartLabels: { flexDirection: 'row', justifyContent: 'space-between' },
-  chartLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
-  interpretation: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, color: Palette.ink, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 17, marginTop: Spacing.four, paddingTop: Spacing.four },
-  sectionTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 18, marginBottom: Spacing.three, marginTop: Spacing.six },
+  chartLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 13 },
+  interpretation: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, color: Palette.ink, fontFamily: Fonts.medium, fontSize: 13, lineHeight: 19, marginTop: Spacing.four, paddingTop: Spacing.four },
+  sectionTitle: { marginBottom: 12, marginTop: 28 },
   flatMetrics: { borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1 },
   metricRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 62 },
-  metricRowLabel: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.semibold, fontSize: 11 },
-  metricRowValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12 },
+  metricRowLabel: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.semibold, fontSize: 13 },
+  metricRowValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13 },
   timelineRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 72 },
   timelineDot: { borderRadius: 5, height: 10, width: 10 },
-  timelineLabel: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12 },
-  timelineDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 13, marginTop: 2 },
-  timelineTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
-  primaryAction: { alignItems: 'center', backgroundColor: Palette.ink, borderRadius: Radius.pill, flexDirection: 'row', gap: Spacing.two, justifyContent: 'center', marginTop: Spacing.five, minHeight: 52 },
-  primaryActionText: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 13 },
-  disclaimer: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 14, marginTop: Spacing.three, textAlign: 'center' },
+  timelineLabel: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13 },
+  timelineDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 13, lineHeight: 19, marginTop: 2 },
+  timelineTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 13 },
+  primaryAction: { alignItems: 'center', backgroundColor: C.accent, borderRadius: Radius.pill, flexDirection: 'row', gap: Spacing.two, justifyContent: 'center', marginTop: Spacing.five, minHeight: 52 },
+  primaryActionText: { color: C.background, fontFamily: Fonts.bold, fontSize: 13 },
+  disclaimer: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 13, lineHeight: 19, marginTop: Spacing.three, textAlign: 'center' },
   alertHero: { borderRadius: Radius.large, padding: Spacing.five },
   alertTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  alertTime: { color: 'rgba(255,253,248,0.82)', fontFamily: Fonts.semibold, fontSize: 12 },
-  alertTitle: { color: Palette.surface, fontFamily: Fonts.extrabold, fontSize: 29, letterSpacing: -0.8, lineHeight: 34, marginTop: Spacing.six },
-  alertName: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 14, marginTop: Spacing.three },
-  alertBody: { color: 'rgba(255,253,248,0.84)', fontFamily: Fonts.medium, fontSize: 11, lineHeight: 17, marginTop: Spacing.two },
+  alertTime: { color: C.secondary, fontFamily: Fonts.semibold, fontSize: 13 },
+  alertTitle: { color: C.text, fontFamily: Fonts.extrabold, fontSize: 29, letterSpacing: -0.8, lineHeight: 34, marginTop: Spacing.six },
+  alertName: { color: C.text, fontFamily: Fonts.bold, fontSize: 14, marginTop: Spacing.three },
+  alertBody: { color: C.secondary, fontFamily: Fonts.medium, fontSize: 13, lineHeight: 19, marginTop: Spacing.two },
   alertAction: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: Radius.pill, flexDirection: 'row', gap: Spacing.two, justifyContent: 'center', marginTop: Spacing.five, minHeight: 50 },
-  alertActionText: { color: Palette.emergency, fontFamily: Fonts.bold, fontSize: 13 },
+  alertActionText: { color: C.accent, fontFamily: Fonts.bold, fontSize: 13 },
   reasonList: { borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1 },
   reasonRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 57 },
-  reasonLabel: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 11 },
-  reasonValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 11 },
+  reasonLabel: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 13 },
+  reasonValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13 },
   responseRow: { alignItems: 'flex-start', flexDirection: 'row', gap: Spacing.three },
   responseIndex: { color: Palette.emergency, fontFamily: Fonts.extrabold, fontSize: 19, textAlign: 'center', width: 24 },
   responseCopy: { borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, marginBottom: Spacing.four, paddingBottom: Spacing.four },
   responseTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13 },
-  responseBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: 3 },
-  contactRow: { alignItems: 'center', backgroundColor: 'rgba(240,111,95,0.16)', borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, padding: Spacing.four },
-  contactText: { color: Palette.emergency, fontFamily: Fonts.bold, fontSize: 11 },
+  responseBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 13, lineHeight: 19, marginTop: 3 },
+  contactRow: { alignItems: 'center', backgroundColor: C.raised, borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, padding: Spacing.four },
+  contactText: { color: Palette.emergency, fontFamily: Fonts.bold, fontSize: 13 },
   sessionHero: { borderRadius: Radius.large, marginTop: Spacing.five, minHeight: 285, padding: Spacing.five },
   sessionTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  sessionHeroLabel: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 11 },
+  sessionHeroLabel: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13 },
   sessionMetric: { alignItems: 'baseline', flexDirection: 'row', marginTop: Spacing.five },
-  sessionValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 70, letterSpacing: -4 },
-  sessionUnit: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12, marginLeft: 7 },
+  sessionValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 70, letterSpacing: -4 , fontVariant: ['tabular-nums']},
+  sessionUnit: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13, marginLeft: 7 },
   sessionZone: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 19, marginTop: 'auto' },
-  sessionRule: { backgroundColor: 'rgba(27,28,25,0.15)', height: 1, marginTop: Spacing.three },
-  sessionGuidance: { color: 'rgba(27,28,25,0.74)', fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: Spacing.three },
+  sessionRule: { backgroundColor: C.line, height: 1, marginTop: Spacing.three },
+  sessionGuidance: { color: C.secondary, fontFamily: Fonts.medium, fontSize: 13, lineHeight: 19, marginTop: Spacing.three },
   recoverySection: { borderBottomColor: Palette.border, borderBottomWidth: 1, paddingBottom: Spacing.four },
   recoveryTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  recoveryValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 30 },
+  recoveryValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 30 , fontVariant: ['tabular-nums']},
   sessionSummary: { borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1, flexDirection: 'row', marginTop: Spacing.five },
   summaryMetric: { flex: 1, paddingVertical: Spacing.four },
-  summaryValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 15 },
-  summaryLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, marginTop: 2 },
-  pressed: { opacity: 0.68 },
+  summaryValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 15 , fontVariant: ['tabular-nums']},
+  summaryLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 13, marginTop: 2 },
+  pressed: { backgroundColor: '#26364D' },
 });
