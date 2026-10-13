@@ -1,6 +1,4 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control';
-import { LinearGradient } from 'expo-linear-gradient';
-import FlowingGradient from '@/components/FlowingGradient';
 import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
@@ -20,6 +18,8 @@ import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from 're
 
 import { ScreenIntro, SectionHeader, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
+import { HeatSenseMascot } from '@/components/heatsense-mascot';
+import { DepthButton } from '@/components/ui/depth-button';
 import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
 
 type IconName = ComponentProps<typeof HeatIcon>['name'];
@@ -89,7 +89,7 @@ function AthleteContent({ tab }: { tab: string }) {
 function CoachHome() {
   return (
     <>
-      <ScreenIntro title="Practice is in the Orange zone." />
+      <ScreenIntro typed eyebrow="Today at practice" title="Practice is in the Orange zone." />
       <RiskHero mode="coach" />
       <SectionHeader action="Full plan" title="Today’s adjustments" />
       <View style={styles.ruleStrip}>
@@ -106,7 +106,7 @@ function CoachHome() {
 function TrainerHome() {
   return (
     <>
-      <ScreenIntro title="Two athletes need review." />
+      <ScreenIntro typed eyebrow="Review queue" title="Two athletes need review." />
       <View style={styles.triageCard}>
         <View style={styles.triageHeader}>
           <View style={styles.triageIcon}><HeatIcon name={icons.recovery} size={23} tintColor={Palette.surface} /></View>
@@ -133,20 +133,25 @@ function TrainerHome() {
 function AthleteHome() {
   return (
     <>
-      <ScreenIntro title="Hi, Maya." />
-      <Text style={styles.contextLine}>Tuesday · Varsity practice at 4:10 PM</Text>
+      <View style={styles.greetingRow}>
+        <View style={styles.flexOne}>
+          <ScreenIntro typed eyebrow="Good afternoon" title="Hi, Maya." />
+          <Text style={styles.contextLine}>Tuesday · Varsity practice at 4:10 PM</Text>
+        </View>
+        <HeatSenseMascot height={104} reaction={null} />
+      </View>
       <View style={styles.bentoGrid}>
-        <FlowingGradient colors={['#F49778', '#F7C3A8', '#FFF6E7']} style={styles.bentoPrimary}>
+        <View style={styles.bentoPrimary}>
           <View style={styles.bentoTopline}>
             <Text style={styles.bentoLabel}>Field WBGT</Text>
-            <HeatIcon name={icons.sun} size={21} tintColor={Palette.zoneOrangeDeep} />
+            <HeatIcon name={icons.sun} size={21} tintColor={Palette.warning} />
           </View>
           <Text style={styles.bentoNumber}>84</Text>
           <Text style={styles.bentoZone}>Orange zone</Text>
           <Text style={styles.bentoHint}>Practice plan adjusted</Text>
-        </FlowingGradient>
+        </View>
         <View style={styles.bentoStack}>
-          <MetricTile icon={icons.droplet} label="Hydration" tone="#547A8C" value="2 breaks" />
+          <MetricTile icon={icons.droplet} label="Hydration" tone={Palette.info} value="2 breaks" />
           <MetricTile icon={icons.recovery} label="Recovery" tone={Palette.safe} value="On baseline" />
         </View>
       </View>
@@ -161,7 +166,7 @@ function AthleteHome() {
         <View style={styles.weekBars}>
           {[42, 66, 52, 78, 36, 61, 73].map((height, index) => (
             <View key={index} style={styles.weekBarSlot}>
-              <View style={[styles.weekBar, { height }]} />
+              <View style={[styles.weekBar, { height }, index === 1 && styles.weekBarToday]} />
               <Text style={styles.weekDay}>{['M', 'T', 'W', 'T', 'F', 'S', 'S'][index]}</Text>
             </View>
           ))}
@@ -182,13 +187,13 @@ function AthleteHome() {
 
 export function RiskHero({ mode }: { mode: 'coach' }) {
   return (
-    <FlowingGradient colors={['#F28A69', '#F7B78D', '#FFF2D9']} style={styles.riskHero}>
+    <View style={styles.riskHero}>
       <View style={styles.riskTopline}>
         <View>
           <Text style={styles.riskLocation}>Memorial Stadium · 4:10 PM</Text>
           <Text style={styles.riskSource}>Field reading · updated 2 min ago</Text>
         </View>
-        <View style={styles.sunBubble}><HeatIcon name={icons.sun} size={22} tintColor={Palette.zoneOrangeDeep} /></View>
+        <View style={styles.sunBubble}><HeatIcon name={icons.sun} size={22} tintColor={Palette.warning} /></View>
       </View>
       <View style={styles.riskMain}>
         <Text style={styles.riskNumber}>84</Text>
@@ -199,14 +204,14 @@ export function RiskHero({ mode }: { mode: 'coach' }) {
       </View>
       <Text style={styles.riskMessage}>Modify work and rest intervals before athletes take the field.</Text>
       <Trend color={Palette.ink} compact />
-    </FlowingGradient>
+    </View>
   );
 }
 
 function PracticePlanScreen() {
   return (
     <>
-      <ScreenIntro title="Today’s varsity soccer plan" />
+      <ScreenIntro eyebrow="Practice plan" title="Today’s varsity soccer plan" />
       <RiskHero mode="coach" />
       <SectionHeader title="Practice timeline" />
       <View style={styles.timelineCard}>
@@ -234,7 +239,7 @@ function RosterScreen({
 
   return (
     <>
-      <ScreenIntro title={title} />
+      <ScreenIntro eyebrow="Live roster" title={title} />
       <Animated.View entering={FadeIn.duration(320)} style={styles.teamOverview}>
         <View style={styles.teamOverviewHeader}>
           <View>
@@ -272,16 +277,16 @@ function RosterScreen({
 function AlertsScreen() {
   return (
     <>
-      <ScreenIntro title="Alerts" />
-      <FlowingGradient colors={['#C94A37', '#E66A50']} style={styles.emergencyCard}>
+      <ScreenIntro eyebrow="Needs a response" title="Alerts" />
+      <View style={styles.emergencyCard}>
         <View style={styles.emergencyTopline}>
-          <HeatIcon name={icons.warning} size={24} tintColor={Palette.surface} />
+          <HeatIcon name={icons.warning} size={24} tintColor={Palette.emergency} />
           <Text style={styles.emergencyTime}>Now</Text>
         </View>
         <Text style={styles.emergencyTitle}>Maya needs a recovery check.</Text>
         <Text style={styles.emergencyBody}>Elevated heart rate and rising skin trend continued through a low-movement break.</Text>
-        <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/detail', params: { kind: 'alert' } })} style={({ pressed }) => [styles.emergencyAction, pressed && styles.pressed]}><Text style={styles.emergencyActionText}>Acknowledge and locate</Text></Pressable>
-      </FlowingGradient>
+        <View style={styles.emergencyAction}><DepthButton label="Acknowledge and locate" onPress={() => router.push({ pathname: '/detail', params: { kind: 'alert' } })} /></View>
+      </View>
       <SectionHeader title="Earlier today" />
       <View style={styles.historyStack}>
         <AlertHistoryRow detail="Jordan Lee · acknowledged" index={0} time="3:52 PM" title="Hydration reminder" tone={Palette.caution} />
@@ -294,7 +299,7 @@ function AlertsScreen() {
 function MonitorScreen() {
   return (
     <>
-      <ScreenIntro title="Maya’s live signals" />
+      <ScreenIntro eyebrow="Live monitor" title="Maya’s live signals" />
       <Text style={styles.contextLine}>Optional wristband · compared with Maya’s personal baseline</Text>
       <View style={styles.monitorCard}>
         <View style={styles.monitorHeader}>
@@ -308,7 +313,7 @@ function MonitorScreen() {
       <SectionHeader title="Supporting context" />
       <View style={styles.metricGrid}>
         <SignalCard icon={icons.thermometer} index={0} label="Skin trend" tone={Palette.warning} value="+0.8°F" />
-        <SignalCard icon={icons.droplet} index={1} label="Sweat trend" tone="#2E7FBF" value="+11%" />
+        <SignalCard icon={icons.droplet} index={1} label="Sweat trend" tone={Palette.info} value="+11%" />
         <SignalCard icon={icons.movement} index={2} label="Movement" tone={Palette.safe} value="Low" />
         <SignalCard icon={icons.clock} index={3} label="Break time" tone={Palette.coralDark} value="6 min" />
       </View>
@@ -323,16 +328,16 @@ function ProtocolsScreen() {
 
   return (
     <>
-      <ScreenIntro title="Response protocols" />
-      <FlowingGradient colors={['#B42318', '#D95749']} style={styles.protocolEmergency}>
+      <ScreenIntro eyebrow="Quick reference" title="Response protocols" />
+      <View style={styles.protocolEmergency}>
         <View style={styles.protocolEmergencyIcon}><HeatIcon name={icons.medical} size={22} tintColor={Palette.emergency} /></View>
         <View style={styles.flexOne}>
           <Text style={styles.protocolEmergencyLabel}>Collapse, confusion, or loss of consciousness</Text>
           <Text style={styles.protocolEmergencyTitle}>Activate the emergency action plan now.</Text>
         </View>
-      </FlowingGradient>
+      </View>
       <SegmentedControl
-        appearance="light"
+        appearance="dark"
         onValueChange={(value) => setProtocol(value === 'Recovery check' ? 'recovery' : 'immediate')}
         selectedIndex={immediate ? 0 : 1}
         style={styles.nativeSegmentedControl}
@@ -369,10 +374,10 @@ function ProtocolsScreen() {
 function AthleteStatusScreen() {
   return (
     <>
-      <ScreenIntro title="My status" />
+      <ScreenIntro eyebrow="Your signals" title="My status" />
       <Text style={styles.contextLine}>Compared with your personal baseline</Text>
       <View style={styles.statusHero}>
-        <View style={styles.statusRing}><HeatIcon name={icons.check} size={42} tintColor={Palette.safe} /></View>
+        <HeatSenseMascot height={116} reaction={null} />
         <Text style={styles.statusHeroTitle}>Signals are within your usual range.</Text>
         <Text style={styles.statusHeroBody}>Keep following today’s Orange-zone practice plan and scheduled water breaks.</Text>
       </View>
@@ -380,7 +385,7 @@ function AthleteStatusScreen() {
       <View style={styles.metricGrid}>
         <SignalCard icon={icons.heart} index={0} label="HR recovery" tone={Palette.emergency} value="Normal" />
         <SignalCard icon={icons.thermometer} index={1} label="Skin trend" tone={Palette.warning} value="+0.3°F" />
-        <SignalCard icon={icons.droplet} index={2} label="Sweat trend" tone="#2E7FBF" value="+4%" />
+        <SignalCard icon={icons.droplet} index={2} label="Sweat trend" tone={Palette.info} value="+4%" />
         <SignalCard icon={icons.movement} index={3} label="Exertion" tone={Palette.safe} value="Moderate" />
       </View>
     </>
@@ -392,9 +397,9 @@ function SessionsScreen() {
 
   return (
     <>
-      <ScreenIntro title="Sessions" />
+      <ScreenIntro eyebrow="Your practice" title="Sessions" />
       <SegmentedControl
-        appearance="light"
+        appearance="dark"
         onValueChange={(value) => setPeriod(value === '4 weeks' ? 'month' : 'week')}
         selectedIndex={period === 'week' ? 0 : 1}
         style={styles.nativeSegmentedControl}
@@ -425,7 +430,7 @@ function LearnScreen() {
 
   return (
     <>
-      <ScreenIntro title="Heat safety guide" />
+      <ScreenIntro eyebrow="Learn" title="Heat safety guide" />
       <View style={styles.learnAlert}>
         <HeatIcon name={icons.warning} size={24} tintColor={Palette.emergency} />
         <View style={styles.flexOne}><Text style={styles.learnAlertTitle}>Stop and tell an adult</Text><Text style={styles.learnAlertBody}>Dizziness, confusion, fainting, or unusual behavior should never wait.</Text></View>
@@ -450,7 +455,7 @@ function LearnScreen() {
         order={1}
         reducedMotion={reducedMotion}
         title="Hydration and recovery"
-        tone="#547A8C"
+        tone={Palette.info}
       />
       <GuideCard
         body="Tell an adult immediately about dizziness, confusion, nausea, weakness, or unusual behavior."
@@ -475,7 +480,7 @@ function ProfileScreen({ role }: { role: string }) {
 
   return (
     <>
-      <ScreenIntro title="Profile" />
+      <ScreenIntro eyebrow="Your account" title="Profile" />
       <View style={styles.profileIdentity}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
         <View style={styles.flexOne}><Text style={styles.profileName}>{name}</Text><Text style={styles.profileRole}>{role} · Liberty High School</Text></View>
@@ -486,14 +491,14 @@ function ProfileScreen({ role }: { role: string }) {
         <ProfileMetric label={isAthlete ? 'This week' : 'Teams'} value={isAthlete ? '3' : '1'} />
         <ProfileMetric label="Status" value="Active" />
       </View>
-      <LinearGradient colors={isAthlete ? ['#DDEBE1', '#F3EFE3'] : ['#FBE4DE', '#F3EFE3']} style={styles.profileConnection}>
+      <View style={styles.profileConnection}>
         <HeatIcon name={isAthlete ? icons.band : icons.people} size={25} tintColor={isAthlete ? Palette.safe : Palette.coralDark} />
         <View style={styles.flexOne}>
           <Text style={styles.profileConnectionTitle}>{isAthlete ? 'HeatSense Band connected' : 'Individual signals enabled'}</Text>
           <Text style={styles.profileConnectionDetail}>{isAthlete ? 'Last synced 2 minutes ago' : '18 athletes have shared wristband data'}</Text>
         </View>
         <HeatIcon name={icons.arrow} size={17} tintColor={Palette.inkMuted} />
-      </LinearGradient>
+      </View>
       <SectionHeader title="Workspace" />
       <View style={styles.listCard}>
         <SettingRow detail="Liberty High School" icon={icons.school} index={0} label="School and team" value="Soccer" />
@@ -556,7 +561,7 @@ function Trend({
       <Svg height={hasLabels ? height - 18 : '100%'} viewBox="0 0 340 100" width="100%">
         <Defs>
           <SvgGradient id={gradId} x1="0" x2="0" y1="0" y2="1">
-            <Stop offset="0" stopColor={color} stopOpacity={0.28} />
+            <Stop offset="0" stopColor={color} stopOpacity={0.14} />
             <Stop offset="1" stopColor={color} stopOpacity={0} />
           </SvgGradient>
         </Defs>
@@ -785,193 +790,184 @@ function SettingRow({ detail, icon, index = 0, label, value }: { detail: string;
 
 const styles = StyleSheet.create({
   flexOne: { flex: 1 },
-  contextLine: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 16, marginTop: Spacing.two },
-  riskHero: { borderRadius: Radius.large, marginTop: Spacing.five, minHeight: 278, overflow: 'hidden', padding: Spacing.five },
+  greetingRow: { alignItems: 'center', flexDirection: 'row' },
+  contextLine: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14, lineHeight: 20, marginTop: Spacing.three },
+  riskHero: { borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, minHeight: 278, overflow: 'hidden', padding: Spacing.six },
   riskTopline: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
-  riskLocation: { color: 'rgba(27,28,25,0.85)', fontFamily: Fonts.semibold, fontSize: 13 },
-  riskSource: { color: 'rgba(27,28,25,0.63)', fontFamily: Fonts.medium, fontSize: 12, marginTop: 2 },
-  sunBubble: { alignItems: 'center', backgroundColor: 'rgba(255,253,248,0.58)', borderRadius: 22, height: 44, justifyContent: 'center', width: 44 },
+  riskLocation: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 15, letterSpacing: -0.2 },
+  riskSource: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, marginTop: 3 },
+  sunBubble: { alignItems: 'center', borderColor: Palette.border, borderRadius: 22, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
   riskMain: { alignItems: 'flex-end', flexDirection: 'row', marginTop: Spacing.six },
-  riskNumber: { color: '#000000', fontFamily: Fonts.extrabold, fontSize: 74, letterSpacing: -4, lineHeight: 75 },
-  riskMainCopy: { marginLeft: Spacing.two, paddingBottom: 10 },
-  riskUnit: { color: Palette.white, fontFamily: Fonts.semibold, fontSize: 12 },
-  riskZone: { color: Palette.white, fontFamily: Fonts.bold, fontSize: 17, marginTop: 3 },
-  riskMessage: { color: 'rgba(27,28,25,0.76)', fontFamily: Fonts.medium, fontSize: 12, lineHeight: 17, marginTop: Spacing.three, maxWidth: 290 },
+  riskNumber: { color: Palette.ink, fontFamily: Fonts.light, fontSize: 88, letterSpacing: -3, lineHeight: 90 },
+  riskMainCopy: { marginLeft: Spacing.three, paddingBottom: 14 },
+  riskUnit: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14 },
+  riskZone: { color: Palette.warning, fontFamily: Fonts.medium, fontSize: 21, letterSpacing: -0.4, marginTop: 3 },
+  riskMessage: { color: 'rgba(255,255,255,0.82)', fontFamily: Fonts.regular, fontSize: 15, lineHeight: 21, marginTop: Spacing.three, maxWidth: 300 },
   trend: { justifyContent: 'center', marginTop: Spacing.two, overflow: 'hidden', width: '100%' },
   trendLabels: { flexDirection: 'row', justifyContent: 'space-between' },
-  trendLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
+  trendLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12 },
   trendDots: { flexDirection: 'row', gap: 5, justifyContent: 'center', marginTop: Spacing.three },
   trendDot: { backgroundColor: Palette.border, borderRadius: 3, height: 6, width: 6 },
-  ruleStrip: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, flexDirection: 'row', overflow: 'hidden' },
+  ruleStrip: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1.5, flexDirection: 'row', overflow: 'hidden' },
   rule: { alignItems: 'flex-start', borderRightColor: Palette.border, borderRightWidth: StyleSheet.hairlineWidth, flex: 1, justifyContent: 'center', minHeight: 112, padding: Spacing.three },
-  ruleLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, marginTop: Spacing.two },
-  ruleValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 11, lineHeight: 15, marginTop: 3 },
-  listCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, overflow: 'hidden' },
-  personRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 72, paddingHorizontal: Spacing.four },
+  ruleLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12, marginTop: Spacing.two },
+  ruleValue: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 14, lineHeight: 18, marginTop: 3 },
+  listCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1.5, overflow: 'hidden' },
+  personRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 78, paddingHorizontal: Spacing.five },
   personAvatar: { alignItems: 'center', borderRadius: 20, height: 40, justifyContent: 'center', width: 40 },
-  personInitials: { fontFamily: Fonts.bold, fontSize: 12 },
-  personName: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13 },
-  personDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 14, marginTop: 2 },
+  personInitials: { fontFamily: Fonts.medium, fontSize: 12 },
+  personName: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 16, letterSpacing: -0.2 },
+  personDetail: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 17, marginTop: 2 },
   statusPill: { alignItems: 'center', borderRadius: Radius.pill, flexDirection: 'row', gap: 5, paddingHorizontal: 9, paddingVertical: 6 },
   statusDot: { borderRadius: 4, height: 6, width: 6 },
-  statusText: { fontFamily: Fonts.bold, fontSize: 11 },
-  teamOverview: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.four },
+  statusText: { fontFamily: Fonts.medium, fontSize: 12 },
+  teamOverview: { borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, padding: Spacing.five },
   teamOverviewHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
-  teamOverviewValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 20, letterSpacing: -0.4 },
-  teamOverviewDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: 3 },
+  teamOverviewValue: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 24, letterSpacing: -0.6 },
+  teamOverviewDetail: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14, lineHeight: 19, marginTop: 4 },
   teamLivePill: { alignItems: 'center', backgroundColor: 'rgba(76,155,118,0.16)', borderRadius: Radius.pill, flexDirection: 'row', gap: 5, paddingHorizontal: 9, paddingVertical: 6 },
   teamLiveDot: { backgroundColor: Palette.safe, borderRadius: 4, height: 7, width: 7 },
-  teamLiveText: { color: Palette.safe, fontFamily: Fonts.bold, fontSize: 11 },
+  teamLiveText: { color: Palette.safe, fontFamily: Fonts.medium, fontSize: 12 },
   distributionTrack: { flexDirection: 'row', gap: 3, height: 10, marginTop: Spacing.four, overflow: 'hidden' },
   distributionSegment: { borderRadius: Radius.pill, minWidth: 8 },
   distributionLegend: { flexDirection: 'row', gap: Spacing.four, marginTop: Spacing.three },
   distributionLabel: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   distributionDot: { borderRadius: 4, height: 7, width: 7 },
-  distributionText: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
-  distributionValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 11 },
+  distributionText: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12 },
+  distributionValue: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 12 },
   filterRow: { flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.three },
-  filterChip: { alignItems: 'center', borderColor: Palette.border, borderRadius: Radius.pill, borderWidth: 1, justifyContent: 'center', minHeight: 35, paddingHorizontal: Spacing.three },
-  filterChipActive: { backgroundColor: Palette.ink, borderColor: Palette.ink },
-  filterChipText: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 12 },
-  filterChipTextActive: { color: Palette.surface, fontFamily: Fonts.bold },
-  rosterFooter: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, paddingHorizontal: Spacing.four, paddingVertical: Spacing.three, textAlign: 'center' },
-  triageCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.five },
+  filterChip: { alignItems: 'center', borderColor: Palette.border, borderRadius: Radius.pill, borderWidth: 1.5, justifyContent: 'center', minHeight: 40, paddingHorizontal: Spacing.four },
+  filterChipActive: { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: Palette.ink },
+  filterChipText: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14 },
+  filterChipTextActive: { color: Palette.ink, fontFamily: Fonts.medium },
+  rosterFooter: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12, paddingHorizontal: Spacing.four, paddingVertical: Spacing.three, textAlign: 'center' },
+  triageCard: { borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, padding: Spacing.five },
   triageHeader: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three },
   triageIcon: { alignItems: 'center', backgroundColor: Palette.warning, borderRadius: 20, height: 42, justifyContent: 'center', width: 42 },
-  triageLabel: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 12 },
-  triageName: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 16, marginTop: 2 },
-  triageSummary: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 18 },
+  triageLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13 },
+  triageName: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 21, letterSpacing: -0.4, marginTop: 2 },
+  triageSummary: { color: Palette.ink, fontFamily: Fonts.regular, fontSize: 14, lineHeight: 20 },
   triageMetrics: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', marginTop: Spacing.four, paddingTop: Spacing.four },
   miniMetric: { flex: 1 },
-  miniMetricValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 14 },
-  miniMetricLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, marginTop: 2 },
+  miniMetricValue: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 17, letterSpacing: -0.2 },
+  miniMetricLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12, marginTop: 2 },
   bentoGrid: { flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five },
-  bentoPrimary: { borderRadius: Radius.large, flex: 1.35, minHeight: 236, overflow: 'hidden', padding: Spacing.four },
+  bentoPrimary: { borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, flex: 1.35, minHeight: 236, overflow: 'hidden', padding: Spacing.five },
   bentoTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  bentoLabel: { color: 'rgba(27,28,25,0.85)', fontFamily: Fonts.semibold, fontSize: 12 },
-  bentoNumber: { color: '#000000', fontFamily: Fonts.extrabold, fontSize: 62, letterSpacing: -3, lineHeight: 66, marginTop: Spacing.six },
-  bentoZone: { color: Palette.white, fontFamily: Fonts.bold, fontSize: 16 },
-  bentoHint: { color: 'rgba(27,28,25,0.64)', fontFamily: Fonts.medium, fontSize: 12, marginTop: 3 },
+  bentoLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13 },
+  bentoNumber: { color: Palette.ink, fontFamily: Fonts.light, fontSize: 68, letterSpacing: -2, lineHeight: 72, marginTop: Spacing.six },
+  bentoZone: { color: Palette.warning, fontFamily: Fonts.medium, fontSize: 18, letterSpacing: -0.3 },
+  bentoHint: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, marginTop: 3 },
   bentoStack: { flex: 1, gap: Spacing.three },
-  metricTile: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, flex: 1, justifyContent: 'center', padding: Spacing.three },
-  metricTileLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, marginTop: Spacing.two },
-  metricTileValue: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13, marginTop: 2 },
-  weeklyCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.four, padding: Spacing.four },
+  metricTile: { borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1.5, flex: 1, justifyContent: 'center', padding: Spacing.four },
+  metricTileLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12, marginTop: Spacing.two },
+  metricTileValue: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 16, letterSpacing: -0.2, marginTop: 2 },
+  weeklyCard: { borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.three, padding: Spacing.five },
   weeklyHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
-  cardLabel: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 12 },
-  weeklyTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 16, marginTop: 2 },
-  weeklyStatus: { color: Palette.safe, fontFamily: Fonts.bold, fontSize: 11 },
+  cardLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13 },
+  weeklyTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 21, letterSpacing: -0.4, marginTop: 2 },
+  weeklyStatus: { color: Palette.safe, fontFamily: Fonts.medium, fontSize: 12 },
   weekBars: { alignItems: 'flex-end', flexDirection: 'row', gap: 9, height: 104, marginTop: Spacing.four },
   weekBarSlot: { alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end' },
-  weekBar: { backgroundColor: Palette.coral, borderRadius: Radius.pill, maxHeight: 78, minHeight: 20, width: 17 },
-  weekDay: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 11, marginTop: 6 },
-  sessionFeature: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: Radius.large, flexDirection: 'row', gap: Spacing.three, minHeight: 88, padding: Spacing.four },
-  sessionIcon: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 22, height: 46, justifyContent: 'center', width: 46 },
-  sessionTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 14 },
-  sessionMeta: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, marginTop: 3 },
-  timelineCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, padding: Spacing.four },
+  weekBar: { backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: Radius.pill, maxHeight: 78, minHeight: 20, width: 17 },
+  weekBarToday: { backgroundColor: Palette.coral },
+  weekDay: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12, marginTop: 6 },
+  sessionFeature: { alignItems: 'center', borderColor: Palette.outline, borderRadius: 9999, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.four, minHeight: 92, paddingHorizontal: Spacing.five },
+  sessionIcon: { alignItems: 'center', borderColor: Palette.border, borderRadius: 23, borderWidth: 1, height: 46, justifyContent: 'center', width: 46 },
+  sessionTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 17, letterSpacing: -0.3 },
+  sessionMeta: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, marginTop: 3 },
+  timelineCard: { borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1.5, padding: Spacing.five },
   timelineRow: { flexDirection: 'row', minHeight: 84 },
-  timelineTime: { color: Palette.inkMuted, fontFamily: Fonts.bold, fontSize: 11, width: 42 },
+  timelineTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, width: 44 },
   timelineTrack: { alignItems: 'center', width: 24 },
   timelineDot: { borderRadius: 6, height: 11, width: 11 },
   timelineLine: { backgroundColor: Palette.border, flex: 1, marginVertical: 4, width: 2 },
   timelineCopy: { flex: 1, paddingBottom: Spacing.four, paddingLeft: Spacing.two },
-  timelineTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13 },
-  timelineDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: 3 },
+  timelineTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 16, letterSpacing: -0.2 },
+  timelineDetail: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 17, marginTop: 3 },
   summaryRow: { flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five },
   summaryBlock: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, flex: 1, padding: Spacing.four },
   summaryValue: { fontFamily: Fonts.extrabold, fontSize: 28 },
   summaryLabel: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 12, marginTop: 2 },
-  disclaimer: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginHorizontal: Spacing.two, marginTop: Spacing.four },
-  emergencyCard: { borderRadius: Radius.large, marginTop: Spacing.five, padding: Spacing.five },
+  disclaimer: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12.5, lineHeight: 17, marginHorizontal: Spacing.two, marginTop: Spacing.five },
+  emergencyCard: { borderColor: Palette.emergency, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, padding: Spacing.six },
   emergencyTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  emergencyTime: { color: Palette.surface, fontFamily: Fonts.semibold, fontSize: 11 },
-  emergencyTitle: { color: Palette.surface, fontFamily: Fonts.extrabold, fontSize: 25, letterSpacing: -0.5, lineHeight: 30, marginTop: Spacing.six },
-  emergencyBody: { color: 'rgba(255,253,248,0.82)', fontFamily: Fonts.medium, fontSize: 12, lineHeight: 18, marginTop: Spacing.three },
-  emergencyAction: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: Radius.pill, height: 48, justifyContent: 'center', marginTop: Spacing.five },
-  emergencyActionText: { color: Palette.emergency, fontFamily: Fonts.bold, fontSize: 13 },
+  emergencyTime: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12 },
+  emergencyTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 28, letterSpacing: -0.8, lineHeight: 31, marginTop: Spacing.six },
+  emergencyBody: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 15, lineHeight: 21, marginTop: Spacing.three },
+  emergencyAction: { marginTop: Spacing.six },
   historyStack: { gap: Spacing.three },
-  historyPill: {
-    alignItems: 'center',
-    backgroundColor: Palette.surface,
-    borderColor: Palette.border,
-    borderRadius: Radius.large,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: Spacing.three,
-    minHeight: 74,
-    paddingHorizontal: Spacing.four,
-  },
+  historyPill: { alignItems: 'center', borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.three, minHeight: 78, paddingHorizontal: Spacing.five },
   historyIcon: { alignItems: 'center', borderRadius: 18, height: 38, justifyContent: 'center', width: 38 },
-  historyTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
-  monitorCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.five },
+  historyTime: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12 },
+  monitorCard: { borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, padding: Spacing.six },
   monitorHeader: { alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
-  monitorValue: { color: Palette.ink, fontFamily: Fonts.uiExtrabold, fontSize: 34, letterSpacing: -1, marginTop: 4 },
-  monitorUnit: { color: Palette.inkMuted, fontFamily: Fonts.uiSemibold, fontSize: 12 },
-  monitorInterpretation: { color: Palette.ink, fontFamily: Fonts.uiMedium, fontSize: 12, lineHeight: 18 },
+  monitorValue: { color: Palette.ink, fontFamily: Fonts.light, fontSize: 52, letterSpacing: -1.5, marginTop: 4 },
+  monitorUnit: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 15 },
+  monitorInterpretation: { color: Palette.ink, fontFamily: Fonts.regular, fontSize: 14, lineHeight: 20 },
   metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
-  signalCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, minHeight: 150, padding: Spacing.four, width: '48%' },
+  signalCard: { borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1.5, minHeight: 158, padding: Spacing.five, width: '48%' },
   signalTop: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two },
-  signalLabel: { color: Palette.inkMuted, fontFamily: Fonts.uiSemibold, fontSize: 11.5 },
-  signalValue: { color: Palette.ink, fontFamily: Fonts.uiExtrabold, fontSize: 28, letterSpacing: -0.5, marginTop: Spacing.three },
+  signalLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12.5 },
+  signalValue: { color: Palette.ink, fontFamily: Fonts.light, fontSize: 32, letterSpacing: -1, marginTop: Spacing.three },
   signalWave: { marginTop: Spacing.three },
-  protocolEmergency: { alignItems: 'center', borderRadius: Radius.large, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, padding: Spacing.four },
-  protocolEmergencyIcon: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 21, height: 44, justifyContent: 'center', width: 44 },
-  protocolEmergencyLabel: { color: 'rgba(255,253,248,0.78)', fontFamily: Fonts.semibold, fontSize: 11, lineHeight: 13 },
-  protocolEmergencyTitle: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 15, lineHeight: 19, marginTop: 3 },
+  protocolEmergency: { alignItems: 'center', borderColor: Palette.emergency, borderRadius: Radius.large, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.four, marginTop: Spacing.six, padding: Spacing.five },
+  protocolEmergencyIcon: { alignItems: 'center', borderColor: Palette.emergency, borderRadius: 22, borderWidth: 1.5, height: 44, justifyContent: 'center', width: 44 },
+  protocolEmergencyLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12, lineHeight: 16 },
+  protocolEmergencyTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 18, letterSpacing: -0.3, lineHeight: 22, marginTop: 4 },
   nativeSegmentedControl: { height: 40, marginTop: Spacing.four, width: '100%' },
-  protocolCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.three, padding: Spacing.four },
+  protocolCard: { borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.three, padding: Spacing.five },
   protocolRow: { alignItems: 'flex-start', flexDirection: 'row', gap: Spacing.three },
   protocolIndex: { alignItems: 'center', borderRadius: 18, height: 36, justifyContent: 'center', width: 36 },
   protocolIndexText: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 13 },
-  protocolTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 14 },
-  protocolBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 17, marginTop: 4 },
+  protocolTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 16, letterSpacing: -0.2 },
+  protocolBody: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 18, marginTop: 4 },
   protocolDivider: { backgroundColor: Palette.border, height: StyleSheet.hairlineWidth, marginVertical: Spacing.four },
-  eapAction: { alignItems: 'center', backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.three, padding: Spacing.three },
+  eapAction: { alignItems: 'center', borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.three, padding: Spacing.four },
   eapActionIcon: { alignItems: 'center', backgroundColor: Palette.emergency, borderRadius: 18, height: 38, justifyContent: 'center', width: 38 },
-  eapActionTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12 },
-  eapActionDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, marginTop: 2 },
-  protocolNotice: { alignItems: 'flex-start', backgroundColor: Palette.surfaceMuted, borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.four, padding: Spacing.four },
-  protocolNoticeText: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15 },
-  statusHero: { alignItems: 'center', backgroundColor: 'rgba(76,155,118,0.16)', borderRadius: Radius.large, marginTop: Spacing.five, padding: Spacing.six },
+  eapActionTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 15 },
+  eapActionDetail: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12.5, marginTop: 2 },
+  protocolNotice: { alignItems: 'flex-start', borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.four, padding: Spacing.four },
+  protocolNoticeText: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 18 },
+  statusHero: { alignItems: 'center', borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, padding: Spacing.six },
   statusRing: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 38, height: 76, justifyContent: 'center', width: 76 },
-  statusHeroTitle: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 23, letterSpacing: -0.5, lineHeight: 28, marginTop: Spacing.four, textAlign: 'center' },
-  statusHeroBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 17, marginTop: Spacing.two, textAlign: 'center' },
-  sessionRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 76, paddingHorizontal: Spacing.four },
-  sessionDate: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: 14, height: 42, justifyContent: 'center', width: 50 },
-  sessionDateText: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 11 },
+  statusHeroTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 26, letterSpacing: -0.6, lineHeight: 30, marginTop: Spacing.four, textAlign: 'center' },
+  statusHeroBody: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14, lineHeight: 20, marginTop: Spacing.three, textAlign: 'center' },
+  sessionRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 80, paddingHorizontal: Spacing.five },
+  sessionDate: { alignItems: 'center', borderColor: Palette.border, borderRadius: 14, borderWidth: 1, height: 42, justifyContent: 'center', width: 52 },
+  sessionDateText: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 12 },
   sessionStats: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', marginTop: Spacing.three, paddingTop: Spacing.four },
-  learnAlert: { alignItems: 'flex-start', backgroundColor: 'rgba(240,111,95,0.16)', borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, padding: Spacing.four },
-  learnAlertTitle: { color: Palette.emergency, fontFamily: Fonts.bold, fontSize: 13 },
-  learnAlertBody: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: 3 },
-  guideCard: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.three, minHeight: 112, padding: Spacing.four },
-  guideCardExpanded: { borderColor: '#CFC7B8' },
+  learnAlert: { alignItems: 'flex-start', borderColor: Palette.emergency, borderRadius: Radius.medium, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.six, padding: Spacing.five },
+  learnAlertTitle: { color: Palette.emergency, fontFamily: Fonts.medium, fontSize: 16 },
+  learnAlertBody: { color: Palette.ink, fontFamily: Fonts.regular, fontSize: 14, lineHeight: 19, marginTop: 4 },
+  guideCard: { borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.three, minHeight: 112, padding: Spacing.five },
+  guideCardExpanded: { borderColor: Palette.ink },
   guideTopline: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three },
   guideIcon: { alignItems: 'center', borderRadius: 22, height: 46, justifyContent: 'center', width: 46 },
-  guideTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 14 },
-  guideBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: 4 },
+  guideTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 17, letterSpacing: -0.3 },
+  guideBody: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 18, marginTop: 4 },
   guideDisclosure: { transform: [{ rotate: '0deg' }] },
   guideDisclosureExpanded: { transform: [{ rotate: '90deg' }] },
   guideDetail: { flexDirection: 'row', gap: Spacing.three, marginLeft: 58, marginTop: Spacing.three, paddingTop: Spacing.three },
   guideDetailRule: { borderRadius: Radius.pill, width: 3 },
-  guideDetailText: { color: Palette.ink, flex: 1, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 16 },
-  profileIdentity: { alignItems: 'center', flexDirection: 'row', gap: Spacing.four, marginTop: Spacing.five, paddingHorizontal: Spacing.two },
-  avatar: { alignItems: 'center', backgroundColor: Palette.coral, borderRadius: 28, height: 56, justifyContent: 'center', width: 56 },
-  avatarText: { color: Palette.surface, fontFamily: Fonts.extrabold, fontSize: 17 },
-  profileName: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 17 },
-  profileRole: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, marginTop: 3 },
-  profileEdit: { alignItems: 'center', borderColor: Palette.ink, borderRadius: Radius.pill, borderWidth: 1, justifyContent: 'center', minHeight: 34, paddingHorizontal: Spacing.three },
-  profileEditText: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12 },
-  profileMetrics: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, flexDirection: 'row', marginTop: Spacing.five, overflow: 'hidden' },
+  guideDetailText: { color: Palette.ink, flex: 1, fontFamily: Fonts.regular, fontSize: 14, lineHeight: 20 },
+  profileIdentity: { alignItems: 'center', flexDirection: 'row', gap: Spacing.four, marginTop: Spacing.six, paddingHorizontal: Spacing.two },
+  avatar: { alignItems: 'center', borderColor: Palette.ink, borderRadius: 28, borderWidth: 1.5, height: 56, justifyContent: 'center', width: 56 },
+  avatarText: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 17 },
+  profileName: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 21, letterSpacing: -0.4 },
+  profileRole: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, marginTop: 3 },
+  profileEdit: { alignItems: 'center', borderColor: Palette.ink, borderRadius: Radius.pill, borderWidth: 1.5, justifyContent: 'center', minHeight: 38, paddingHorizontal: Spacing.four },
+  profileEditText: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 14 },
+  profileMetrics: { borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1.5, flexDirection: 'row', marginTop: Spacing.six, overflow: 'hidden' },
   profileMetric: { alignItems: 'center', borderRightColor: Palette.border, borderRightWidth: StyleSheet.hairlineWidth, flex: 1, justifyContent: 'center', minHeight: 78 },
-  profileMetricValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 20 },
-  profileMetricLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, marginTop: 3 },
-  profileConnection: { alignItems: 'center', borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.three, padding: Spacing.four },
-  profileConnectionTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12 },
-  profileConnectionDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, marginTop: 3 },
-  settingRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 72, paddingHorizontal: Spacing.four, paddingVertical: Spacing.three },
-  settingLabel: { color: Palette.ink, fontFamily: Fonts.semibold, fontSize: 12 },
-  settingDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 13, marginTop: 2 },
-  settingValue: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12 },
+  profileMetricValue: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 22, letterSpacing: -0.4 },
+  profileMetricLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 12, marginTop: 3 },
+  profileConnection: { alignItems: 'center', borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.three, padding: Spacing.five },
+  profileConnectionTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 15 },
+  profileConnectionDetail: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, marginTop: 3 },
+  settingRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 76, paddingHorizontal: Spacing.five, paddingVertical: Spacing.three },
+  settingLabel: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 16, letterSpacing: -0.2 },
+  settingDetail: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 17, marginTop: 2 },
+  settingValue: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14 },
   pressed: { opacity: 0.68 },
 });

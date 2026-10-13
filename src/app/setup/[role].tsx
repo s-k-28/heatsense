@@ -1,16 +1,7 @@
-import { StatusBar } from 'expo-status-bar';
-import { useLocalSearchParams } from 'expo-router';
-import { View } from 'react-native';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
-import { MobileViewport } from '@/components/mobile-viewport';
-
-// Temporary placeholder for the role-specific setup screens (coach, trainer, athlete).
+// Role setup isn't built yet for athlete/trainer: land on that role's mock dashboard.
 export default function RoleSetupPlaceholder() {
   const { role } = useLocalSearchParams<{ role?: string }>();
-  return (
-    <MobileViewport>
-      <StatusBar style="light" />
-      <View accessibilityLabel={`${role ?? 'Role'} setup, coming soon`} style={{ flex: 1 }} />
-    </MobileViewport>
-  );
+  return <Redirect href={`/dashboard?role=${role === 'athlete' || role === 'trainer' ? role : 'coach'}` as never} />;
 }
