@@ -16,14 +16,10 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { AppleLogo, GoogleLogo } from '@/components/brand-logos';
+import { GoogleLogo } from '@/components/brand-logos';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
-import { NativeAppleButton } from '@/components/native-apple-button';
 import { WelcomeWristband, WristbandShadow, WRISTBAND_ASPECT } from '@/components/welcome-wristband';
-import { isNativeAppleSignInAvailable, signInWithApple } from '@/services/apple-auth';
 import { signInWithGoogle } from '@/services/google-auth';
-
-type AuthProvider = 'google' | 'apple';
 
 // Same canvas as the welcome screen so the two read as one flow.
 const SCREEN = '#222222';
@@ -54,16 +50,8 @@ function SignInContent() {
   const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [pending, setPending] = useState<AuthProvider | null>(null);
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [nativeAppleAvailable, setNativeAppleAvailable] = useState(false);
-
-  useEffect(() => {
-    if (Platform.OS !== 'ios') return;
-    let active = true;
-    isNativeAppleSignInAvailable().then((available) => { if (active) setNativeAppleAvailable(available); });
-    return () => { active = false; };
-  }, []);
 
   // About 270px tall on a 390x844 phone, shrinking on short screens so the buttons stay visible.
   const bandHeight = Math.max(140, Math.min(290, size.height * 0.36 - 30));
@@ -89,17 +77,17 @@ function SignInContent() {
   const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(450));
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/welcome'));
-  const signIn = async (provider: AuthProvider) => {
+  const signIn = async () => {
     if (pending) return;
-    setPending(provider);
+    setPending(true);
     setError(null);
     try {
-      const result = provider === 'apple' ? await signInWithApple() : await signInWithGoogle();
+      const result = await signInWithGoogle();
       if (result === 'signed-in') router.replace('/role');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Sign in failed. Please try again.');
     } finally {
-      setPending(null);
+      setPending(false);
     }
   };
 
@@ -125,12 +113,7 @@ function SignInContent() {
 
       <View style={styles.buttons}>
         <Animated.View entering={rise(900)}>
-          <AuthButton label="Continue with Google" loading={pending === 'google'} disabled={pending !== null} onPress={() => signIn('google')} icon={<GoogleLogo size={21} />} />
-        </Animated.View>
-        <Animated.View entering={rise(1050)}>
-          {nativeAppleAvailable
-            ? <NativeAppleButton loading={pending === 'apple'} disabled={pending !== null} onPress={() => signIn('apple')} />
-            : <AuthButton label="Continue with Apple" loading={pending === 'apple'} disabled={pending !== null} onPress={() => signIn('apple')} icon={<AppleLogo size={22} />} />}
+          <AuthButton label="Continue with Google" loading={pending} disabled={pending} onPress={signIn} icon={<GoogleLogo size={21} />} />
         </Animated.View>
       </View>
 
