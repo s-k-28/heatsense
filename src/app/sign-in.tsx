@@ -1,13 +1,11 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  cancelAnimation,
-  Easing,
   FadeIn,
   FadeInUp,
-  interpolate,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -18,11 +16,9 @@ import Svg, { Path } from 'react-native-svg';
 
 import { GoogleLogo } from '@/components/brand-logos';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
-import { WelcomeWristband, WristbandShadow, WRISTBAND_ASPECT } from '@/components/welcome-wristband';
 import { signInWithGoogle } from '@/services/google-auth';
 
-// Same canvas as the welcome screen so the two read as one flow.
-const SCREEN = '#222222';
+const SCREEN = '#090909';
 const DESKTOP = '#111111';
 const DESKTOP_BREAKPOINT = 600;
 const fontFamily = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif', default: '"Helvetica Neue", Helvetica, Arial, sans-serif' });
@@ -53,25 +49,7 @@ function SignInContent() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // About 270px tall on a 390x844 phone, shrinking on short screens so the buttons stay visible.
-  const bandHeight = Math.max(140, Math.min(290, size.height * 0.36 - 30));
-  const bandWidth = bandHeight * WRISTBAND_ASPECT;
   const headlineSize = Math.max(34, Math.min(42, size.width * 0.1));
-
-  // The band arrives from where it sat on the welcome screen: lower, slightly larger.
-  const arrive = useSharedValue(reducedMotion ? 1 : 0);
-  useEffect(() => {
-    if (reducedMotion) return;
-    arrive.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
-    return () => { cancelAnimation(arrive); };
-  }, [arrive, reducedMotion]);
-  const bandStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(arrive.value, [0, 0.4, 1], [0, 1, 1]),
-    transform: [{ translateY: interpolate(arrive.value, [0, 1], [150, 0]) }, { scale: interpolate(arrive.value, [0, 1], [1.1, 1]) }],
-  }));
-  const shadowStyle = useAnimatedStyle(() => ({
-    opacity: arrive.value * 0.8,
-  }));
 
   const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(500));
   const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(450));
@@ -94,19 +72,19 @@ function SignInContent() {
   return (
     <View onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)} style={[styles.content, { paddingTop: Math.max(insets.top + 8, 56), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
       <StatusBar style="light" />
+      {size.height > 0 && <View pointerEvents="none" style={[styles.imageLayer, { height: size.height * 0.73 }]}>
+        <Image source={require('@/assets/images/sign-in-track.jpg')} resizeMode="cover" style={styles.trackImage} />
+      </View>}
+      <LinearGradient pointerEvents="none" colors={['rgba(9,9,9,0.48)', 'rgba(9,9,9,0)', 'rgba(9,9,9,0)']} locations={[0, 0.38, 1]} style={styles.topShade} />
+      <LinearGradient pointerEvents="none" colors={['rgba(9,9,9,0)', 'rgba(9,9,9,0.2)', SCREEN, SCREEN]} locations={[0, 0.32, 0.7, 1]} style={styles.bottomShade} />
       <Animated.View entering={fade(150)} style={styles.topRow}>
         <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={back} hitSlop={8} style={({ pressed }) => [styles.circle, pressed && styles.pressed]}>
           <BackChevron />
         </Pressable>
-        <HeatSenseLogo height={24} />
+        <View style={styles.logoPlate}><HeatSenseLogo height={24} /></View>
       </Animated.View>
 
-      <View style={styles.hero} pointerEvents="none">
-        {size.height > 0 && <>
-          <Animated.View style={bandStyle}><WelcomeWristband width={bandWidth} /></Animated.View>
-          <Animated.View style={[styles.shadow, shadowStyle]}><WristbandShadow width={Math.min(210, bandWidth * 0.75)} /></Animated.View>
-        </>}
-      </View>
+      <View style={styles.hero} pointerEvents="none" />
 
       <Animated.Text entering={rise(500)} accessibilityRole="header" style={[styles.headline, { fontFamily, fontSize: headlineSize, lineHeight: Math.round(headlineSize * 1.15) }]}>Built for the heat.</Animated.Text>
       <Animated.Text entering={rise(700)} style={[styles.description, { fontFamily }]}>Smarter practices. Safer athletes. Everything you need to stay one step ahead.</Animated.Text>
@@ -161,12 +139,16 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   desktop: { backgroundColor: DESKTOP, alignItems: 'center', justifyContent: 'center' },
   frame: { backgroundColor: SCREEN, borderRadius: 30, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.45)' },
-  content: { flex: 1, paddingHorizontal: 22 },
+  content: { flex: 1, paddingHorizontal: 22, backgroundColor: SCREEN, overflow: 'hidden' },
+  imageLayer: { position: 'absolute', top: 0, left: 0, right: 0 },
+  trackImage: { width: '100%', height: '100%' },
+  topShade: { position: 'absolute', top: 0, left: 0, right: 0, height: '32%' },
+  bottomShade: { position: 'absolute', top: '33%', bottom: 0, left: 0, right: 0 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  logoPlate: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(9,9,9,0.62)', alignItems: 'center', justifyContent: 'center' },
   circle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.6 },
-  hero: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 0 },
-  shadow: { marginTop: -2 },
+  hero: { flex: 1, minHeight: 0 },
   headline: { color: '#FFFFFF', fontWeight: '400', letterSpacing: -0.4 },
   description: { color: '#B8B8B8', fontSize: 15, lineHeight: 22, fontWeight: '400', marginTop: 10, maxWidth: 340 },
   buttons: { gap: 14, marginTop: 26 },
