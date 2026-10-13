@@ -86,3 +86,74 @@ export async function regenerateInvite(teamId: string): Promise<TeamInvite> {
   if (!team) throw new Error('Team not found.');
   return issueInvite(team);
 }
+
+// ── Athlete side: redeeming a code ──────────────────────────────────────────
+// Same LOCAL STAND-IN as above: it checks the codes issued on this device, so it
+// only finds a team created earlier in the same app session. The server must
+// replace these bodies and own every rule here (lookup, expiry, rate limits,
+// duplicate prevention, coach approval). A code never grants access on its own:
+// joining always creates a PENDING request.
+
+export type InviteLookup =
+  | { status: 'valid'; teamId: string; team: { teamName: string; school: string; sport: string } }
+  | { status: 'not-found' }
+  | { status: 'expired' }
+  | { status: 'rate-limited'; retryAfterSeconds: number };
+
+export type JoinRequest = { teamId: string; status: 'pending' };
+
+const MAX_MISSES = 5;
+const MISS_WINDOW_MS = 10 * 60_000;
+const LOCKOUT_MS = 10 * 60_000;
+let misses: number[] = [];
+let lockedUntil = 0;
+const joinRequests = new Map<string, JoinRequest>(); // keyed by `${teamId}:${userId}`
+
+function rateLimited(): InviteLookup | null {
+  const now = Date.now();
+  if (now < lockedUntil) return { status: 'rate-limited', retryAfterSeconds: Math.ceil((lockedUntil - now) / 1000) };
+  return null;
+}
+
+function recordMiss() {
+  const now = Date.now();
+  misses = misses.filter((time) => now - time < MISS_WINDOW_MS);
+  misses.push(now);
+  if (misses.length >= MAX_MISSES) {
+    lockedUntil = now + LOCKOUT_MS;
+    misses = [];
+  }
+}
+
+/** Checks a code and returns only the public team summary, and only for a valid code. */
+export async function lookupInvite(code: string): Promise<InviteLookup> {
+  warnAboutLocalStandIn();
+  const limited = rateLimited();
+  if (limited) return limited;
+  if (!new RegExp(`^\\d{${INVITE_CODE_LENGTH}}$`).test(code)) {
+    recordMiss();
+    return { status: 'not-found' };
+  }
+  const invite = activeInvites.get(code);
+  const team = invite ? teams.get(invite.teamId) : undefined;
+  if (!invite || !team) {
+    recordMiss();
+    return { status: 'not-found' };
+  }
+  if (!isActive(invite)) return { status: 'expired' };
+  return { status: 'valid', teamId: team.id, team: { teamName: team.teamName, school: team.school, sport: team.sport } };
+}
+
+/** Asks to join the team behind a still-valid code. Idempotent: a repeat request returns the existing one. */
+export async function requestToJoinTeam(code: string, userId: string): Promise<JoinRequest> {
+  const lookup = await lookupInvite(code);
+  if (lookup.status === 'expired') throw new Error('This code has expired. Ask your coach for a new one.');
+  if (lookup.status === 'rate-limited') throw new Error('Too many attempts. Try again in a few minutes.');
+  if (lookup.status !== 'valid') throw new Error("That code wasn't found. Check it and try again.");
+  const key = `${lookup.teamId}:${userId}`;
+  const existing = joinRequests.get(key);
+  if (existing) return existing;
+  const request: JoinRequest = { teamId: lookup.teamId, status: 'pending' };
+  joinRequests.set(key, request);
+  return request;
+}

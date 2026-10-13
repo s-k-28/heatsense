@@ -16,6 +16,7 @@ import { createTamagui, TamaguiProvider } from 'tamagui';
 import { defaultConfig } from '@tamagui/config/v6';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
+import { SKIP_SIGN_IN } from '@/constants/dev-flags';
 import { Palette } from '@/constants/theme';
 import { firebaseAuth } from '@/services/firebase';
 import { hydrateOnboardingRole } from '@/state/onboarding';
@@ -55,7 +56,7 @@ export default function RootLayout() {
     const restore = async (nextUser: User | null) => {
       const version = ++restoreVersion;
       setUser(nextUser);
-      await hydrateOnboardingRole(nextUser?.uid ?? (__DEV__ && !firebaseAuth ? 'local-demo' : null));
+      await hydrateOnboardingRole(nextUser?.uid ?? ((__DEV__ && !firebaseAuth) || SKIP_SIGN_IN ? 'local-demo' : null));
       if (active && version === restoreVersion) setAuthReady(true);
     };
     if (!firebaseAuth) {
@@ -75,7 +76,7 @@ export default function RootLayout() {
 
   // Unconfigured local development keeps design review routes reachable. A
   // configured build always uses the real session for navigation protection.
-  const canOpenAccountRoutes = (__DEV__ && !firebaseAuth) || Boolean(user);
+  const canOpenAccountRoutes = (__DEV__ && !firebaseAuth) || SKIP_SIGN_IN || Boolean(user);
 
   return (
     <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
@@ -92,6 +93,7 @@ export default function RootLayout() {
           <Stack.Screen name="dashboard" />
           <Stack.Screen name="detail" />
           <Stack.Screen name="setup/coach" />
+          <Stack.Screen name="setup/athlete" />
           <Stack.Screen name="setup/[role]" />
           <Stack.Screen name="team/create" />
           <Stack.Screen name="team/invite" />
