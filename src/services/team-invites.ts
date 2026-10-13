@@ -32,8 +32,12 @@ type StoredTeam = TeamDetails & { id: string; inviteCode: string | null };
 const teams = new Map<string, StoredTeam>();
 const activeInvites = new Map<string, TeamInvite>(); // keyed by code
 
-if (__DEV__ && IS_LOCAL_STAND_IN) {
-  console.warn('[team-invites] Using the local stand-in: invite codes are not saved to a server and cannot be redeemed.');
+let didWarnAboutLocalStandIn = false;
+function warnAboutLocalStandIn() {
+  if (__DEV__ && IS_LOCAL_STAND_IN && !didWarnAboutLocalStandIn) {
+    console.warn('[team-invites] Using the local stand-in: invite codes are not saved to a server and cannot be redeemed.');
+    didWarnAboutLocalStandIn = true;
+  }
 }
 
 // Uniform 4-digit code from a cryptographically secure source. Rejection sampling
@@ -64,6 +68,7 @@ function issueInvite(team: StoredTeam): TeamInvite {
 
 /** Creates the team the first time (or updates its details), and returns its active invite, issuing one only if needed. */
 export async function ensureTeamInvite(details: TeamDetails, teamId: string | null): Promise<TeamInvite> {
+  warnAboutLocalStandIn();
   let team = teamId ? teams.get(teamId) : undefined;
   if (team) Object.assign(team, details);
   else {
@@ -76,6 +81,7 @@ export async function ensureTeamInvite(details: TeamDetails, teamId: string | nu
 
 /** Revokes the team's current code and issues a new one. */
 export async function regenerateInvite(teamId: string): Promise<TeamInvite> {
+  warnAboutLocalStandIn();
   const team = teams.get(teamId);
   if (!team) throw new Error('Team not found.');
   return issueInvite(team);

@@ -7,7 +7,6 @@ export default function WristbandIllustration({ size = 220 }: { size?: number })
     <View style={[styles.wrap, { width: size, height: size }]}>
       <Image
         resizeMode="contain"
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         source={require('@/assets/wristband-render.png')}
         style={styles.image}
       />

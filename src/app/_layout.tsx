@@ -7,18 +7,24 @@ import {
   useFonts,
 } from '@expo-google-fonts/atkinson-hyperlegible-next';
 import { Fraunces_500Medium_Italic, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
-import { Stack, router } from 'expo-router';
-import { Platform, Settings } from 'react-native'; // TEMP-HSROUTE
+import { Stack } from 'expo-router';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 import { BarlowCondensed_600SemiBold, BarlowCondensed_700Bold } from '@expo-google-fonts/barlow-condensed';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createTamagui, TamaguiProvider } from 'tamagui';
+import { defaultConfig } from '@tamagui/config/v6';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 import { Palette } from '@/constants/theme';
+import { firebaseAuth } from '@/services/firebase';
 
 SplashScreen.preventAutoHideAsync();
+const tamaguiConfig = createTamagui(defaultConfig);
 
 export default function RootLayout() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(!firebaseAuth);
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -37,28 +43,49 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if ((fontsLoaded || fontError) && authReady) {
       SplashScreen.hideAsync();
     }
-  }, [fontError, fontsLoaded]);
+  }, [authReady, fontError, fontsLoaded]);
 
-  // TEMP-HSROUTE: dev-only screenshot jump, remove after capture
   useEffect(() => {
-    const route = __DEV__ && Platform.OS === 'ios' && (fontsLoaded || fontError) ? Settings.get('HSRoute') : null;
-    if (typeof route === 'string' && route) setTimeout(() => router.replace(route as never), 300);
-  }, [fontError, fontsLoaded]);
+    if (!firebaseAuth) return;
+    return onAuthStateChanged(firebaseAuth, (nextUser) => {
+      setUser(nextUser);
+      setAuthReady(true);
+    }, () => setAuthReady(true));
+  }, []);
 
-  if (!fontsLoaded && !fontError) {
+  if ((!fontsLoaded && !fontError) || !authReady) {
     return null;
   }
 
+  // Unconfigured local development keeps design review routes reachable. A
+  // configured build always uses the real session for navigation protection.
+  const canOpenAccountRoutes = (__DEV__ && !firebaseAuth) || Boolean(user);
+
   return (
-    <Stack
-      screenOptions={{
-        animation: 'fade',
-        contentStyle: { backgroundColor: Palette.canvas },
-        headerShown: false,
-      }}
-    />
+    <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+      <Stack
+        screenOptions={{
+          animation: 'fade',
+          contentStyle: { backgroundColor: Palette.canvas },
+          headerShown: false,
+        }}
+      >
+        <Stack.Protected guard={canOpenAccountRoutes}>
+          <Stack.Screen name="role" />
+          <Stack.Screen name="ready" />
+          <Stack.Screen name="dashboard" />
+          <Stack.Screen name="detail" />
+          <Stack.Screen name="setup/coach" />
+          <Stack.Screen name="setup/[role]" />
+          <Stack.Screen name="team/create" />
+          <Stack.Screen name="team/invite" />
+          <Stack.Screen name="team/[mode]" />
+          <Stack.Screen name="team/practice-location" />
+        </Stack.Protected>
+      </Stack>
+    </TamaguiProvider>
   );
 }

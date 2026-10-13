@@ -115,7 +115,7 @@ export function FlameMascot({ height = 104, onPress }: { height?: number; onPres
     onPress?.();
     if (reducedMotion) return;
     bounce.value = withSequence(withTiming(-10, { duration: 140, easing: Easing.out(Easing.quad) }), withSpring(0, { damping: 6, stiffness: 180 }));
-    wave.value = withSequence(withTiming(-16, { duration: 160 }), withTiming(10, { duration: 200 }), withTiming(-16, { duration: 200 }), withTiming(0, { duration: 180 }));
+    wave.set(withSequence(withTiming(-16, { duration: 160 }), withTiming(10, { duration: 200 }), withTiming(-16, { duration: 200 }), withTiming(0, { duration: 180 })));
   };
 
   const width = (height * VIEW_W) / VIEW_H;

@@ -1,10 +1,11 @@
-import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { Image, View, type ImageSourcePropType } from 'react-native';
 import Svg, { ClipPath, Defs, Ellipse, G, Line, LinearGradient, Path, Pattern, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 // Product photo of the HeatSense Band, cut out from its black studio background
 // (source: IMG_1544.jpeg). Set to null to fall back to the drawing below.
-const BAND_IMAGE: ImageSourcePropType | null = require('@/assets/images/heatsense-band.png');
-const PHOTO_ASPECT = 661 / 948;
+const BAND_IMAGE: ImageSourcePropType | null = require('@/assets/images/heatsense-band-refined.png');
+// Crop the generous transparent padding around the square studio render.
+const PHOTO_ASPECT = 1 / 1.15;
 
 export const WRISTBAND_ASPECT = BAND_IMAGE ? PHOTO_ASPECT : 300 / 320;
 
@@ -103,18 +104,8 @@ export function WelcomeWristband({ width }: { width: number }) {
   if (BAND_IMAGE) {
     const height = width / WRISTBAND_ASPECT;
     return (
-      <View style={{ width, height }}>
-        {/* Soft studio light behind the dark product so it lifts off the charcoal. */}
-        <Svg style={StyleSheet.absoluteFill} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <Defs>
-            <RadialGradient id="photoStudio" cx="0.5" cy="0.47" r="0.5">
-              <Stop offset="0" stopColor="#6A6A6A" stopOpacity="0.22" />
-              <Stop offset="1" stopColor="#6A6A6A" stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Rect x={0} y={0} width={100} height={100} fill="url(#photoStudio)" />
-        </Svg>
-        <Image source={BAND_IMAGE} style={{ width, height }} resizeMode="contain" accessibilityIgnoresInvertColors />
+      <View style={{ width, height, overflow: 'hidden' }}>
+        <Image source={BAND_IMAGE} resizeMode="contain" accessibilityIgnoresInvertColors style={{ position: 'absolute', width: width * 1.3, height: width * 1.3, left: -width * 0.15, top: -width * 0.07 }} />
       </View>
     );
   }
