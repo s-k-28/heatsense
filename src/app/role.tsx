@@ -57,12 +57,12 @@ function RoleContent() {
   const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const selected = useOnboardingRole();
-  const [height, setHeight] = useState(0);
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const [mascotArea, setMascotArea] = useState(0);
   const [reaction, setReaction] = useState<MascotReaction>(null);
   // Short phones get tighter spacing, smaller panels and headline before anything scrolls.
-  const compact = height > 0 && height < 720;
-  const headlineSize = compact ? 34 : 46;
+  const compact = size.height > 0 && size.height < 830;
+  const headlineSize = Math.max(32, Math.min(42, Math.floor((size.width - 44) * 0.116)));
 
   const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(480));
   const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(420));
@@ -71,7 +71,7 @@ function RoleContent() {
   const next = () => { if (selected) router.push(`/setup/${selected}`); };
 
   return (
-    <View style={styles.fill} onLayout={(event: LayoutChangeEvent) => setHeight(event.nativeEvent.layout.height)}>
+    <View style={styles.fill} onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
       <StatusBar style="light" />
       <ScrollView
         bounces={false}
@@ -92,7 +92,7 @@ function RoleContent() {
 
         {/* The mascot fills the space between the intro and the role options. */}
         <View style={[styles.mascotArea, compact && { minHeight: 0, paddingVertical: 4 }]} onLayout={(event: LayoutChangeEvent) => setMascotArea(event.nativeEvent.layout.height)}>
-          {mascotArea > 0 && <Animated.View entering={fade(300)}><HeatSenseMascot height={Math.max(72, Math.min(210, mascotArea - (compact ? 22 : 56)))} reaction={reaction} /></Animated.View>}
+          {mascotArea > 0 && <Animated.View entering={fade(300)}><HeatSenseMascot height={Math.max(72, Math.min(compact ? 125 : 180, mascotArea - (compact ? 8 : 36)))} reaction={reaction} /></Animated.View>}
         </View>
 
         <View accessibilityRole="radiogroup" style={{ gap: compact ? 12 : 16 }}>

@@ -66,9 +66,7 @@ export function HeatSenseMascot({ height, reaction }: { height: number; reaction
   const width = height * MASCOT_ASPECT;
 
   const entrance = useSharedValue(reducedMotion ? 1 : 0);
-  const float = useSharedValue(0);
   const tilt = useSharedValue(0);
-  const bounce = useSharedValue(0);
   const squash = useSharedValue(0);
   const wave = useSharedValue(0);
   const lidLeft = useSharedValue(0);
@@ -109,14 +107,12 @@ export function HeatSenseMascot({ height, reaction }: { height: number; reaction
     const scheduleWave = () => later(random(15000, 20000), () => { if (!isBusy()) doWave(2); scheduleWave(); });
 
     const startIdle = () => {
-      float.set(withRepeat(withTiming(1, { duration: 2000, easing: ease }), -1, true));
-      // A slower, unsynchronized tilt keeps the hover from looking mechanical.
       tilt.set(withRepeat(withSequence(withTiming(1.5, { duration: 2700, easing: ease }), withTiming(-1.5, { duration: 2700, easing: ease })), -1, true));
       scheduleBlink(); scheduleWink(); scheduleWave();
     };
     const stopAll = () => {
       timers.current.forEach(clearTimeout); timers.current = [];
-      [float, tilt, wave, lidLeft, lidRight, bounce, squash].forEach((value) => cancelAnimation(value));
+      [tilt, wave, lidLeft, lidRight, squash].forEach((value) => cancelAnimation(value));
     };
 
     // Entrance: appear at 0.3s, wave at 1.0s, blink at 1.9s, idle from 2.2s.
@@ -131,7 +127,7 @@ export function HeatSenseMascot({ height, reaction }: { height: number; reaction
       if (state === 'active') { stopAll(); startIdle(); } else stopAll();
     });
     return () => { sub.remove(); stopAll(); };
-  }, [bounce, entrance, float, lidLeft, lidRight, reducedMotion, squash, tilt, wave]);
+  }, [entrance, lidLeft, lidRight, reducedMotion, squash, tilt, wave]);
 
   // React to role choices without affecting the selection itself.
   const lastReaction = useRef(reaction?.id ?? 0);
@@ -140,14 +136,14 @@ export function HeatSenseMascot({ height, reaction }: { height: number; reaction
     lastReaction.current = reaction.id;
     busyUntil.current = Date.now() + 1300;
     if (reaction.kind === 'coach') {
-      bounce.set(withSequence(withTiming(6, { duration: 160, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 260, easing: Easing.in(Easing.quad) })));
+      wave.set(withSequence(withTiming(-12, { duration: 180, easing: ease }), withTiming(0, { duration: 260, easing: ease })));
       lidLeft.set(withDelay(380, withSequence(withTiming(1, { duration: 70 }), withTiming(0, { duration: 90 }))));
       lidRight.set(withDelay(380, withSequence(withTiming(1, { duration: 70 }), withTiming(0, { duration: 90 }))));
     } else {
       wave.set(withSequence(withTiming(-15, { duration: 160, easing: ease }), withTiming(12, { duration: 200, easing: ease }), withTiming(-15, { duration: 200, easing: ease }), withTiming(0, { duration: 240, easing: ease })));
       lidRight.set(withDelay(820, withSequence(withTiming(1, { duration: 90 }), withDelay(240, withTiming(0, { duration: 130 })))));
     }
-  }, [bounce, lidLeft, lidRight, reaction, reducedMotion, wave]);
+  }, [lidLeft, lidRight, reaction, reducedMotion, wave]);
 
   const onTap = () => {
     if (reducedMotion) return;
@@ -159,7 +155,7 @@ export function HeatSenseMascot({ height, reaction }: { height: number; reaction
   const bodyStyle = useAnimatedStyle(() => ({
     opacity: entrance.value,
     transform: [
-      { translateY: (1 - entrance.value) * 15 - float.value * 7 - bounce.value },
+      { translateY: (1 - entrance.value) * 15 },
       { rotate: `${tilt.value}deg` },
       { scale: 0.9 + entrance.value * 0.1 },
       { scaleX: 1 + squash.value * 0.03 },
@@ -167,11 +163,7 @@ export function HeatSenseMascot({ height, reaction }: { height: number; reaction
     ],
   }));
   const armStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${wave.value}deg` }] }));
-  // Shadow stays on the floor: smaller and lighter as the mascot rises.
-  const shadowStyle = useAnimatedStyle(() => ({
-    opacity: entrance.value * (0.85 - float.value * 0.3 - bounce.value * 0.03),
-    transform: [{ scale: 1 - float.value * 0.12 - bounce.value * 0.015 }],
-  }));
+  const shadowStyle = useAnimatedStyle(() => ({ opacity: entrance.value * 0.8 }));
 
   return (
     <View style={styles.wrap}>
