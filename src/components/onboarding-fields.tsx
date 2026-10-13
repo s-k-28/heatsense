@@ -15,7 +15,7 @@ import { GlassSurface } from '@/components/glass-surface';
 import { onboardingFont, OnboardingTokens } from '@/components/onboarding-controls';
 
 // Form fields for onboarding, in the same component family as the sign-in screen's
-// Google / Apple buttons: a charcoal pill with a clear white outline and white type.
+// Sign-in buttons: a charcoal pill with a clear white outline and white type.
 // Focus brightens the outline to a solid 2px white; errors use a restrained red
 // outline plus a short message. Never orange.
 const ease = Easing.out(Easing.cubic);

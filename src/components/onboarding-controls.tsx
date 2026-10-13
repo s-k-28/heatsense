@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-// Shared onboarding controls, modeled on the sign-in screen's Google / Apple buttons:
+// Shared onboarding controls, modeled on the sign-in screen's Google button:
 // charcoal surface, precise white outline, white type, neutral (never orange) states.
 // Every onboarding screen should use these so the flow stays visually consistent.
 export const onboardingFont = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif', default: '"Helvetica Neue", Helvetica, Arial, sans-serif' });
