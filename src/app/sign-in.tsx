@@ -1,18 +1,16 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactElement } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeIn,
   FadeInUp,
-  useAnimatedStyle,
   useReducedMotion,
-  useSharedValue,
-  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { Button } from 'tamagui';
 
 import { GoogleLogo } from '@/components/brand-logos';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
@@ -107,31 +105,25 @@ function SignInContent() {
   );
 }
 
-function AuthButton({ label, icon, onPress, loading, disabled }: { label: string; icon: ReactNode; onPress: () => void; loading: boolean; disabled: boolean }) {
-  const reducedMotion = useReducedMotion();
-  const [hovered, setHovered] = useState(false);
-  const press = useSharedValue(0);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: 1 - press.value * 0.02 }] }));
-  const active = hovered || loading;
+function AuthButton({ label, icon, onPress, loading, disabled }: { label: string; icon: ReactElement; onPress: () => void; loading: boolean; disabled: boolean }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
+    <Button
+      aria-label={label}
       aria-busy={loading}
       aria-disabled={disabled}
       disabled={disabled}
       onPress={onPress}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      onPressIn={() => { press.value = withTiming(1, { duration: reducedMotion ? 0 : 160 }); }}
-      onPressOut={() => { press.value = withTiming(0, { duration: reducedMotion ? 0 : 180 }); }}>
-      {({ pressed }) => (
-        <Animated.View style={[styles.authButton, (active || pressed) && styles.authButtonActive, disabled && !loading && { opacity: 0.55 }, style]}>
-          {loading ? <ActivityIndicator size="small" color="#FFFFFF" /> : icon}
-          <Text style={[styles.authText, { fontFamily }]}>{label}</Text>
-        </Animated.View>
-      )}
-    </Pressable>
+      icon={loading ? <ActivityIndicator size="small" color="#FFFFFF" /> : icon}
+      height={58}
+      borderRadius={999}
+      borderWidth={1}
+      borderColor="rgba(255,255,255,0.85)"
+      backgroundColor="transparent"
+      scale="press:0.98"
+      opacity={disabled && !loading ? 0.55 : 1}
+      gap={12}>
+      <Button.Text color="#FFFFFF" fontFamily={fontFamily} fontSize={16} fontWeight="500">{label}</Button.Text>
+    </Button>
   );
 }
 
@@ -152,9 +144,6 @@ const styles = StyleSheet.create({
   headline: { color: '#FFFFFF', fontWeight: '400', letterSpacing: -0.4 },
   description: { color: '#B8B8B8', fontSize: 15, lineHeight: 22, fontWeight: '400', marginTop: 10, maxWidth: 340 },
   buttons: { gap: 14, marginTop: 26 },
-  authButton: { height: 58, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.85)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  authButtonActive: { borderColor: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.08)' },
-  authText: { color: '#FFFFFF', fontSize: 16, fontWeight: '500' },
   legal: { color: '#8E8E8E', fontSize: 11.5, lineHeight: 17, textAlign: 'center', marginTop: 16, paddingHorizontal: 8 },
   legalLink: { color: '#B8B8B8', textDecorationLine: 'underline' },
   error: { color: '#FFB9A7', fontSize: 13, lineHeight: 18, marginTop: 14, textAlign: 'center' },
