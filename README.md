@@ -200,6 +200,7 @@ scripts/
 
 ## Documentation
 
+- [Social sign in setup](docs/auth-setup.md)
 - [UI product contract](docs/ui-product-contract.md)
 - [Design reference map](docs/design-reference-map.md)
 - [Component reference inventory](docs/component-reference-inventory.md)

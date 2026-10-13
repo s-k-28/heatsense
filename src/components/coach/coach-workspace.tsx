@@ -156,7 +156,7 @@ function PeachButton({ label, accessibilityLabel, onPress, compact = false }: { 
   const [hovered, setHovered] = useState(false);
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} onPress={onPress} onHoverIn={() => setHovered(true)} onHoverOut={() => setHovered(false)} onPressIn={() => { if (!reducedMotion) scale.value = withTiming(0.95, { duration: 90 }); }} onPressOut={() => { scale.value = withTiming(1, { duration: 140 }); }} hitSlop={compact ? 6 : 2}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} onPress={onPress} onHoverIn={() => setHovered(true)} onHoverOut={() => setHovered(false)} onPressIn={() => { if (!reducedMotion) scale.set(withTiming(0.95, { duration: 90 })); }} onPressOut={() => { scale.set(withTiming(1, { duration: 140 })); }} hitSlop={compact ? 6 : 2}>
     <Animated.View style={[style, hovered && { opacity: 0.9 }]}>
       <LinearGradient colors={[C.peach, C.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.peachButton, compact && s.peachButtonCompact]}>
         <Text style={s.peachText}>{label}</Text>
