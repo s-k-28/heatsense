@@ -27,6 +27,7 @@ export async function hydrateOnboardingRole(userId: string | null) {
   state = { role: null, teamChoice: null };
   teamDraft = { school: '', teamName: '', sport: null, level: null };
   teamId = null;
+  athleteTeam = { status: 'unassigned', teamId: null };
   notify();
   if (!userId) return;
 
@@ -98,4 +99,23 @@ export function setTeamId(id: string) {
 
 export function getTeamId() {
   return teamId;
+}
+
+export function getCurrentUserId() {
+  return currentUserId;
+}
+
+// Athlete team membership as this device knows it. 'pending' means a join
+// request is waiting for the coach; it is never treated as team access.
+export type AthleteTeam = { status: 'unassigned' | 'pending'; teamId: string | null };
+
+let athleteTeam: AthleteTeam = { status: 'unassigned', teamId: null };
+
+export function setAthleteTeam(next: AthleteTeam) {
+  athleteTeam = next;
+  notify();
+}
+
+export function useAthleteTeam() {
+  return useSyncExternalStore(subscribe, () => athleteTeam, () => athleteTeam);
 }

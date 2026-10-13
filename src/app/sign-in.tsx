@@ -14,6 +14,7 @@ import { Button } from 'tamagui';
 
 import { GoogleLogo } from '@/components/brand-logos';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
+import { SKIP_SIGN_IN } from '@/constants/dev-flags';
 import { signInWithGoogle } from '@/services/google-auth';
 
 const SCREEN = '#090909';
@@ -55,6 +56,10 @@ function SignInContent() {
   const back = () => (router.canGoBack() ? router.back() : router.replace('/welcome'));
   const signIn = async () => {
     if (pending) return;
+    if (SKIP_SIGN_IN) {
+      router.replace('/role');
+      return;
+    }
     setPending(true);
     setError(null);
     try {
