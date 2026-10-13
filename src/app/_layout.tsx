@@ -18,13 +18,14 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 
 import { Palette } from '@/constants/theme';
 import { firebaseAuth } from '@/services/firebase';
+import { hydrateOnboardingRole } from '@/state/onboarding';
 
 SplashScreen.preventAutoHideAsync();
 const tamaguiConfig = createTamagui(defaultConfig);
 
 export default function RootLayout() {
   const [user, setUser] = useState<User | null>(null);
-  const [authReady, setAuthReady] = useState(!firebaseAuth);
+  const [authReady, setAuthReady] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -49,11 +50,23 @@ export default function RootLayout() {
   }, [authReady, fontError, fontsLoaded]);
 
   useEffect(() => {
-    if (!firebaseAuth) return;
-    return onAuthStateChanged(firebaseAuth, (nextUser) => {
+    let active = true;
+    let restoreVersion = 0;
+    const restore = async (nextUser: User | null) => {
+      const version = ++restoreVersion;
       setUser(nextUser);
-      setAuthReady(true);
-    }, () => setAuthReady(true));
+      await hydrateOnboardingRole(nextUser?.uid ?? (__DEV__ && !firebaseAuth ? 'local-demo' : null));
+      if (active && version === restoreVersion) setAuthReady(true);
+    };
+    if (!firebaseAuth) {
+      void restore(null);
+      return () => { active = false; };
+    }
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (nextUser) => {
+      setAuthReady(false);
+      void restore(nextUser);
+    }, () => { if (active) setAuthReady(true); });
+    return () => { active = false; unsubscribe(); };
   }, []);
 
   if ((!fontsLoaded && !fontError) || !authReady) {

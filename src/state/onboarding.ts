@@ -1,8 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
-// In-memory onboarding state shared across screens, so a choice survives
-// navigating back and forward. It does not survive an app restart.
-//
 // The selected role is a preference for which experience to show, NOT verified
 // authorization. Coach access must be confirmed later through
 // organization/team setup.
@@ -12,10 +10,47 @@ export type TeamChoice = 'create' | 'join';
 
 let state: { role: OnboardingRole | null; teamChoice: TeamChoice | null } = { role: null, teamChoice: null };
 const listeners = new Set<() => void>();
+let currentUserId: string | null = null;
+let hydrationVersion = 0;
+
+function notify() {
+  listeners.forEach((listener) => listener());
+}
+
+function roleKey(userId: string) {
+  return `heatsense:onboarding-role:${userId}`;
+}
+
+export async function hydrateOnboardingRole(userId: string | null) {
+  const version = ++hydrationVersion;
+  currentUserId = userId;
+  state = { role: null, teamChoice: null };
+  teamDraft = { school: '', teamName: '', sport: null, level: null };
+  teamId = null;
+  notify();
+  if (!userId) return;
+
+  try {
+    const saved = await AsyncStorage.getItem(roleKey(userId));
+    if (version !== hydrationVersion) return;
+    if (saved === 'coach' || saved === 'athlete') {
+      state = { ...state, role: saved };
+      notify();
+    }
+  } catch (error) {
+    console.warn('Could not restore the selected HeatSense role.', error);
+  }
+}
 
 export function setOnboardingRole(role: OnboardingRole | null) {
   state = { ...state, role };
-  listeners.forEach((listener) => listener());
+  notify();
+  if (currentUserId) {
+    const key = roleKey(currentUserId);
+    void (role ? AsyncStorage.setItem(key, role) : AsyncStorage.removeItem(key)).catch((error) => {
+      console.warn('Could not save the selected HeatSense role.', error);
+    });
+  }
 }
 
 function subscribe(listener: () => void) {
@@ -30,7 +65,7 @@ export function useOnboardingRole() {
 // Coach team setup: create a new team or join an existing one.
 export function setTeamChoice(teamChoice: TeamChoice | null) {
   state = { ...state, teamChoice };
-  listeners.forEach((listener) => listener());
+  notify();
 }
 
 export function useTeamChoice() {
@@ -45,7 +80,7 @@ let teamDraft: TeamDraft = { school: '', teamName: '', sport: null, level: null 
 
 export function setTeamDraft(update: Partial<TeamDraft>) {
   teamDraft = { ...teamDraft, ...update };
-  listeners.forEach((listener) => listener());
+  notify();
 }
 
 export function useTeamDraft() {
@@ -58,7 +93,7 @@ let teamId: string | null = null;
 
 export function setTeamId(id: string) {
   teamId = id;
-  listeners.forEach((listener) => listener());
+  notify();
 }
 
 export function getTeamId() {
