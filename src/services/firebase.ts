@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth, getReactNativePersistence, initializeAuth, type Auth } from 'firebase/auth';
+import * as FirebaseAuth from 'firebase/auth';
+import { getAuth, initializeAuth, type Auth, type Persistence } from 'firebase/auth';
 import { Platform } from 'react-native';
 
 const config = {
@@ -18,6 +19,11 @@ function createAuth(): Auth | null {
   if (!app) return null;
   if (Platform.OS === 'web') return getAuth(app);
   try {
+    // Firebase publishes this export in its React Native bundle, but its top-level
+    // TypeScript declaration points at the web bundle.
+    const getReactNativePersistence = (FirebaseAuth as typeof FirebaseAuth & {
+      getReactNativePersistence: (storage: typeof AsyncStorage) => Persistence;
+    }).getReactNativePersistence;
     return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'auth/already-initialized') return getAuth(app);
