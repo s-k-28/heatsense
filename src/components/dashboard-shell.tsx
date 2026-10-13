@@ -117,39 +117,41 @@ export function ScreenIntro({
 }) {
   const reducedMotion = useReducedMotion();
   const animate = Boolean(typed) && !reducedMotion;
-  const [visibleChars, setVisibleChars] = useState(animate ? 0 : title.length);
-
-  useEffect(() => {
-    if (!animate) {
-      setVisibleChars(title.length);
-      return;
-    }
-    let next = 0;
-    setVisibleChars(0);
-    const timer = setInterval(() => {
-      next += 1;
-      setVisibleChars(next);
-      if (next >= title.length) clearInterval(timer);
-    }, 36);
-    return () => clearInterval(timer);
-  }, [animate, title]);
 
   return (
     <Animated.View entering={reducedMotion ? undefined : FadeInUp.delay(60).duration(480)} style={styles.screenIntro}>
       <View style={styles.screenIntroCopy}>
         {eyebrow ? <Text style={styles.screenEyebrow}>{eyebrow.toUpperCase()}</Text> : null}
         {animate ? (
-          // The full title stays in the layout (hidden) so the lines don't re-wrap as it types.
-          <View accessible accessibilityLabel={title} accessibilityRole="header">
-            <Text aria-hidden accessibilityElementsHidden style={[styles.screenTitle, styles.screenTitleMeasure]}>{title}</Text>
-            <Text aria-hidden accessibilityElementsHidden style={[styles.screenTitle, styles.screenTitleTyped]}>{title.slice(0, visibleChars)}</Text>
-          </View>
+          <TypedScreenTitle key={title} title={title} />
         ) : (
           <Text accessibilityRole="header" style={styles.screenTitle}>{title}</Text>
         )}
       </View>
       {action}
     </Animated.View>
+  );
+}
+
+function TypedScreenTitle({ title }: { title: string }) {
+  const [visibleChars, setVisibleChars] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setVisibleChars((count) => {
+        if (count + 1 >= title.length) clearInterval(timer);
+        return Math.min(count + 1, title.length);
+      });
+    }, 36);
+    return () => clearInterval(timer);
+  }, [title]);
+
+  // The full title stays in the layout (hidden) so the lines don't re-wrap as it types.
+  return (
+    <View accessible accessibilityLabel={title} accessibilityRole="header">
+      <Text aria-hidden accessibilityElementsHidden style={[styles.screenTitle, styles.screenTitleMeasure]}>{title}</Text>
+      <Text aria-hidden accessibilityElementsHidden style={[styles.screenTitle, styles.screenTitleTyped]}>{title.slice(0, visibleChars)}</Text>
+    </View>
   );
 }
 
