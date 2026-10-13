@@ -14,7 +14,7 @@ HeatSense uses Firebase Authentication. Google sign in uses the native Google SD
 
 - Verified on October 12, 2026: Google popup sign-in on `localhost:8083` reached the role screen for `siddarthakodithyala28@gmail.com`; Firebase Authentication recorded that Google user; reloading the app preserved the session.
 - Verified on October 12, 2026: the iOS development build succeeded and installed on the dedicated **HeatSense Dev** simulator with the reversed Google OAuth URL scheme in the built app.
-- The native iOS account chooser and Firebase credential exchange still need a live sign-in on the simulator. A successful build alone does not verify that handoff.
+- Verified on October 12, 2026: the native welcome CTA opens the sign-in screen, and the Google button opens Google's iOS authentication page for the registered HeatSense OAuth client. Google requires the account owner's passkey verification on a trusted device before the simulator can receive a credential. The native Firebase credential exchange and session persistence remain unverified until that challenge is completed.
 - With no Firebase configuration, Google sign in shows an inline setup error and does not enter the role screen.
 - With configuration complete, sign in with Google on the dedicated HeatSense simulator and confirm the Firebase Authentication user appears in the console. Restart the app and confirm the session persists.
 - Test cancellation, repeat sign in, sign out, web origin restrictions, and a production iOS build.
