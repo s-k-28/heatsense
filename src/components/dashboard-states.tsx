@@ -1,10 +1,10 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { type ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenIntro, SectionHeader } from '@/components/dashboard-shell';
 import FlameLogo from '@/components/FlameLogo';
 import { HeatIcon } from '@/components/heat-icon';
+import { DepthButton } from '@/components/ui/depth-button';
 import WristbandIllustration from '@/components/WristbandIllustration';
 import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
 
@@ -35,7 +35,7 @@ function WeatherStaleState() {
     <>
       <ScreenIntro title="Weather data needs a refresh." />
       <Text style={styles.introBody}>HeatSense will not calculate a new practice zone until the latest field conditions are available.</Text>
-      <LinearGradient colors={['#ECE5D6', '#F8F3E8']} style={styles.weatherPanel}>
+      <View style={styles.weatherPanel}>
         <View style={styles.panelTopline}>
           <View style={styles.stalePill}><HeatIcon name={icons.cloud} size={15} tintColor={Palette.warning} /><Text style={styles.staleText}>Last update 28 min ago</Text></View>
           <Text style={styles.mutedLabel}>Frisco, Texas</Text>
@@ -44,7 +44,7 @@ function WeatherStaleState() {
         <Text style={styles.weatherUnit}>Last WBGT reading · not current guidance</Text>
         <View style={styles.weatherRule} />
         <Text style={styles.weatherInstruction}>Use the school’s backup measurement process before practice.</Text>
-      </LinearGradient>
+      </View>
       <PrimaryAction icon={icons.arrow} label="Try weather update again" />
       <Text style={styles.supportText}>If data remains unavailable, follow district procedures and record a local WBGT measurement.</Text>
     </>
@@ -109,12 +109,12 @@ function NoBandState() {
     <>
       <ScreenIntro title="Your practice plan is ready." />
       <Text style={styles.introBody}>No wristband is connected. You still receive the complete team-wide WBGT plan.</Text>
-      <LinearGradient colors={['#F5A052', '#FFD28A', '#FFF7E8']} style={styles.noBandHero}>
+      <View style={styles.noBandHero}>
         <Text style={styles.mutedLabel}>Today’s field condition</Text>
         <View style={styles.noBandMetric}><Text style={styles.noBandValue}>84</Text><Text style={styles.noBandUnit}>°F WBGT</Text></View>
         <Text style={styles.noBandZone}>Orange zone</Text>
         <Text style={styles.noBandGuidance}>Follow today’s scheduled work, rest, water, and equipment adjustments.</Text>
-      </LinearGradient>
+      </View>
       <View style={styles.optionalBandRow}>
         <HeatIcon name={icons.band} size={25} tintColor={Palette.inkMuted} />
         <View style={styles.flexOne}><Text style={styles.deviceTitle}>Personal signals are off</Text><Text style={styles.deviceDetail}>Pair later to add recovery, skin, sweat, and movement trends.</Text></View>
@@ -154,10 +154,12 @@ function AlertAcknowledgedState() {
 }
 
 function PrimaryAction({ icon, label, secondary }: { icon: ComponentProps<typeof HeatIcon>['name']; label: string; secondary?: boolean }) {
+  // The main action uses the same peach depth button as the welcome screen; the optional one stays a quiet outlined pill.
+  if (!secondary) return <View style={styles.depthAction}><DepthButton label={label} onPress={() => {}} /></View>;
   return (
-    <Pressable accessibilityRole="button" style={({ pressed }) => [styles.primaryAction, secondary && styles.primaryActionSecondary, pressed && styles.pressed]}>
-      <Text style={[styles.primaryActionText, secondary && styles.primaryActionTextSecondary]}>{label}</Text>
-      <HeatIcon name={icon} size={18} tintColor={secondary ? Palette.ink : Palette.surface} />
+    <Pressable accessibilityRole="button" style={({ pressed }) => [styles.primaryAction, styles.primaryActionSecondary, pressed && styles.pressed]}>
+      <Text style={[styles.primaryActionText, styles.primaryActionTextSecondary]}>{label}</Text>
+      <HeatIcon name={icon} size={18} tintColor={Palette.ink} />
     </Pressable>
   );
 }
@@ -172,7 +174,7 @@ function TimelineRow({ detail, label, pending, time }: { detail: string; label: 
 
 const styles = StyleSheet.create({
   flexOne: { flex: 1 },
-  introBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 18, marginTop: Spacing.three, maxWidth: 380 },
+  introBody: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 15, lineHeight: 21, marginTop: Spacing.three, maxWidth: 380 },
   wristbandHero: {
     backgroundColor: '#14120F',
     borderRadius: Radius.large,
@@ -198,16 +200,16 @@ const styles = StyleSheet.create({
     marginTop: Spacing.four,
   },
   wristbandHeroArt: { alignItems: 'center', marginTop: Spacing.five },
-  weatherPanel: { borderRadius: Radius.large, marginTop: Spacing.five, minHeight: 300, padding: Spacing.five },
+  weatherPanel: { borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, minHeight: 300, padding: Spacing.six },
   panelTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  stalePill: { alignItems: 'center', backgroundColor: 'rgba(255,253,248,0.7)', borderRadius: Radius.pill, flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingVertical: 7 },
-  staleText: { color: Palette.warning, fontFamily: Fonts.bold, fontSize: 11 },
-  mutedLabel: { color: 'rgba(27,28,25,0.66)', fontFamily: Fonts.semibold, fontSize: 12 },
-  weatherValue: { color: Palette.inkMuted, fontFamily: Fonts.extrabold, fontSize: 80, letterSpacing: -5, lineHeight: 86, marginTop: Spacing.five },
-  weatherUnit: { color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 11 },
-  weatherRule: { backgroundColor: 'rgba(27,28,25,0.16)', height: 1, marginTop: 'auto' },
-  weatherInstruction: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 13, lineHeight: 18, marginTop: Spacing.four, maxWidth: 300 },
-  supportText: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: Spacing.three, paddingHorizontal: Spacing.two, textAlign: 'center' },
+  stalePill: { alignItems: 'center', borderColor: Palette.border, borderRadius: Radius.pill, borderWidth: 1, flexDirection: 'row', gap: 6, paddingHorizontal: 12, paddingVertical: 7 },
+  staleText: { color: Palette.warning, fontFamily: Fonts.medium, fontSize: 12 },
+  mutedLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13 },
+  weatherValue: { color: Palette.inkMuted, fontFamily: Fonts.light, fontSize: 84, letterSpacing: -3, lineHeight: 90, marginTop: Spacing.five },
+  weatherUnit: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13 },
+  weatherRule: { backgroundColor: Palette.border, height: 1, marginTop: 'auto' },
+  weatherInstruction: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 15, lineHeight: 21, marginTop: Spacing.four, maxWidth: 300 },
+  supportText: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 18, marginTop: Spacing.four, paddingHorizontal: Spacing.two, textAlign: 'center' },
   invitePanel: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.five },
   inviteLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, marginTop: Spacing.five },
   inviteCode: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 35, letterSpacing: 2, marginTop: 3 },
@@ -227,28 +229,29 @@ const styles = StyleSheet.create({
   deviceDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 13, marginTop: 3 },
   nearbyDot: { backgroundColor: Palette.safe, borderRadius: 5, height: 10, width: 10 },
   privacyRow: { alignItems: 'flex-start', flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.four, paddingHorizontal: Spacing.two },
-  privacyText: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15 },
-  noBandHero: { borderRadius: Radius.large, marginTop: Spacing.five, minHeight: 300, padding: Spacing.five },
+  privacyText: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 18 },
+  noBandHero: { borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, minHeight: 300, padding: Spacing.six },
   noBandMetric: { alignItems: 'baseline', flexDirection: 'row', marginTop: Spacing.five },
-  noBandValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 76, letterSpacing: -4 },
-  noBandUnit: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12, marginLeft: 7 },
-  noBandZone: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 24, marginTop: 'auto' },
-  noBandGuidance: { color: 'rgba(27,28,25,0.76)', fontFamily: Fonts.medium, fontSize: 11, lineHeight: 16, marginTop: Spacing.two, maxWidth: 300 },
+  noBandValue: { color: Palette.ink, fontFamily: Fonts.light, fontSize: 80, letterSpacing: -3 },
+  noBandUnit: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14, marginLeft: 8 },
+  noBandZone: { color: Palette.warning, fontFamily: Fonts.medium, fontSize: 24, letterSpacing: -0.5, marginTop: 'auto' },
+  noBandGuidance: { color: 'rgba(255,255,255,0.82)', fontFamily: Fonts.regular, fontSize: 15, lineHeight: 21, marginTop: Spacing.two, maxWidth: 300 },
   optionalBandRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, minHeight: 78, paddingHorizontal: Spacing.two },
-  ackBanner: { alignItems: 'flex-start', backgroundColor: 'rgba(76,155,118,0.16)', borderRadius: Radius.medium, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, padding: Spacing.four },
-  ackTitle: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 15 },
-  ackBody: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 15, marginTop: 3 },
+  ackBanner: { alignItems: 'flex-start', borderColor: Palette.safe, borderRadius: Radius.medium, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.six, padding: Spacing.five },
+  ackTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 17, letterSpacing: -0.3 },
+  ackBody: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14, lineHeight: 19, marginTop: 3 },
   incidentSummary: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.five, paddingBottom: Spacing.four, paddingHorizontal: Spacing.two },
-  incidentName: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 16 },
+  incidentName: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 18, letterSpacing: -0.3 },
   warningStatus: { backgroundColor: 'rgba(224,124,62,0.18)', borderRadius: Radius.pill, paddingHorizontal: 11, paddingVertical: 6 },
   warningStatusText: { color: Palette.warning, fontFamily: Fonts.bold, fontSize: 11 },
   timelineRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 72 },
   timelineMarker: { backgroundColor: Palette.safe, borderRadius: 5, height: 10, width: 10 },
   timelineMarkerPending: { backgroundColor: Palette.caution },
   timelineTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
-  primaryAction: { alignItems: 'center', backgroundColor: Palette.ink, borderRadius: Radius.pill, flexDirection: 'row', gap: Spacing.two, justifyContent: 'center', marginTop: Spacing.five, minHeight: 52 },
-  primaryActionSecondary: { backgroundColor: Palette.surface, borderColor: Palette.border, borderWidth: 1 },
-  primaryActionText: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 13 },
+  depthAction: { marginTop: Spacing.six },
+  primaryAction: { alignItems: 'center', borderColor: Palette.ink, borderRadius: 9999, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.two, justifyContent: 'center', marginTop: Spacing.six, minHeight: 60 },
+  primaryActionSecondary: { borderColor: Palette.border },
+  primaryActionText: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 17.5, letterSpacing: -0.2 },
   primaryActionTextSecondary: { color: Palette.ink },
   pressed: { opacity: 0.7 },
 });

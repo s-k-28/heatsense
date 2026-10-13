@@ -3,28 +3,30 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 export const Palette = {
-  // Flipped to a black-first scheme -- canvas/surface/ink/border inverted;
-  // coral and the semantic risk colors (safe/caution/warning/emergency)
-  // stay as-is since they already read clearly against a dark ground.
-  canvas: '#0D0C0A',
-  surface: '#17140F',
-  surfaceMuted: '#231F19',
-  ink: '#F5F1E8',
-  inkMuted: '#A39C90',
-  border: '#332D24',
-  coral: '#F06F5F',
-  coralDark: '#D95749',
-  coralSoft: 'rgba(240,111,95,0.16)',
+  // Matches the onboarding flow: charcoal ground, white type, quiet white
+  // outlines instead of filled panels, and a single peach-orange accent
+  // (eyebrows, the logo mark, small highlights). The semantic risk colors
+  // (safe/caution/warning/emergency) stay as-is.
+  canvas: '#222222',
+  surface: '#222222',
+  surfaceMuted: '#2A2A2A',
+  ink: '#FFFFFF',
+  inkMuted: '#B8B8B8',
+  border: 'rgba(255,255,255,0.22)',
+  outline: 'rgba(255,255,255,0.85)',
+  coral: '#FF996B',
+  coralDark: '#FF996B',
+  coralSoft: 'rgba(255,153,107,0.14)',
   peach: '#F4B29F',
   sage: '#96A99C',
-  safe: '#4C9B76',
-  caution: '#C99A2E',
-  warning: '#E07C3E',
-  emergency: '#E5584A',
+  safe: '#5ED3A0',
+  caution: '#E3B341',
+  warning: '#F0803C',
+  emergency: '#FF6B5E',
+  info: '#7AA7FF',
   white: '#FFFFFF',
 
-  // Deep/burnt tones for the sun glyph on a zone card -- a darker shade of
-  // whatever zone color is active, instead of a flat neutral icon color.
+  // Deep tones for a sun glyph sitting on a light zone fill.
   zoneOrangeDeep: '#7A3A16',
   zoneYellowDeep: '#7A5C0E',
   zoneRedDeep: '#6E1C14',
@@ -52,25 +54,34 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+// Helvetica Neue, like the onboarding screens. Weights are separate PostScript
+// faces on iOS; the onboarding headline weight (500) is the heaviest we use.
+const face = Platform.select({
+  ios: { light: 'HelveticaNeue-Light', regular: 'HelveticaNeue', medium: 'HelveticaNeue-Medium' },
+  android: { light: 'sans-serif-light', regular: 'sans-serif', medium: 'sans-serif-medium' },
+  default: {
+    light: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+    regular: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+    medium: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  },
+})!;
+
 export const Fonts = {
-  regular: 'AtkinsonHyperlegibleNext_400Regular',
-  medium: 'AtkinsonHyperlegibleNext_500Medium',
-  semibold: 'AtkinsonHyperlegibleNext_600SemiBold',
-  bold: 'AtkinsonHyperlegibleNext_700Bold',
-  extrabold: 'AtkinsonHyperlegibleNext_800ExtraBold',
+  light: face.light,
+  regular: face.regular,
+  medium: face.medium,
+  semibold: face.medium,
+  bold: face.medium,
+  extrabold: face.medium,
   mono: Platform.select({ ios: 'ui-monospace', default: 'monospace' }),
   fallback: Platform.select({ ios: 'System', default: 'sans-serif' }),
 
-  // Onboarding-only set. Everywhere else in the app keeps the accessible
-  // Atkinson Hyperlegible family above -- these two are scoped to the
-  // "meet HeatSense" intro screens specifically.
-  uiRegular: 'Inter_400Regular',
-  uiMedium: 'Inter_500Medium',
-  uiSemibold: 'Inter_600SemiBold',
-  uiBold: 'Inter_700Bold',
-  uiExtrabold: 'Inter_800ExtraBold',
-  // A display serif with soft, curved (not straight-cut) letter terminals,
-  // for the one big headline CTA on the first onboarding screen.
+  // Legacy "meet HeatSense" story set, still used by the optional intro screens.
+  uiRegular: face.regular,
+  uiMedium: face.medium,
+  uiSemibold: face.medium,
+  uiBold: face.medium,
+  uiExtrabold: face.medium,
   ctaItalic: 'Fraunces_500Medium_Italic',
   ctaItalicSemibold: 'Fraunces_600SemiBold_Italic',
 } as const;
@@ -91,8 +102,8 @@ export const Spacing = {
 
 export const Radius = {
   small: 12,
-  medium: 18,
-  large: 26,
+  medium: 24,
+  large: 30,
   pill: 999,
 } as const;
 
