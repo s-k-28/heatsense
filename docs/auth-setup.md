@@ -4,12 +4,11 @@ HeatSense uses Firebase Authentication. Google sign in uses the native Google SD
 
 ## Firebase project
 
-1. Create a dedicated **HeatSense** Firebase project in the account that owns the app. Do not use an unrelated existing project.
-2. In Authentication, enable the Google provider. Set the support email to the project owner's address. Add `localhost` and each deployed web domain to Authorized domains.
-3. Add a web app. Copy its public Firebase config values into a local `.env` based on `.env.example`. These values are Firebase client configuration, not an admin key. Never place a service account JSON or OAuth client secret in the app.
-4. Add an iOS app with bundle ID `com.s-k-28.heatsense-app`. From its `GoogleService-Info.plist`, copy `CLIENT_ID` into `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` and `REVERSED_CLIENT_ID` into `GOOGLE_IOS_URL_SCHEME` in `.env`. The app config adds the URL scheme during native build. The plist is not needed in the repository for this Firebase JS SDK setup.
-5. For Android, first choose an `android.package` in `app.json`, then register it in Firebase with development and release SHA-1 certificates. Rebuild after changing native configuration.
-6. Copy the Google **web OAuth client ID** into `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`. The native SDK uses it to request a Google ID token for Firebase.
+1. The dedicated **HeatSense** Firebase project is `heatsense-aa3c8`. Google Authentication is enabled with `siddarthakodithyala28@gmail.com` as its support email. Add each deployed web domain to Authorized domains before using web sign-in there.
+2. Copy `.env.example` to `.env`. It contains the public Firebase web app and Google OAuth client identifiers for this project. These are client configuration, not admin credentials. Never place a service account JSON or OAuth client secret in the app.
+3. The registered iOS app uses bundle ID `com.s-k-28.heatsense-app`. Its OAuth URL scheme is in `.env.example` and is added by `app.config.js` during native prebuild. The `GoogleService-Info.plist` file is not needed in the repository for this Firebase JS SDK setup. If the iOS OAuth client is rotated, update its client ID and reversed URL scheme from the latest Firebase configuration file.
+4. For Android, first choose an `android.package` in `app.json`, then register it in Firebase with development and release SHA-1 certificates. Rebuild after changing native configuration.
+5. Rebuild the iOS development app after copying `.env`; a Metro reload alone cannot add the native OAuth URL scheme.
 
 ## Verification
 
