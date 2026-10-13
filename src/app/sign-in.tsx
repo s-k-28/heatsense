@@ -73,7 +73,7 @@ function SignInContent() {
     <View onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)} style={[styles.content, { paddingTop: Math.max(insets.top + 8, 56), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
       <StatusBar style="light" />
       {size.height > 0 && <View pointerEvents="none" style={[styles.imageLayer, { height: size.height * 0.73 }]}>
-        <Image source={require('@/assets/images/sign-in-track.jpg')} resizeMode="cover" style={styles.trackImage} />
+        <Image source={require('@/assets/images/sign-in-on-field.jpg')} resizeMode="cover" style={styles.trackImage} />
       </View>}
       <LinearGradient pointerEvents="none" colors={['rgba(9,9,9,0.48)', 'rgba(9,9,9,0)', 'rgba(9,9,9,0)']} locations={[0, 0.38, 1]} style={styles.topShade} />
       <LinearGradient pointerEvents="none" colors={['rgba(9,9,9,0)', 'rgba(9,9,9,0.2)', SCREEN, SCREEN]} locations={[0, 0.32, 0.7, 1]} style={styles.bottomShade} />
