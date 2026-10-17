@@ -14,10 +14,12 @@ import {
   ATHLETE_ERROR,
   ATHLETE_MUTED,
   ATHLETE_SCREEN,
-  athleteFont as fontFamily,
   useAthleteEntrance,
 } from '@/components/athlete-onboarding';
+import { entryStyles } from '@/components/entry-ui';
+import { ShieldMark } from '@/components/onboarding-art';
 import { MobileViewport } from '@/components/mobile-viewport';
+import { Entry } from '@/constants/entry-theme';
 import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
 import { getAthleteProfile } from '@/services/athlete-profile';
 import {
@@ -96,7 +98,6 @@ function Content() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const compact = size.height > 0 && size.height < 760;
-  const headlineSize = Math.max(40, Math.min(48, Math.floor((size.width || 390) * 0.118)));
   const revealed = (enter: boolean) => (reducedMotion ? undefined : enter ? FadeIn.duration(220) : FadeOut.duration(160));
 
   const update = (next: Partial<SafetyDraft>) => {
@@ -178,7 +179,6 @@ function Content() {
     return (
       <View style={styles.fields}>
         <OnboardingTextField
-          surface="flat"
           label="Full name"
           placeholder="Contact’s full name"
           value={contact.name}
@@ -191,7 +191,6 @@ function Content() {
         />
         <View style={styles.select}>
           <OnboardingSelectField
-            surface="flat"
             label="Relationship"
             placeholder="Select relationship"
             options={RELATIONSHIP_LABELS}
@@ -204,7 +203,6 @@ function Content() {
           />
         </View>
         <OnboardingTextField
-          surface="flat"
           label="Phone number"
           placeholder="(000) 000-0000"
           value={contact.phone}
@@ -227,19 +225,17 @@ function Content() {
         bounces={false}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 8, compact ? 36 : 56), paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
         <Animated.View entering={fade(200)}>
           <AthleteHeader onBack={back} step="03 / 03" />
         </Animated.View>
 
-        <Animated.Text
-          entering={rise(350)}
-          accessibilityRole="header"
-          style={[styles.headline, { fontFamily, fontSize: headlineSize, lineHeight: Math.round(headlineSize * 1.08), marginTop: compact ? 26 : 32 }]}>
-          {'Safety comes\nfirst.'}
-        </Animated.Text>
+        <Animated.View entering={rise(350)} style={[styles.titleRow, { marginTop: compact ? 22 : 30 }]}>
+          <Text accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.title]}>{'Safety comes\nfirst.'}</Text>
+          <ShieldMark size={compact ? 72 : 88} />
+        </Animated.View>
         {/* HeatSense doesn't send emergency notifications, so the page never says it will reach anyone. */}
-        <Animated.Text entering={fade(550)} style={[styles.description, { fontFamily }]}>Keep important contact information available to authorized safety staff.</Animated.Text>
+        <Animated.Text entering={fade(550)} style={entryStyles.description}>Keep important contact information available to authorized safety staff.</Animated.Text>
 
         <Animated.View entering={rise(700)} style={styles.section}>
           <AthleteSectionLabel>Primary emergency contact</AthleteSectionLabel>
@@ -252,14 +248,14 @@ function Content() {
               <View style={styles.sectionRow}>
                 <AthleteSectionLabel>Secondary emergency contact</AthleteSectionLabel>
                 <Pressable accessibilityRole="button" accessibilityLabel="Remove secondary contact" hitSlop={10} onPress={() => { update({ secondary: null }); if (openSelect === 'secondary') setOpenSelect(null); }}>
-                  {({ hovered }: { hovered?: boolean }) => <Text style={[styles.remove, { fontFamily }, hovered && styles.underline]}>Remove contact</Text>}
+                  {({ hovered }: { hovered?: boolean }) => <Text style={[styles.remove, hovered && styles.underline]}>Remove contact</Text>}
                 </Pressable>
               </View>
               {contactFields('secondary')}
             </Animated.View>
           ) : (
             <Pressable accessibilityRole="button" accessibilityLabel="Add another contact" hitSlop={10} onPress={() => update({ secondary: EMPTY_CONTACT })} style={styles.addWrap}>
-              {({ hovered }: { hovered?: boolean }) => <Text style={[styles.add, { fontFamily }, hovered && styles.underline]}>+ Add another contact</Text>}
+              {({ hovered }: { hovered?: boolean }) => <Text style={[styles.add, hovered && styles.underline]}>+ Add another contact</Text>}
             </Pressable>
           )}
         </Animated.View>
@@ -267,7 +263,7 @@ function Content() {
         <Animated.View entering={rise(900)} style={styles.section}>
           <View>
             <AthleteSectionLabel>Additional safety notes (optional)</AthleteSectionLabel>
-            <Text style={[styles.hint, { fontFamily }]}>Share anything important authorized safety staff should know. No medical records, medication lists, or insurance details.</Text>
+            <Text style={[styles.hint]}>Share anything important authorized safety staff should know. No medical records, medication lists, or insurance details.</Text>
           </View>
           <TextInput
             accessibilityLabel="Additional safety notes, optional"
@@ -276,27 +272,27 @@ function Content() {
             onFocus={() => setNotesFocused(true)}
             onBlur={() => setNotesFocused(false)}
             placeholder="Add any additional information here..."
-            placeholderTextColor="#8A8A8A"
-            selectionColor="#FFFFFF"
-            cursorColor="#FFFFFF"
+            placeholderTextColor={Entry.placeholder}
+            selectionColor={Entry.peach}
+            cursorColor={Entry.peach}
             keyboardAppearance="dark"
             multiline
             textAlignVertical="top"
             maxLength={SAFETY_NOTES_MAX}
-            style={[styles.notes, notesFocused && styles.notesFocused, { fontFamily }, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null]}
+            style={[styles.notes, notesFocused && styles.notesFocused, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null]}
           />
-          <Text style={[styles.counter, { fontFamily }]}>{draft.notes.length} / {SAFETY_NOTES_MAX}</Text>
+          <Text style={[styles.counter]}>{draft.notes.length} / {SAFETY_NOTES_MAX}</Text>
         </Animated.View>
 
         <Animated.View entering={fade(1000)} style={styles.privacyRow}>
           <LockIcon />
-          <Text style={[styles.privacy, { fontFamily }]}>Only you can see this information right now. It isn’t shared with coaches or teammates, and HeatSense never contacts anyone automatically.</Text>
+          <Text style={[styles.privacy]}>Only you can see this information right now. It isn’t shared with coaches or teammates, and HeatSense never contacts anyone automatically.</Text>
         </Animated.View>
 
         <Animated.View entering={rise(1100)} style={styles.actions}>
-          <AthletePillButton label="Finish setup →" enabled={busy === null} loading={busy === 'finish'} onPress={() => void finish('finish')} />
+          <AthletePillButton label="Finish setup" enabled={busy === null} loading={busy === 'finish'} onPress={() => void finish('finish')} />
           <AthleteTextLink label="Skip for now" disabled={busy !== null} onPress={() => void finish('skip')} />
-          {saveError && <Text accessibilityRole="alert" style={[styles.saveError, { fontFamily }]}>{saveError}</Text>}
+          {saveError && <Text accessibilityRole="alert" style={[styles.saveError]}>{saveError}</Text>}
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -305,7 +301,7 @@ function Content() {
 
 function LockIcon() {
   return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#8E8E8E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2 }}>
+    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={Entry.blue} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2 }}>
       <Rect x={4} y={11} width={16} height={10} rx={2} /><Path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </Svg>
   );
@@ -313,9 +309,9 @@ function LockIcon() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 22 },
-  headline: { color: '#FFFFFF', fontWeight: '400', letterSpacing: -0.6 },
-  description: { color: ATHLETE_MUTED, fontSize: 16, lineHeight: 23, fontWeight: '400', marginTop: 12, maxWidth: 340 },
+  content: { flexGrow: 1, paddingHorizontal: 26 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+  title: { flex: 1 },
   section: { marginTop: 30, gap: 16 },
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   fields: { gap: 16 },
@@ -323,15 +319,15 @@ const styles = StyleSheet.create({
   select: { zIndex: 1 },
   secondaryWrap: { marginTop: 4 },
   addWrap: { alignSelf: 'flex-start', marginTop: 18, paddingVertical: 4 },
-  add: { color: '#FFFFFF', fontSize: 14.5, fontWeight: '500' },
-  remove: { color: ATHLETE_MUTED, fontSize: 13.5 },
+  add: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 14.5 },
+  remove: { color: ATHLETE_MUTED, fontFamily: Entry.medium, fontSize: 13.5 },
   underline: { textDecorationLine: 'underline' },
-  hint: { color: '#8E8E8E', fontSize: 13, lineHeight: 18, marginTop: 6 },
-  notes: { minHeight: 120, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)', backgroundColor: '#101010', color: '#FFFFFF', fontSize: 16, lineHeight: 22, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16 },
-  notesFocused: { borderColor: '#FFFFFF', backgroundColor: '#141414' },
-  counter: { color: '#8E8E8E', fontSize: 12, textAlign: 'right', marginTop: -8, marginRight: 6 },
+  hint: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13, lineHeight: 18, marginTop: 6 },
+  notes: { minHeight: 120, borderRadius: 16, borderWidth: 1.5, borderColor: Entry.line, backgroundColor: Entry.surface, color: Entry.ink, fontFamily: Entry.body, fontSize: 16, lineHeight: 22, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 16 },
+  notesFocused: { borderColor: Entry.blue },
+  counter: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12, textAlign: 'right', marginTop: -8, marginRight: 6 },
   privacyRow: { flexDirection: 'row', gap: 8, marginTop: 24, paddingRight: 8 },
-  privacy: { flex: 1, color: '#8E8E8E', fontSize: 12.5, lineHeight: 18 },
+  privacy: { flex: 1, color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 18 },
   actions: { marginTop: 28, gap: 14 },
-  saveError: { color: ATHLETE_ERROR, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

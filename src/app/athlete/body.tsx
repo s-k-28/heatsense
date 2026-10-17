@@ -11,14 +11,15 @@ import {
   AthleteSectionLabel,
   AthleteTextLink,
   ATHLETE_ERROR,
-  ATHLETE_MUTED,
   ATHLETE_SCREEN,
-  athleteFont as fontFamily,
   MultiChoice,
   SingleChoice,
   useAthleteEntrance,
 } from '@/components/athlete-onboarding';
+import { entryStyles } from '@/components/entry-ui';
+import { HeatMark } from '@/components/onboarding-art';
 import { MobileViewport } from '@/components/mobile-viewport';
+import { Entry } from '@/constants/entry-theme';
 import { OnboardingTextField } from '@/components/onboarding-fields';
 import {
   ACCLIMATIZATION,
@@ -122,7 +123,6 @@ function Content() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const compact = size.height > 0 && size.height < 760;
-  const headlineSize = Math.max(40, Math.min(48, Math.floor((size.width || 390) * 0.118)));
   const revealed = (enter: boolean) => (reducedMotion ? undefined : enter ? FadeIn.duration(220) : FadeOut.duration(160));
 
   const update = (next: Partial<BodyDraft>) => {
@@ -198,30 +198,27 @@ function Content() {
         bounces={false}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 8, compact ? 36 : 56), paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
         <Animated.View entering={fade(200)}>
           <AthleteHeader onBack={back} step="02 / 03" />
         </Animated.View>
 
-        <Animated.Text
-          entering={rise(350)}
-          accessibilityRole="header"
-          style={[styles.headline, { fontFamily, fontSize: headlineSize, lineHeight: Math.round(headlineSize * 1.08), marginTop: compact ? 26 : 32 }]}>
-          {'Know your\nbody.'}
-        </Animated.Text>
+        <Animated.View entering={rise(350)} style={[styles.titleRow, { marginTop: compact ? 22 : 30 }]}>
+          <Text accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.title]}>{'Know your\nbody.'}</Text>
+          <HeatMark size={compact ? 72 : 88} />
+        </Animated.View>
         <Animated.View entering={fade(550)}>
-          <Text style={[styles.description, { fontFamily }]}>Help us understand your heat-related needs.</Text>
-          <Text style={[styles.privacy, { fontFamily }]}>These questions are optional. You can update your answers anytime.</Text>
+          <Text style={entryStyles.description}>Help us understand your heat-related needs.</Text>
+          <Text style={[styles.privacy]}>These questions are optional. You can update your answers anytime.</Text>
         </Animated.View>
 
         <Animated.View entering={rise(700)} style={styles.section}>
           <AthleteSectionLabel>Physical metrics</AthleteSectionLabel>
           <View>
-            <Text style={[styles.label, { fontFamily }]}>Height (optional)</Text>
+            <Text style={[styles.label]}>Height (optional)</Text>
             <View style={styles.pair}>
               <View style={styles.half}>
                 <OnboardingTextField
-                  surface="flat"
                   hideLabel
                   label="Height, feet"
                   placeholder="Feet"
@@ -236,7 +233,6 @@ function Content() {
               </View>
               <View style={styles.half}>
                 <OnboardingTextField
-                  surface="flat"
                   hideLabel
                   label="Height, inches"
                   placeholder="Inches"
@@ -250,10 +246,9 @@ function Content() {
                 />
               </View>
             </View>
-            {showHeightError && <Text role="alert" style={[styles.fieldError, { fontFamily }]}>{showHeightError}</Text>}
+            {showHeightError && <Text role="alert" style={[styles.fieldError]}>{showHeightError}</Text>}
           </View>
           <OnboardingTextField
-            surface="flat"
             label="Weight (optional)"
             placeholder="Weight in lbs"
             value={draft.pounds}
@@ -299,7 +294,6 @@ function Content() {
           {draft.heatConcerns.includes('other') && (
             <Animated.View entering={revealed(true)} exiting={revealed(false)}>
               <OnboardingTextField
-                surface="flat"
                 label="Other concern (optional)"
                 placeholder="A few words"
                 value={draft.otherConcern}
@@ -307,7 +301,7 @@ function Content() {
                 maxLength={OTHER_CONCERN_MAX}
                 autoCapitalize="sentences"
               />
-              <Text style={[styles.note, { fontFamily }]}>No need to include medical details, diagnoses, or medication names.</Text>
+              <Text style={[styles.note]}>No need to include medical details, diagnoses, or medication names.</Text>
             </Animated.View>
           )}
         </Animated.View>
@@ -320,13 +314,13 @@ function Content() {
             value={draft.heatAcclimatization}
             onChange={(code) => update({ heatAcclimatization: code })}
           />
-          <Text style={[styles.note, { fontFamily }]}>Your heat tolerance can change after time away from training.</Text>
+          <Text style={[styles.note]}>Your heat tolerance can change after time away from training.</Text>
         </Animated.View>
 
         <Animated.View entering={rise(1100)} style={styles.actions}>
-          <AthletePillButton label="Continue →" enabled={valid && busy === null} loading={busy === 'continue'} onPress={() => void finish('continue')} />
+          <AthletePillButton label="Continue" enabled={valid && busy === null} loading={busy === 'continue'} onPress={() => void finish('continue')} />
           <AthleteTextLink label="Skip for now" disabled={busy !== null} onPress={() => void finish('skip')} />
-          {saveError && <Text accessibilityRole="alert" style={[styles.saveError, { fontFamily }]}>{saveError}</Text>}
+          {saveError && <Text accessibilityRole="alert" style={[styles.saveError]}>{saveError}</Text>}
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -335,16 +329,16 @@ function Content() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 22 },
-  headline: { color: '#FFFFFF', fontWeight: '400', letterSpacing: -0.6 },
-  description: { color: ATHLETE_MUTED, fontSize: 16, lineHeight: 23, fontWeight: '400', marginTop: 12, maxWidth: 340 },
-  privacy: { color: '#8E8E8E', fontSize: 12.5, lineHeight: 18, marginTop: 8, maxWidth: 340 },
+  content: { flexGrow: 1, paddingHorizontal: 26 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+  title: { flex: 1 },
+  privacy: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 18, marginTop: 8, maxWidth: 340 },
   section: { marginTop: 34, gap: 16 },
-  label: { color: '#E8E8E8', fontSize: 13.5, fontWeight: '500', letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
+  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
   pair: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
-  fieldError: { color: '#FF8E8E', fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
-  note: { color: '#8E8E8E', fontSize: 12.5, lineHeight: 17, marginTop: 8, marginLeft: 6 },
+  fieldError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
+  note: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 8, marginLeft: 6 },
   actions: { marginTop: 36, gap: 14 },
-  saveError: { color: ATHLETE_ERROR, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

@@ -9,12 +9,13 @@ import {
   AthleteHeader,
   AthletePillButton,
   ATHLETE_ERROR,
-  ATHLETE_MUTED,
   ATHLETE_SCREEN,
-  athleteFont as fontFamily,
   useAthleteEntrance,
 } from '@/components/athlete-onboarding';
+import { entryStyles } from '@/components/entry-ui';
+import { JerseyMark } from '@/components/onboarding-art';
 import { MobileViewport } from '@/components/mobile-viewport';
+import { Entry } from '@/constants/entry-theme';
 import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
 import { SPORTS } from '@/constants/sports';
 import { ageBandFor, getAthleteProfile, GRADES, saveAthleteBasics, type AthleteProfile, type Grade } from '@/services/athlete-profile';
@@ -78,7 +79,6 @@ function Content() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const compact = size.height > 0 && size.height < 760;
-  const headlineSize = Math.max(40, Math.min(48, Math.floor((size.width || 390) * 0.118)));
 
   const update = (next: Partial<AthleteDraft>) => {
     edited.current = true;
@@ -191,23 +191,20 @@ function Content() {
         bounces={false}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 8, compact ? 36 : 56), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <Animated.View entering={fade(200)}>
           <AthleteHeader onBack={back} step="01 / 03" />
         </Animated.View>
 
-        <Animated.Text
-          entering={rise(350)}
-          accessibilityRole="header"
-          style={[styles.headline, { fontFamily, fontSize: headlineSize, lineHeight: Math.round(headlineSize * 1.08), marginTop: compact ? 26 : 32 }]}>
-          {'Make it\nyours.'}
-        </Animated.Text>
-        <Animated.Text entering={fade(550)} style={[styles.description, { fontFamily }]}>Let’s start with the basics.</Animated.Text>
+        <Animated.View entering={rise(350)} style={[styles.titleRow, { marginTop: compact ? 22 : 30 }]}>
+          <Text accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.title]}>{'Make it\nyours.'}</Text>
+          <JerseyMark size={compact ? 72 : 88} />
+        </Animated.View>
+        <Animated.Text entering={fade(550)} style={entryStyles.description}>Let’s start with the basics.</Animated.Text>
 
         <View style={[styles.form, { marginTop: compact ? 22 : 28 }]}>
           <Animated.View entering={rise(fieldDelay(0))}>
             <OnboardingTextField
-              surface="flat"
               label="Full name"
               placeholder="Your full name"
               value={draft.fullName}
@@ -225,7 +222,6 @@ function Content() {
 
           <Animated.View entering={rise(fieldDelay(1))}>
             <OnboardingTextField
-              surface="flat"
               label="Date of birth"
               placeholder="MM / DD / YYYY"
               value={draft.birthDate}
@@ -239,12 +235,11 @@ function Content() {
               maxLength={14}
               returnKeyType="done"
             />
-            {keepsSavedAge && <Text style={[styles.hint, { fontFamily }]}>Already saved. Enter it again only to change it.</Text>}
+            {keepsSavedAge && <Text style={[styles.hint]}>Already saved. Enter it again only to change it.</Text>}
           </Animated.View>
 
           <Animated.View entering={rise(fieldDelay(2))} style={styles.select}>
             <OnboardingSelectField
-              surface="flat"
               label="Grade level"
               placeholder="Select your grade"
               options={GRADES}
@@ -261,7 +256,6 @@ function Content() {
               <TeamSportField sport={teamSport} teamName={team.preview.teamName} pending={team.status === 'pending'} />
             ) : (
               <OnboardingSelectField
-                surface="flat"
                 label="Sport"
                 placeholder="Select your sport"
                 options={SPORTS}
@@ -276,7 +270,6 @@ function Content() {
 
           <Animated.View entering={rise(fieldDelay(4))}>
             <OnboardingTextField
-              surface="flat"
               label="Jersey number (optional)"
               placeholder="e.g. 12"
               value={draft.jersey}
@@ -293,8 +286,8 @@ function Content() {
         <View style={styles.spacer} />
 
         <Animated.View entering={rise(1150)} style={styles.actions}>
-          <AthletePillButton label="Continue →" enabled={valid && !saving} loading={saving} onPress={() => void submit()} />
-          {saveError && <Text accessibilityRole="alert" style={[styles.saveError, { fontFamily }]}>{saveError}</Text>}
+          <AthletePillButton label="Continue" enabled={valid && !saving} loading={saving} onPress={() => void submit()} />
+          {saveError && <Text accessibilityRole="alert" style={[styles.saveError]}>{saveError}</Text>}
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -305,11 +298,11 @@ function Content() {
 function TeamSportField({ sport, teamName, pending }: { sport: string; teamName: string; pending: boolean }) {
   return (
     <View>
-      <Text style={[styles.label, { fontFamily }]}>Sport</Text>
+      <Text style={[styles.label]}>Sport</Text>
       <View accessible accessibilityLabel={`Sport, ${sport}, set by ${teamName}`} style={styles.readOnly}>
-        <Text numberOfLines={1} style={[styles.readOnlyText, { fontFamily }]}>{sport}</Text>
+        <Text numberOfLines={1} style={[styles.readOnlyText]}>{sport}</Text>
       </View>
-      <Text style={[styles.hint, { fontFamily }]}>
+      <Text style={[styles.hint]}>
         {pending ? `From ${teamName}. Your request to join is waiting for your coach.` : `From your team, ${teamName}.`}
       </Text>
     </View>
@@ -318,17 +311,18 @@ function TeamSportField({ sport, teamName, pending }: { sport: string; teamName:
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 22 },
-  headline: { color: '#FFFFFF', fontWeight: '400', letterSpacing: -0.6 },
-  description: { color: ATHLETE_MUTED, fontSize: 16, lineHeight: 23, fontWeight: '400', marginTop: 12, maxWidth: 340 },
+  content: { flexGrow: 1, paddingHorizontal: 26 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+  title: { flex: 1 },
   form: { gap: 16 },
   // Keep an open dropdown above the fields that follow it.
   select: { zIndex: 1 },
-  label: { color: '#E8E8E8', fontSize: 13.5, fontWeight: '500', letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
-  readOnly: { height: 60, borderRadius: 30, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)', backgroundColor: '#101010', justifyContent: 'center', paddingHorizontal: 22 },
-  readOnlyText: { color: '#FFFFFF', fontSize: 16, fontWeight: '500', letterSpacing: -0.1 },
-  hint: { color: '#8E8E8E', fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
+  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
+  // Set by the team: shown, not editable, so it reads as information rather than a field.
+  readOnly: { height: 60, borderRadius: 16, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.canvas, justifyContent: 'center', paddingHorizontal: 18 },
+  readOnlyText: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 16, letterSpacing: -0.1 },
+  hint: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
   spacer: { flexGrow: 1, minHeight: 28 },
   actions: { gap: 12 },
-  saveError: { color: ATHLETE_ERROR, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

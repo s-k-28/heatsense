@@ -28,24 +28,27 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { AthleteHeader, AthletePillButton as JoinButton } from '@/components/athlete-onboarding';
+import { entryStyles } from '@/components/entry-ui';
+import { FieldlineScene } from '@/components/fieldline-character';
+import { Entry } from '@/constants/entry-theme';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { INVITE_CODE_LENGTH, lookupInvite, NETWORK_ERROR, requestToJoinTeam, watchMyMembership, type InviteLookup } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
 
 // Athlete onboarding, step 1: join a team with the coach's invitation code.
-// Visual source of truth is the sign-in screen ("Built for the heat."): same
-// background, type, padding, header and white-outlined pill controls.
-const SCREEN = '#090909';
-const MUTED = '#B8B8B8';
-const ERROR = '#FFB9A7';
-const fontFamily = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif', default: '"Helvetica Neue", Helvetica, Arial, sans-serif' });
+// Entry design language (welcome / sign-in / role): a medium Fieldline scene, a
+// display headline, neutral code boxes with a light-blue active edge, and the peach
+// primary action.
+const SCREEN = Entry.canvas;
+const MUTED = Entry.muted;
+const ERROR = Entry.error;
 
 const T = {
-  surface: '#101010',
-  outline: 'rgba(255,255,255,0.85)',
-  outlineIdle: 'rgba(255,255,255,0.5)',
-  outlineStrong: '#FFFFFF',
-  outlineError: 'rgba(255,185,167,0.75)',
+  surface: Entry.surface,
+  outline: Entry.lineStrong,
+  outlineIdle: Entry.line,
+  outlineStrong: Entry.blue,
+  outlineError: Entry.error,
 } as const;
 
 const easeOut = Easing.out(Easing.cubic);
@@ -60,7 +63,7 @@ type Check =
 
 function CheckIcon() {
   return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={Entry.blue} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <Path d="M21.8 10A10 10 0 1 1 17 3.34" /><Path d="m9 11 3 3L22 4" />
     </Svg>
   );
@@ -79,7 +82,7 @@ function CodeBox({ digit, active, error, width, height }: { digit: string; activ
   const frame = useAnimatedStyle(() => ({ borderColor: interpolateColor(focus.value, [0, 1], [idle, T.outlineStrong]) }));
   return (
     <Animated.View style={[styles.box, { width, height }, frame]}>
-      <Text style={[styles.digit, { fontFamily }]}>{digit}</Text>
+      <Text style={[styles.digit]}>{digit}</Text>
     </Animated.View>
   );
 }
@@ -133,8 +136,7 @@ function Content() {
   }, []);
 
   const compact = size.height > 0 && size.height < 760;
-  const headlineSize = Math.max(38, Math.min(46, Math.floor((size.width - 44) * 0.14)));
-  const contentWidth = Math.max(0, size.width - 44);
+  const contentWidth = Math.max(0, size.width - 52);
   const gap = 8;
   const boxWidth = Math.min(62, Math.floor((contentWidth - gap * (INVITE_CODE_LENGTH - 1)) / INVITE_CODE_LENGTH));
   const boxHeight = compact ? 62 : 66;
@@ -206,21 +208,22 @@ function Content() {
         bounces={false}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 8, compact ? 36 : 56), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
-        <Animated.View entering={fade(200)} style={styles.topRow}>
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <Animated.View entering={fade(200)}>
           <AthleteHeader onBack={back} />
         </Animated.View>
 
-        <Animated.Text
-          entering={rise(350)}
-          accessibilityRole="header"
-          style={[styles.headline, { fontFamily, fontSize: headlineSize, lineHeight: Math.round(headlineSize * 1.15), marginTop: compact ? 22 : 40 }]}>
+        {/* Medium scene: smaller than welcome's hero, so the code stays the focus. */}
+        <Animated.View entering={fade(300)} style={{ marginTop: compact ? 4 : 12 }}>
+          <FieldlineScene small reaction={valid || pending ? 'athlete' : null} />
+        </Animated.View>
+        <Animated.Text entering={rise(350)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, { marginTop: compact ? 8 : 14 }]}>
           {'Your team\nawaits.'}
         </Animated.Text>
-        <Animated.Text entering={rise(550)} style={[styles.description, { fontFamily }]}>Enter the code shared by your coach to get connected.</Animated.Text>
+        <Animated.Text entering={rise(550)} style={entryStyles.description}>Enter the code shared by your coach to get connected.</Animated.Text>
 
         {/* One real input drives every box: typing, pasting, deleting and the numeric keyboard all come from it. */}
-        <View style={[styles.codeWrap, { marginTop: compact ? 28 : 44 }]}>
+        <View style={[styles.codeWrap, { marginTop: compact ? 24 : 30 }]}>
           <View style={[styles.codeRow, { gap }]}>
             {Array.from({ length: INVITE_CODE_LENGTH }, (_, index) => (
               <Animated.View key={index} entering={rise(750 + index * 60)}>
@@ -252,15 +255,15 @@ function Content() {
           {check.state === 'checking' && (
             <Animated.View entering={fade(0)} style={styles.statusRow}>
               <ActivityIndicator size="small" color={MUTED} />
-              <Text style={[styles.statusText, { fontFamily }]}>Checking code…</Text>
+              <Text style={[styles.statusText]}>Checking code…</Text>
             </Animated.View>
           )}
           {codeError && (
             <Animated.View entering={fade(0)} style={styles.statusRow}>
-              <Text accessibilityRole="alert" style={[styles.errorText, { fontFamily }]}>{codeError}</Text>
+              <Text accessibilityRole="alert" style={[styles.errorText]}>{codeError}</Text>
               {check.state === 'network-error' && (
                 <Pressable accessibilityRole="button" onPress={() => void verify(code)} hitSlop={8}>
-                  <Text style={[styles.retry, { fontFamily }]}>Try again</Text>
+                  <Text style={[styles.retry]}>Try again</Text>
                 </Pressable>
               )}
             </Animated.View>
@@ -269,28 +272,28 @@ function Content() {
             <Animated.View entering={fade(0)} style={styles.preview}>
               <CheckIcon />
               <View style={styles.previewCopy}>
-                <Text numberOfLines={1} style={[styles.teamName, { fontFamily }]}>{valid.team.teamName}</Text>
-                <Text numberOfLines={1} style={[styles.teamMeta, { fontFamily }]}>{[valid.team.school, valid.team.sport].filter(Boolean).join(' · ')}</Text>
+                <Text numberOfLines={1} style={[styles.teamName]}>{valid.team.teamName}</Text>
+                <Text numberOfLines={1} style={[styles.teamMeta]}>{[valid.team.school, valid.team.sport].filter(Boolean).join(' · ')}</Text>
               </View>
             </Animated.View>
           )}
           {pending && (
             <Animated.View key={pending} entering={fade(0)} style={styles.pendingWrap}>
-              <Text style={[styles.pendingTitle, { fontFamily }]}>{pending === 'member' ? 'You’re on the team.' : 'Request sent.'}</Text>
-              <Text style={[styles.statusText, styles.pendingText, { fontFamily }]}>
+              <Text style={[styles.pendingTitle]}>{pending === 'member' ? 'You’re on the team.' : 'Request sent.'}</Text>
+              <Text style={[styles.statusText, styles.pendingText]}>
                 {pending === 'member' ? 'Your coach approved your request.' : 'Your coach will approve your request to join the team.'}
               </Text>
             </Animated.View>
           )}
-          {joinError && <Text accessibilityRole="alert" style={[styles.errorText, styles.joinError, { fontFamily }]}>{joinError}</Text>}
+          {joinError && <Text accessibilityRole="alert" style={[styles.errorText, styles.joinError]}>{joinError}</Text>}
         </View>
 
         <View style={styles.spacer} />
 
         <Animated.View entering={rise(1000)}>
           {pending
-            ? <JoinButton label="Continue →" enabled loading={false} onPress={() => router.push(NEXT_STEP as never)} />
-            : <JoinButton label="Join team →" enabled={valid !== null && !joining} loading={joining} onPress={() => void join()} />}
+            ? <JoinButton label="Continue" enabled loading={false} onPress={() => router.push(NEXT_STEP as never)} />
+            : <JoinButton label="Join team" enabled={valid !== null && !joining} loading={joining} onPress={() => void join()} />}
         </Animated.View>
 
         {!pending && (
@@ -303,7 +306,7 @@ function Content() {
               onFocus={() => setNoCodeHover(true)}
               onBlur={() => setNoCodeHover(false)}
               hitSlop={10}>
-              <Text style={[styles.noCode, { fontFamily }, noCodeHover && styles.underline]}>I don’t have a code</Text>
+              <Text style={[styles.noCode, noCodeHover && styles.underline]}>I don’t have a code</Text>
             </Pressable>
           </Animated.View>
         )}
@@ -314,30 +317,27 @@ function Content() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 22 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headline: { color: '#FFFFFF', fontWeight: '400', letterSpacing: -0.6 },
-  description: { color: MUTED, fontSize: 16, lineHeight: 23, fontWeight: '400', marginTop: 10, maxWidth: 340 },
+  content: { flexGrow: 1, paddingHorizontal: 26 },
   codeWrap: { alignSelf: 'center' },
   codeRow: { flexDirection: 'row', justifyContent: 'center' },
-  box: { borderRadius: 16, borderWidth: 1.5, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center' },
-  digit: { color: '#FFFFFF', fontSize: 27, fontWeight: '500' },
+  box: { borderRadius: 14, borderWidth: 1.5, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center' },
+  digit: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 26 },
   hiddenInput: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.01, color: 'transparent', fontSize: 16 },
-  status: { minHeight: 56, marginTop: 22, alignItems: 'center' },
+  status: { minHeight: 56, marginTop: 20, alignItems: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
-  statusText: { color: MUTED, fontSize: 14.5, lineHeight: 20 },
+  statusText: { color: MUTED, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   pendingWrap: { alignItems: 'center', marginTop: 14, gap: 4 },
-  pendingTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '500', textAlign: 'center' },
+  pendingTitle: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16, lineHeight: 22, textAlign: 'center' },
   pendingText: { textAlign: 'center' },
-  errorText: { color: ERROR, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  errorText: { color: ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   joinError: { marginTop: 12 },
-  retry: { color: '#FFFFFF', fontSize: 14, lineHeight: 20, textDecorationLine: 'underline' },
-  preview: { flexDirection: 'row', alignItems: 'center', gap: 12, alignSelf: 'stretch', paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.18)' },
+  retry: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 14, lineHeight: 20, textDecorationLine: 'underline' },
+  preview: { flexDirection: 'row', alignItems: 'center', gap: 12, alignSelf: 'stretch', paddingTop: 16, borderTopWidth: 1, borderTopColor: Entry.line },
   previewCopy: { flex: 1, gap: 2 },
-  teamName: { color: '#FFFFFF', fontSize: 18, lineHeight: 23, fontWeight: '500', letterSpacing: -0.2 },
-  teamMeta: { color: MUTED, fontSize: 14.5, lineHeight: 20 },
+  teamName: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 17, lineHeight: 23, letterSpacing: -0.2 },
+  teamMeta: { color: MUTED, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   spacer: { flexGrow: 1, minHeight: 24 },
-  noCodeWrap: { alignItems: 'center', marginTop: 18 },
-  noCode: { color: MUTED, fontSize: 14, lineHeight: 20 },
+  noCodeWrap: { alignItems: 'center', marginTop: 16 },
+  noCode: { color: MUTED, fontFamily: Entry.medium, fontSize: 14, lineHeight: 20 },
   underline: { textDecorationLine: 'underline' },
 });
