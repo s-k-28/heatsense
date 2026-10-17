@@ -1,48 +1,34 @@
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  AthleteHeader,
-  AthletePillButton,
-  AthleteTextLink,
-  ATHLETE_MUTED,
-  ATHLETE_SCREEN,
-  athleteFont as fontFamily,
-  useAthleteEntrance,
-} from '@/components/athlete-onboarding';
-import { MobileViewport } from '@/components/mobile-viewport';
+import { AthleteTextLink, useAthleteEntrance } from '@/components/athlete-onboarding';
+import { EntryButton, EntryHeader, EntryScreen, entryStyles } from '@/components/entry-ui';
+import { FieldlineScene } from '@/components/fieldline-character';
+import { Entry } from '@/constants/entry-theme';
 import { watchMyMembership, type Membership } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
 
-// End of athlete onboarding. Shows the athlete's real team status, live: approved,
-// still waiting on the coach, or no team yet. A pending request never counts as
-// team access. The dashboard it leads to is where the athlete flow lands today.
+// End of athlete onboarding: the payoff screen. It shows the athlete's real team
+// status, live: approved, still waiting on the coach, or no team yet. A pending
+// request never counts as team access. The dashboard it leads to is where the
+// athlete flow lands today.
 const DASHBOARD = '/dashboard?role=athlete';
 
 type State = { kind: 'loading' } | { kind: 'member'; teamName: string | null } | { kind: 'pending'; teamName: string | null } | { kind: 'none' };
 
 const COPY = {
-  member: (team: string | null) => ({ title: 'You’re all set.', body: team ? `You’re on ${team}. Your profile is ready.` : 'You’re on your team. Your profile is ready.' }),
-  pending: () => ({ title: 'Request sent.', body: 'Your coach will need to approve your request before you can access your team.' }),
-  none: () => ({ title: 'You’re all set.', body: 'Your profile is ready. You can join a team anytime with a code from your coach.' }),
+  member: (team: string | null) => ({ title: 'You’re all set.', body: 'Your profile is ready. Your coach can see you on the roster.', status: team ? `${team} · You’re on the team` : 'You’re on the team' }),
+  pending: (team: string | null) => ({ title: 'Request sent.', body: 'Your coach will need to approve your request before you can access your team.', status: team ? `${team} · Waiting for your coach` : 'Waiting for your coach' }),
+  none: () => ({ title: 'You’re all set.', body: 'Your profile is ready. You can join a team anytime with a code from your coach.', status: 'No team yet' }),
 };
 
 export default function AthleteDoneScreen() {
-  return <MobileViewport><View style={[styles.fill, { backgroundColor: ATHLETE_SCREEN }]}><Content /></View></MobileViewport>;
-}
-
-function Content() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { rise, fade } = useAthleteEntrance();
   const uid = getCurrentUserId();
   const [state, setState] = useState<State>(uid ? { kind: 'loading' } : { kind: 'none' });
-  const [height, setHeight] = useState(0);
-  const compact = height > 0 && height < 760;
 
   useEffect(() => {
     if (!uid) return;
@@ -63,46 +49,54 @@ function Content() {
     return watchMyMembership(uid, apply, () => setState({ kind: 'none' }));
   }, [uid]);
 
-  const copy = state.kind === 'member' ? COPY.member(state.teamName) : state.kind === 'pending' ? COPY.pending() : state.kind === 'none' ? COPY.none() : null;
+  const copy = state.kind === 'member' ? COPY.member(state.teamName) : state.kind === 'pending' ? COPY.pending(state.teamName) : state.kind === 'none' ? COPY.none() : null;
 
   return (
-    <View style={[styles.content, { paddingTop: Math.max(insets.top + 8, compact ? 36 : 56), paddingBottom: Math.max(insets.bottom, 16) + 16 }]} onLayout={(event: LayoutChangeEvent) => setHeight(event.nativeEvent.layout.height)}>
-      <StatusBar style="light" />
-      <Animated.View entering={fade(200)}>
-        <AthleteHeader />
+    <EntryScreen>{(compact) => <>
+      <Animated.View entering={fade(100)}>
+        <EntryHeader />
+      </Animated.View>
+
+      <Animated.View entering={fade(250)} style={[styles.illustration, compact && { marginVertical: 10 }]}>
+        <FieldlineScene compact={compact} reaction={state.kind === 'member' ? 'athlete' : null} />
       </Animated.View>
 
       {copy ? (
         <View key={state.kind} accessibilityLiveRegion="polite">
-          <Animated.Text entering={rise(350)} accessibilityRole="header" style={[styles.headline, { fontFamily, marginTop: compact ? 26 : 32 }]}>{copy.title}</Animated.Text>
-          <Animated.Text entering={fade(550)} style={[styles.description, { fontFamily }]}>{copy.body}</Animated.Text>
-          {state.kind === 'pending' && (
-            <Animated.Text entering={fade(650)} style={[styles.note, { fontFamily }]}>Your profile is complete. This screen updates as soon as your coach responds.</Animated.Text>
-          )}
+          <Animated.Text entering={rise(400)} accessibilityRole="header" style={[entryStyles.headline, compact && entryStyles.headlineCompact]}>{copy.title}</Animated.Text>
+          <Animated.Text entering={fade(550)} style={entryStyles.description}>{copy.body}</Animated.Text>
+          <Animated.View entering={fade(650)} style={styles.statusLine}>
+            <View style={[styles.signal, state.kind === 'pending' && styles.signalPending, state.kind === 'none' && styles.signalNone]} />
+            <View style={styles.statusCopy}>
+              <Text style={styles.statusText}>{copy.status}</Text>
+              {state.kind === 'pending' && <Text style={styles.statusNote}>This screen updates as soon as your coach responds.</Text>}
+            </View>
+          </Animated.View>
         </View>
       ) : (
-        <ActivityIndicator style={styles.loading} color={ATHLETE_MUTED} accessibilityLabel="Checking your team status" />
+        <ActivityIndicator style={styles.loading} color={Entry.muted} accessibilityLabel="Checking your team status" />
       )}
-
-      <View style={styles.spacer} />
 
       {copy && (
         <Animated.View entering={rise(800)} style={styles.actions}>
-          <AthletePillButton label={state.kind === 'member' ? 'Go to dashboard →' : 'Continue →'} enabled onPress={() => router.replace(DASHBOARD as never)} />
+          <EntryButton label={state.kind === 'member' ? 'Go to dashboard' : 'Continue'} onPress={() => router.replace(DASHBOARD as never)} />
           {state.kind === 'none' && <AthleteTextLink label="Join a team" onPress={() => router.push('/setup/athlete')} />}
         </Animated.View>
       )}
-    </View>
+    </>}</EntryScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
-  content: { flex: 1, paddingHorizontal: 22 },
-  headline: { color: '#FFFFFF', fontWeight: '400', letterSpacing: -0.6, fontSize: 46, lineHeight: 50 },
-  description: { color: ATHLETE_MUTED, fontSize: 16, lineHeight: 23, fontWeight: '400', marginTop: 12, maxWidth: 340 },
-  note: { color: '#8E8E8E', fontSize: 12.5, lineHeight: 18, marginTop: 14, maxWidth: 320 },
-  loading: { marginTop: 48 },
-  spacer: { flexGrow: 1, minHeight: 32 },
-  actions: { gap: 14 },
+  illustration: { flexGrow: 1, justifyContent: 'center', marginVertical: 20 },
+  // The welcome screen's product line, reused for the real team status.
+  statusLine: { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopColor: Entry.line, borderTopWidth: 1, marginTop: 24, paddingTop: 18 },
+  signal: { width: 4, alignSelf: 'stretch', minHeight: 24, borderRadius: 2, backgroundColor: Entry.blue },
+  signalPending: { backgroundColor: Entry.peach },
+  signalNone: { backgroundColor: Entry.line },
+  statusCopy: { flex: 1, gap: 3 },
+  statusText: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13, lineHeight: 20 },
+  statusNote: { color: Entry.muted, fontFamily: Entry.body, fontSize: 12, lineHeight: 18 },
+  loading: { marginTop: 32 },
+  actions: { marginTop: 28, gap: 14 },
 });

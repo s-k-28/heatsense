@@ -1,22 +1,18 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View, type LayoutChangeEvent } from 'react-native';
-import Animated, { FadeIn, FadeInUp, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Keyboard, ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
+import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
-import { GlassSurface } from '@/components/glass-surface';
-import { HeatSenseLogo } from '@/components/heatsense-logo';
+import { EntryButton, EntryHeader, entryStyles } from '@/components/entry-ui';
 import { MobileViewport } from '@/components/mobile-viewport';
-import { OnboardingContinueButton, onboardingFont as fontFamily } from '@/components/onboarding-controls';
+import { RosterMark } from '@/components/onboarding-art';
 import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
+import { Entry } from '@/constants/entry-theme';
 import { SPORTS } from '@/constants/sports';
 import { setTeamDraft, useTeamDraft, type TeamDraft } from '@/state/onboarding';
 
-const PEACH = '#FF986B';
-const MUTED = '#B8B8B8';
-const FOCUS_RING = { outlineColor: '#FFFFFF', outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
 const MAX_NAME = 80;
 
 const LEVELS = ['Varsity', 'Junior Varsity', 'Freshman', 'Middle School', 'Club / Other'] as const;
@@ -52,7 +48,6 @@ function Content() {
   const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
   const [height, setHeight] = useState(0);
   const compact = height > 0 && height < 720;
-  const headlineSize = compact ? 38 : 46;
   const fieldHeight = compact ? 58 : 60;
 
   // The screen stays mounted under the next one, so re-arm Continue when the coach comes back.
@@ -100,17 +95,16 @@ function Content() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         automaticallyAdjustKeyboardInsets
-        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 8, compact ? 40 : 56), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
-        <Animated.View entering={fade(0)} style={styles.topRow}>
-          <BackButton onPress={back} />
-          <HeatSenseLogo height={30} />
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <Animated.View entering={fade(0)}>
+          <EntryHeader onBack={back} />
         </Animated.View>
 
-        <Animated.Text entering={fade(200)} style={[styles.eyebrow, { fontFamily, marginTop: compact ? 26 : 36 }]}>TEAM DETAILS</Animated.Text>
-        <Animated.Text entering={rise(350)} accessibilityRole="header" style={[styles.headline, { fontFamily, fontSize: headlineSize, lineHeight: Math.round(headlineSize * 1.08), marginTop: compact ? 10 : 14 }]}>
-          {'Create your\nteam.'}
-        </Animated.Text>
-        <Animated.Text entering={rise(500)} style={[styles.description, { fontFamily, marginTop: compact ? 10 : 14 }]}>A few details to get your team up and running.</Animated.Text>
+        <Animated.View entering={rise(300)} style={[styles.titleRow, { marginTop: compact ? 22 : 30 }]}>
+          <Text accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.title]}>{'Create your\nteam.'}</Text>
+          <RosterMark size={compact ? 72 : 84} />
+        </Animated.View>
+        <Animated.Text entering={rise(450)} style={[entryStyles.description, styles.noShrink]}>A few details to get your team up and running.</Animated.Text>
 
         <View style={{ gap: compact ? 16 : 20, marginTop: compact ? 24 : 30 }}>
           <Animated.View entering={rise(650)}>
@@ -180,46 +174,18 @@ function Content() {
         </View>
 
         <Animated.View entering={rise(1100)} style={{ marginTop: compact ? 26 : 32 }}>
-          <OnboardingContinueButton enabled={valid} onPress={next} />
+          <EntryButton label="Create team" disabled={!valid} onPress={next} />
         </Animated.View>
       </ScrollView>
     </View>
   );
 }
 
-function BackButton({ onPress }: { onPress: () => void }) {
-  const reducedMotion = useReducedMotion();
-  const [focused, setFocused] = useState(false);
-  const press = useSharedValue(0);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: 1 - press.value * 0.06 }], opacity: 1 - press.value * 0.15 }));
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Back"
-      onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      onPressIn={() => { press.set(withTiming(1, { duration: reducedMotion ? 0 : 110 })); }}
-      onPressOut={() => { press.set(withTiming(0, { duration: reducedMotion ? 0 : 200 })); }}
-      hitSlop={8}
-      style={[styles.backWrap, focused && FOCUS_RING]}>
-      <Animated.View style={style}>
-        <GlassSurface radius={22} style={styles.back}>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="m15 5-7 7 7 7" /></Svg>
-        </GlassSurface>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 22 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backWrap: { borderRadius: 22 },
-  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)' },
+  fill: { flex: 1, backgroundColor: Entry.canvas },
+  content: { flexGrow: 1, paddingHorizontal: 26 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   // flexShrink 0: on web, text would otherwise shrink when an open menu makes the form taller than the screen.
-  eyebrow: { flexShrink: 0, color: PEACH, fontSize: 12.5, letterSpacing: 1.5, fontWeight: '500' },
-  headline: { flexShrink: 0, color: '#FFFFFF', fontWeight: '500', letterSpacing: -0.9 },
-  description: { flexShrink: 0, color: MUTED, fontSize: 15.5, lineHeight: 23, fontWeight: '400', maxWidth: 330 },
+  title: { flex: 1, flexShrink: 0 },
+  noShrink: { flexShrink: 0 },
 });

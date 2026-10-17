@@ -11,20 +11,20 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { GlassSurface } from '@/components/glass-surface';
-import { onboardingFont, OnboardingTokens } from '@/components/onboarding-controls';
+import { Entry } from '@/constants/entry-theme';
 
-// Form fields for onboarding, in the same component family as the sign-in screen's
-// Sign-in buttons: a charcoal pill with a clear white outline and white type.
-// Focus brightens the outline to a solid 2px white; errors use a restrained red
-// outline plus a short message. Never orange.
+// Form fields for onboarding, in the entry design language (welcome / sign-in /
+// role): raised charcoal fields with a quiet neutral outline, Inter type, and 16pt
+// corners to sit with the 18pt buttons. Focus draws a light-blue edge; errors add a
+// soft red edge plus a short message, so color is never the only signal.
 const ease = Easing.out(Easing.cubic);
-const ERROR = '#FF8E8E';
+const ERROR = Entry.error;
 const ROW_HEIGHT = 48;
 // React Native's Role type omits 'listbox'; React Native Web passes it through to the DOM.
 const LISTBOX = 'listbox' as Role;
 const MENU_PADDING = 6;
-const FOCUS_RING = { outlineColor: '#FFFFFF', outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
+const FOCUS_RING = { outlineColor: Entry.blue, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
+const RADIUS = 16;
 // The field draws its own focus state, so drop the browser's default input outline.
 // React Native's types omit 'none', but React Native Web passes it through (Chrome ignores a 0 width on its 'auto' outline).
 const noWebOutline = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as unknown as TextStyle) : null;
@@ -41,30 +41,23 @@ function useTimedValue(target: number, duration: number) {
   return value;
 }
 
-// 'glass' is the coach onboarding look; 'flat' is the sign-in screen's look (plain
-// dark interior, no glass), used by athlete onboarding.
-export type FieldSurface = 'glass' | 'flat';
-
-// The pill itself: surface, outline, focus ring, and error ring, shared by both field types.
-function FieldFrame({ height, active, invalid, hover, press, surface = 'glass', children }: { height: number; active: boolean; invalid: boolean; hover: SharedValue<number>; press?: SharedValue<number>; surface?: FieldSurface; children: React.ReactNode }) {
+// The field itself: fill, outline, focus edge, and error edge, shared by both field types.
+// The fill sits on the frame: an opaque absolute layer would paint over the text on web.
+function FieldFrame({ height, active, invalid, hover, press, children }: { height: number; active: boolean; invalid: boolean; hover: SharedValue<number>; press?: SharedValue<number>; children: React.ReactNode }) {
   const focus = useTimedValue(active ? 1 : 0, 200);
   const error = useTimedValue(invalid ? 1 : 0, 200);
   const frame = useAnimatedStyle(() => ({ transform: [{ scale: 1 - (press?.value ?? 0) * 0.015 }] }));
   const outline = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(Math.max(focus.value, hover.value * 0.6), [0, 1], [OnboardingTokens.outline, OnboardingTokens.outlineStrong]),
+    borderColor: interpolateColor(hover.value, [0, 1], [Entry.line, Entry.lineStrong]),
     opacity: 1 - error.value * (1 - focus.value),
   }));
   const focusRing = useAnimatedStyle(() => ({ opacity: focus.value }));
   const errorRing = useAnimatedStyle(() => ({ opacity: error.value * (1 - focus.value) }));
   const lift = useAnimatedStyle(() => ({ opacity: Math.max(focus.value, hover.value * 0.5) }));
-  const radius = height / 2;
+  const radius = RADIUS;
   return (
-    <Animated.View style={[{ height, borderRadius: radius }, surface === 'flat' && styles.flat, frame]}>
-      {/* Decorative only: on web an absolutely positioned layer paints above the input, so it must not take touches. */}
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        {/* A flat field paints its fill on the frame itself: an opaque absolute layer would cover the text on web. */}
-        {surface === 'glass' && <GlassSurface radius={radius} sheen={0.8} style={StyleSheet.absoluteFill} />}
-      </View>
+    <Animated.View style={[{ height, borderRadius: radius }, styles.fill, frame]}>
+      {/* Decorative layers: on web an absolutely positioned layer paints above the input, so none of them take touches. */}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.lift, { borderRadius: radius }, lift]} />
       {children}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.outline, { borderRadius: radius }, outline]} />
@@ -75,12 +68,12 @@ function FieldFrame({ height, active, invalid, hover, press, surface = 'glass', 
 }
 
 function FieldLabel({ children }: { children: string }) {
-  return <Text style={[styles.label, { fontFamily: onboardingFont }]}>{children}</Text>;
+  return <Text style={[styles.label, null]}>{children}</Text>;
 }
 
 function FieldError({ message }: { message?: string | null }) {
   if (!message) return null;
-  return <Text accessibilityLiveRegion="polite" role="alert" style={[styles.error, { fontFamily: onboardingFont }]}>{message}</Text>;
+  return <Text accessibilityLiveRegion="polite" role="alert" style={[styles.error, null]}>{message}</Text>;
 }
 
 type TextFieldProps = {
@@ -93,14 +86,13 @@ type TextFieldProps = {
   inputRef?: Ref<TextInput>;
   onFocus?: () => void;
   onBlur?: () => void;
-  surface?: FieldSurface;
   /** Keep `label` for screen readers but don't draw it (e.g. paired inputs under one shared label). */
   hideLabel?: boolean;
   /** Outline the field as invalid without a message under it (the message is shown elsewhere). */
   invalid?: boolean;
 } & Pick<TextInputProps, 'returnKeyType' | 'onSubmitEditing' | 'autoCapitalize' | 'textContentType' | 'autoComplete' | 'maxLength' | 'submitBehavior' | 'keyboardType' | 'inputMode' | 'accessibilityHint' | 'autoCorrect'>;
 
-export function OnboardingTextField({ label, value, onChangeText, placeholder, error, height = 60, inputRef, onFocus, onBlur, surface, hideLabel, invalid, ...inputProps }: TextFieldProps) {
+export function OnboardingTextField({ label, value, onChangeText, placeholder, error, height = 60, inputRef, onFocus, onBlur, hideLabel, invalid, ...inputProps }: TextFieldProps) {
   const ms = useMs();
   const [focused, setFocused] = useState(false);
   const hover = useSharedValue(0);
@@ -112,7 +104,7 @@ export function OnboardingTextField({ label, value, onChangeText, placeholder, e
         focusable={false}
         onHoverIn={() => { hover.set(withTiming(1, { duration: ms(200), easing: ease })); }}
         onHoverOut={() => { hover.set(withTiming(0, { duration: ms(200), easing: ease })); }}>
-        <FieldFrame height={height} active={focused} invalid={!!error || !!invalid} hover={hover} surface={surface}>
+        <FieldFrame height={height} active={focused} invalid={!!error || !!invalid} hover={hover} >
           <TextInput
             ref={inputRef}
             accessibilityLabel={label}
@@ -120,14 +112,14 @@ export function OnboardingTextField({ label, value, onChangeText, placeholder, e
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}
-            placeholderTextColor="#8A8A8A"
-            selectionColor="#FFFFFF"
-            cursorColor="#FFFFFF"
+            placeholderTextColor={Entry.placeholder}
+            selectionColor={Entry.peach}
+            cursorColor={Entry.peach}
             keyboardAppearance="dark"
             autoCorrect={false}
             onFocus={() => { setFocused(true); onFocus?.(); }}
             onBlur={() => { setFocused(false); onBlur?.(); }}
-            style={[styles.input, { fontFamily: onboardingFont }, noWebOutline]}
+            style={[styles.input, null, noWebOutline]}
             {...inputProps}
           />
         </FieldFrame>
@@ -142,7 +134,7 @@ function Chevron({ open }: { open: boolean }) {
   const style = useAnimatedStyle(() => ({ transform: [{ rotate: `${progress.value * 180}deg` }] }));
   return (
     <Animated.View style={style}>
-      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><Path d="m6 9 6 6 6-6" /></Svg>
+      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={Entry.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="m6 9 6 6 6-6" /></Svg>
     </Animated.View>
   );
 }
@@ -159,12 +151,11 @@ type SelectFieldProps = {
   height?: number;
   /** Rows shown before the menu scrolls. */
   maxVisibleRows?: number;
-  surface?: FieldSurface;
 };
 
 // The menu opens inline, pushing the fields below it down, so it can never be
 // clipped by the phone frame or the scroll view.
-export function OnboardingSelectField({ label, placeholder, options, value, onChange, open, onOpenChange, error, height = 60, maxVisibleRows = 5, surface }: SelectFieldProps) {
+export function OnboardingSelectField({ label, placeholder, options, value, onChange, open, onOpenChange, error, height = 60, maxVisibleRows = 5 }: SelectFieldProps) {
   const ms = useMs();
   const [focused, setFocused] = useState(false);
   const [mounted, setMounted] = useState(open);
@@ -206,10 +197,10 @@ export function OnboardingSelectField({ label, placeholder, options, value, onCh
         onHoverOut={() => { hover.set(withTiming(0, { duration: ms(200), easing: ease })); }}
         onPressIn={() => { press.set(withTiming(1, { duration: ms(110), easing: ease })); }}
         onPressOut={() => { press.set(withTiming(0, { duration: ms(200), easing: ease })); }}
-        style={[{ borderRadius: height / 2 }, focused && !open && FOCUS_RING]}>
-        <FieldFrame height={height} active={open} invalid={!!error && !open} hover={hover} press={press} surface={surface}>
+        style={[{ borderRadius: RADIUS }, focused && !open && FOCUS_RING]}>
+        <FieldFrame height={height} active={open} invalid={!!error && !open} hover={hover} press={press} >
           <View style={styles.selectRow}>
-            <Text numberOfLines={1} style={[value ? styles.inputText : styles.placeholder, styles.selectText, { fontFamily: onboardingFont }]}>{value ?? placeholder}</Text>
+            <Text numberOfLines={1} style={[value ? styles.inputText : styles.placeholder, styles.selectText, null]}>{value ?? placeholder}</Text>
             <Chevron open={open} />
           </View>
         </FieldFrame>
@@ -217,7 +208,7 @@ export function OnboardingSelectField({ label, placeholder, options, value, onCh
 
       {mounted && (
         <Animated.View style={[styles.menuClip, menu]}>
-          <View style={[styles.menu, surface === 'flat' && styles.menuFlat]}>
+          <View style={styles.menu}>
             <ScrollView role={LISTBOX} aria-label={label} nestedScrollEnabled scrollEnabled={scrolls} showsVerticalScrollIndicator={scrolls} style={{ maxHeight: rows * ROW_HEIGHT }} contentContainerStyle={styles.menuList}>
               {options.map((option) => (
                 <MenuOption key={option} label={option} selected={option === value} onPress={() => { onChange(option); onOpenChange(false); }} />
@@ -245,33 +236,31 @@ function MenuOption({ label, selected, onPress }: { label: string; selected: boo
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
       style={({ pressed }) => [styles.option, (hovered || focused) && styles.optionHover, pressed && styles.optionPressed, focused && { ...FOCUS_RING, outlineOffset: -2 }]}>
-      <Text numberOfLines={1} style={[styles.optionText, selected && styles.optionTextSelected, { fontFamily: onboardingFont }]}>{label}</Text>
-      {selected && <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="m5 12 4 4L19 6" /></Svg>}
+      <Text numberOfLines={1} style={[styles.optionText, selected && styles.optionTextSelected, null]}>{label}</Text>
+      {selected && <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={Entry.peach} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="m5 12 4 4L19 6" /></Svg>}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { color: '#E8E8E8', fontSize: 13.5, fontWeight: '500', letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
-  error: { color: ERROR, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
-  lift: { backgroundColor: 'rgba(255,255,255,0.035)' },
-  flat: { backgroundColor: '#101010' },
-  menuFlat: { backgroundColor: '#141414', boxShadow: 'none' },
+  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 2 },
+  error: { color: ERROR, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 2 },
+  fill: { backgroundColor: Entry.surface },
+  lift: { backgroundColor: 'rgba(255,255,255,0.025)' },
   outline: { borderWidth: 1.5 },
-  // A full 2px white edge when focused, without shifting the layout.
-  focusRing: { borderWidth: 2, borderColor: '#FFFFFF' },
-  errorRing: { borderWidth: 1.5, borderColor: 'rgba(255,142,142,0.9)' },
-  input: { flex: 1, paddingHorizontal: 22, color: OnboardingTokens.text, fontSize: 16, fontWeight: '500', letterSpacing: -0.1 },
-  inputText: { color: OnboardingTokens.text, fontWeight: '500' },
-  placeholder: { color: '#8A8A8A', fontWeight: '400' },
-  selectRow: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingLeft: 22, paddingRight: 20, gap: 12 },
+  focusRing: { borderWidth: 1.5, borderColor: Entry.blue },
+  errorRing: { borderWidth: 1.5, borderColor: ERROR },
+  input: { flex: 1, paddingHorizontal: 18, color: Entry.ink, fontFamily: Entry.body, fontSize: 16, letterSpacing: -0.1 },
+  inputText: { color: Entry.ink, fontFamily: Entry.body },
+  placeholder: { color: Entry.placeholder, fontFamily: Entry.body },
+  selectRow: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingLeft: 18, paddingRight: 16, gap: 12 },
   selectText: { flex: 1, fontSize: 16, letterSpacing: -0.1 },
   menuClip: { overflow: 'hidden' },
-  menu: { borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)', backgroundColor: '#2A2A2A', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)' },
+  menu: { borderRadius: RADIUS, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.raised, overflow: 'hidden' },
   menuList: { padding: MENU_PADDING },
-  option: { height: ROW_HEIGHT, borderRadius: 18, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  optionHover: { backgroundColor: 'rgba(255,255,255,0.07)' },
-  optionPressed: { backgroundColor: 'rgba(255,255,255,0.11)' },
-  optionText: { color: '#D6D6D6', fontSize: 16, fontWeight: '400' },
-  optionTextSelected: { color: '#FFFFFF', fontWeight: '600' },
+  option: { height: ROW_HEIGHT, borderRadius: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  optionHover: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  optionPressed: { backgroundColor: 'rgba(255,255,255,0.09)' },
+  optionText: { color: Entry.muted, fontFamily: Entry.body, fontSize: 15.5 },
+  optionTextSelected: { color: Entry.ink, fontFamily: Entry.strong },
 });
