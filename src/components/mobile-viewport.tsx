@@ -12,8 +12,9 @@ export function MobileViewport({ children }: { children: ReactNode }) {
   const preview = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
   if (!preview) return <View style={styles.full}>{children}</View>;
 
-  const frameHeight = Math.min(880, height - 48);
-  const frameWidth = Math.min(410, Math.round(frameHeight * 0.47));
+  const frameHeight = Math.max(320, Math.min(880, height - 48));
+  // Keep the phone width readable when a desktop browser window is short.
+  const frameWidth = Math.min(410, width - 48);
   return (
     <View style={styles.desktop}>
       <View style={[styles.frame, { width: frameWidth, height: frameHeight }]}>{children}</View>

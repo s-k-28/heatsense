@@ -10,8 +10,9 @@ This document keeps interface work tied to the HeatSense product instead of drif
 
 ## Visual system
 
+- Welcome, sign-in, and role selection use the Fieldline entry system: field charcoal `#101416`, warm white `#F6F3EC`, peach `#FFB183` for the primary action, and pale blue `#A8D9E8` for selection. Barlow Condensed headings and Inter body text connect the entry flow to the athletic workspace. Tokens live in `src/constants/entry-theme.ts`; shared layouts and controls live in `src/components/entry-ui.tsx`. See [implementation and screenshots](entry-ui-review.md).
 - Coach workspace (September 16 rebuild): graphite canvas (`#0C0E11`), raised charcoal (`#171A1F`), pure-white primary text, bright warm-gray secondary text, and cool blue (`#8BB8FF`) for controls. Bold Barlow Condensed is used for headings and numerals outside the locked hero; Inter semibold/bold is used for body text and controls. Tokens live in `src/constants/coach-theme.ts`.
-- Onboarding, trainer, and athlete workspaces retain the warm cream canvas (`#F6F3EC`), warm-white surfaces (`#FFFDF8`), coral primary accent (`#F06F5F`), and near-black text (`#1B1C19`).
+- Other setup, trainer, and athlete screens continue to use their existing shared theme. Extending the Fieldline entry system to those screens is a separate design pass.
 - Color carries meaning: green is normal, amber is caution, orange is warning, and coral/red is emergency.
 - The approved orange WBGT hero is locked: original gradient, Atkinson Hyperlegible Next type, black 84°F reading, sun badge, guidance, and squiggle chart. Home and Plan reuse the original `RiskHero` component without restyling it.
 - The dark recheck card sits below the locked hero, so typography and countdown improvements never change the approved card. Shared athlete/alert/session detail screens use the dark workspace treatment.
