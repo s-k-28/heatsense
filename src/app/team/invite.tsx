@@ -22,8 +22,19 @@ import { GlassSurface } from '@/components/glass-surface';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { OnboardingContinueButton, onboardingFont as fontFamily, OnboardingTokens } from '@/components/onboarding-controls';
-import { ensureTeamInvite, regenerateInvite, type TeamInvite } from '@/services/team-invites';
-import { getTeamId, setTeamId, useTeamDraft } from '@/state/onboarding';
+import {
+  ensureTeamInvite,
+  getMyTeamInvite,
+  INVITE_CODE_LENGTH,
+  NETWORK_ERROR,
+  regenerateInvite,
+  respondToJoinRequest,
+  watchPendingAthletes,
+  type PendingAthlete,
+  type TeamInvite,
+  type TeamSummary,
+} from '@/services/team-invites';
+import { setTeamId, useTeamDraft, type TeamDraft } from '@/state/onboarding';
 
 const MUTED = '#B8B8B8';
 const FOCUS_RING = { outlineColor: '#FFFFFF', outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
@@ -33,29 +44,44 @@ const inviteMessage = (code: string) => `Join my team on HeatSense! Use code ${c
 
 export default function InviteTeamScreen() {
   const draft = useTeamDraft();
-  // Reached without finishing Create Your Team (e.g. a direct link): send the coach back to it.
-  if (!draft.school.trim() || !draft.teamName.trim() || !draft.sport || !draft.level) return <Redirect href="/team/create" />;
-  return <MobileViewport><Content /></MobileViewport>;
+  // Without a finished draft (a page refresh, or a coach coming back later) the
+  // screen loads the coach's existing team from the server instead.
+  const complete = Boolean(draft.school.trim() && draft.teamName.trim() && draft.sport && draft.level);
+  return <MobileViewport><Content draft={complete ? draft : null} /></MobileViewport>;
 }
 
-function Content() {
+function Content({ draft }: { draft: TeamDraft | null }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
-  const draft = useTeamDraft();
+  const [team, setTeam] = useState<TeamSummary | null>(null);
   const [invite, setInvite] = useState<TeamInvite | null>(null);
+  const [noTeam, setNoTeam] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [height, setHeight] = useState(0);
-  const compact = height > 0 && height < 720;
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const compact = size.height > 0 && size.height < 720;
   const headlineSize = compact ? 38 : 44;
 
-  const { school, teamName, sport, level } = draft;
+  const school = draft?.school ?? '';
+  const teamName = draft?.teamName ?? '';
+  const sport = draft?.sport ?? '';
+  const level = draft?.level ?? '';
   useEffect(() => {
     let cancelled = false;
-    ensureTeamInvite({ school, teamName, sport: sport ?? '', level: level ?? '' }, getTeamId())
-      .then((result) => { if (cancelled) return; setTeamId(result.teamId); setInvite(result); setLoadError(null); })
-      .catch(() => { if (!cancelled) setLoadError("We couldn't create your invitation code."); });
+    const details = { school, teamName, sport, level };
+    // Both calls are idempotent on the server: they return the team's live code and only issue one if it has none.
+    const load = teamName ? ensureTeamInvite(details).then((result) => ({ team: details, invite: result })) : getMyTeamInvite();
+    load
+      .then((result) => {
+        if (cancelled) return;
+        if (!result) { setNoTeam(true); return; }
+        setTeamId(result.invite.teamId);
+        setTeam(result.team);
+        setInvite(result.invite);
+        setLoadError(null);
+      })
+      .catch((reason) => { if (!cancelled) setLoadError(reason instanceof Error ? reason.message : NETWORK_ERROR); });
     return () => { cancelled = true; };
   }, [school, teamName, sport, level, attempt]);
 
@@ -65,8 +91,11 @@ function Content() {
   const back = () => (router.canGoBack() ? router.back() : router.replace('/team/create'));
   const next = () => { if (invite) router.push('/team/practice-location'); };
 
+  // No draft and no team on the server yet: start at Create Your Team.
+  if (noTeam) return <Redirect href="/team/create" />;
+
   return (
-    <View style={styles.fill} onLayout={(event: LayoutChangeEvent) => setHeight(event.nativeEvent.layout.height)}>
+    <View style={styles.fill} onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
       <StatusBar style="light" />
       <ScrollView
         bounces={false}
@@ -83,11 +112,11 @@ function Content() {
         <Animated.Text entering={rise(350)} style={[styles.description, { fontFamily, marginTop: compact ? 10 : 14 }]}>Share this code with your athletes so they can join your team.</Animated.Text>
 
         <Animated.View entering={rise(500)} style={[styles.identity, { marginTop: compact ? 24 : 34 }]}>
-          <Text numberOfLines={1} style={[styles.teamName, { fontFamily }]}>{teamName}</Text>
-          <Text numberOfLines={1} style={[styles.teamMeta, { fontFamily }]}>{sport} · {level}</Text>
+          <Text numberOfLines={1} style={[styles.teamName, { fontFamily }]}>{team?.teamName ?? teamName}</Text>
+          <Text numberOfLines={1} style={[styles.teamMeta, { fontFamily }]}>{[team?.sport ?? sport, team?.level ?? level].filter(Boolean).join(' · ')}</Text>
         </Animated.View>
 
-        <CodeTiles invite={invite} compact={compact} firstDelay={reducedMotion ? 0 : 650} />
+        <CodeTiles invite={invite} compact={compact} width={size.width} firstDelay={reducedMotion ? 0 : 650} />
         <View style={styles.status}>
           {loadError ? (
             <Animated.View entering={fade(0)} style={styles.errorRow}>
@@ -114,6 +143,8 @@ function Content() {
           <RegenerateControl invite={invite} onRegenerated={setInvite} />
         </Animated.View>
 
+        {invite && <JoinRequests teamId={invite.teamId} />}
+
         <Animated.View entering={rise(1350)} style={{ marginTop: compact ? 18 : 24 }}>
           <OnboardingContinueButton enabled={invite !== null} onPress={next} />
         </Animated.View>
@@ -124,13 +155,17 @@ function Content() {
 
 // Display-only code tiles. Each tile fades and scales up (0.96 → 1) in turn; a new
 // code (after regenerating) replays the same reveal.
-function CodeTiles({ invite, compact, firstDelay }: { invite: TeamInvite | null; compact: boolean; firstDelay: number }) {
-  const digits = invite ? invite.code.split('') : [null, null, null, null];
+function CodeTiles({ invite, compact, width, firstDelay }: { invite: TeamInvite | null; compact: boolean; width: number; firstDelay: number }) {
+  const digits: (string | null)[] = invite ? invite.code.split('') : Array.from({ length: INVITE_CODE_LENGTH }, () => null);
   // The first code waits for the page entrance; a regenerated code reveals right away.
   const [firstCode, setFirstCode] = useState<string | null>(null);
   if (invite && firstCode === null) setFirstCode(invite.code);
   const delay = !invite || invite.code === firstCode ? firstDelay : 0;
-  const size = compact ? { width: 62, height: 72, gap: 12 } : { width: 68, height: 80, gap: 14 };
+  // Six tiles share the row: as wide as the screen allows, up to 54pt.
+  const gap = compact ? 8 : 10;
+  const available = Math.max(0, (width || 390) - 44);
+  const tileWidth = Math.min(54, Math.floor((available - gap * (INVITE_CODE_LENGTH - 1)) / INVITE_CODE_LENGTH));
+  const size = { width: tileWidth, height: Math.round(tileWidth * (compact ? 1.2 : 1.28)), gap };
   return (
     <View
       accessible
@@ -161,9 +196,9 @@ function CodeTile({ digit, code, delay, width, height }: { digit: string | null;
   const text = useAnimatedStyle(() => ({ opacity: glyph.value, transform: [{ scale: 0.92 + glyph.value * 0.08 }] }));
   return (
     <Animated.View style={[{ width, height }, frame]}>
-      <GlassSurface radius={20} style={[styles.tile, { width, height }]}>
-        <Animated.Text style={[styles.digit, { fontFamily }, text]}>{digit ?? ''}</Animated.Text>
-      </GlassSurface>
+      <View style={[styles.tile, { width, height }]}>
+        <Animated.Text style={[styles.digit, { fontFamily, fontSize: Math.round(width * 0.54) }, text]}>{digit ?? ''}</Animated.Text>
+      </View>
     </Animated.View>
   );
 }
@@ -283,8 +318,8 @@ function RegenerateControl({ invite, onRegenerated }: { invite: TeamInvite | nul
     try {
       onRegenerated(await regenerateInvite(invite.teamId));
       setConfirming(false);
-    } catch {
-      setError("Couldn't generate a new code. Try again.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : NETWORK_ERROR);
     } finally {
       setBusy(false);
     }
@@ -307,6 +342,57 @@ function RegenerateControl({ invite, onRegenerated }: { invite: TeamInvite | nul
         <SmallPill label={busy ? 'Generating…' : 'Generate new code'} onPress={regenerate} disabled={busy} strong />
       </View>
     </Animated.View>
+  );
+}
+
+// Live list of athletes waiting to join. Approving is the only way an athlete gets team access.
+function JoinRequests({ teamId }: { teamId: string }) {
+  const reducedMotion = useReducedMotion();
+  const [athletes, setAthletes] = useState<PendingAthlete[] | null>(null);
+  const [listenError, setListenError] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<{ userId: string; message: string } | null>(null);
+
+  useEffect(() => watchPendingAthletes(teamId, (next) => { setAthletes(next); setListenError(false); }, () => setListenError(true)), [teamId]);
+
+  const respond = async (athlete: PendingAthlete, approve: boolean) => {
+    if (busy) return;
+    setBusy(athlete.userId);
+    setError(null);
+    try {
+      await respondToJoinRequest(teamId, athlete.userId, approve);
+    } catch (reason) {
+      setError({ userId: athlete.userId, message: reason instanceof Error ? reason.message : NETWORK_ERROR });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <View style={styles.requests} aria-live="polite">
+      <Text style={[styles.requestsLabel, { fontFamily }]}>Join requests</Text>
+      {listenError ? (
+        <Text style={[styles.errorText, { fontFamily }]}>{NETWORK_ERROR}</Text>
+      ) : athletes === null ? (
+        <ActivityIndicator size="small" color={MUTED} accessibilityLabel="Loading join requests" />
+      ) : athletes.length === 0 ? (
+        <Text style={[styles.requestsEmpty, { fontFamily }]}>No requests yet. Athletes appear here after they enter your code.</Text>
+      ) : (
+        athletes.map((athlete) => (
+          <Animated.View key={athlete.userId} entering={reducedMotion ? undefined : FadeIn.duration(220)} exiting={reducedMotion ? undefined : FadeOut.duration(160)} style={styles.request}>
+            <View style={styles.requestRow}>
+              <View style={styles.requestCopy}>
+                <Text numberOfLines={1} style={[styles.requestName, { fontFamily }]}>{athlete.displayName ?? athlete.email ?? 'Athlete'}</Text>
+                {athlete.displayName && athlete.email ? <Text numberOfLines={1} style={[styles.requestMeta, { fontFamily }]}>{athlete.email}</Text> : null}
+              </View>
+              <SmallPill label="Decline" onPress={() => void respond(athlete, false)} disabled={busy !== null} />
+              <SmallPill label={busy === athlete.userId ? '…' : 'Approve'} onPress={() => void respond(athlete, true)} disabled={busy !== null} strong />
+            </View>
+            {error?.userId === athlete.userId && <Text style={[styles.errorText, { fontFamily }]}>{error.message}</Text>}
+          </Animated.View>
+        ))
+      )}
+    </View>
   );
 }
 
@@ -375,8 +461,8 @@ const styles = StyleSheet.create({
   teamName: { color: '#FFFFFF', fontSize: 19, fontWeight: '500', letterSpacing: -0.3 },
   teamMeta: { color: MUTED, fontSize: 14.5, fontWeight: '400' },
   tiles: { flexDirection: 'row', justifyContent: 'center' },
-  tile: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)', boxShadow: '0 6px 16px rgba(0,0,0,0.18)' },
-  digit: { color: '#FFFFFF', fontSize: 32, fontWeight: '500', fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
+  tile: { alignItems: 'center', justifyContent: 'center', borderRadius: 16, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)', backgroundColor: 'rgba(255,255,255,0.03)' },
+  digit: { color: '#FFFFFF', fontWeight: '400', fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
   status: { minHeight: 22, marginTop: 12, alignItems: 'center', justifyContent: 'center' },
   expiry: { color: '#8E8E8E', fontSize: 13, fontWeight: '400' },
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -394,4 +480,12 @@ const styles = StyleSheet.create({
   smallPillStrong: { borderColor: 'rgba(255,255,255,0.85)' },
   smallPillActive: { borderColor: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.06)' },
   smallPillText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  requests: { marginTop: 24, gap: 10, paddingTop: 18, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.18)' },
+  requestsLabel: { color: MUTED, fontSize: 13, fontWeight: '600', letterSpacing: 0.4, textTransform: 'uppercase' },
+  requestsEmpty: { color: '#8E8E8E', fontSize: 13.5, lineHeight: 19 },
+  request: { gap: 6 },
+  requestRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  requestCopy: { flex: 1, gap: 2 },
+  requestName: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '500' },
+  requestMeta: { color: MUTED, fontSize: 13 },
 });

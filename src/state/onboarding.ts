@@ -28,6 +28,9 @@ export async function hydrateOnboardingRole(userId: string | null) {
   teamDraft = { school: '', teamName: '', sport: null, level: null };
   teamId = null;
   athleteTeam = { status: 'unassigned', teamId: null };
+  athleteDraft = null;
+  bodyDraft = null;
+  safetyDraft = null;
   notify();
   if (!userId) return;
 
@@ -107,7 +110,7 @@ export function getCurrentUserId() {
 
 // Athlete team membership as this device knows it. 'pending' means a join
 // request is waiting for the coach; it is never treated as team access.
-export type AthleteTeam = { status: 'unassigned' | 'pending'; teamId: string | null };
+export type AthleteTeam = { status: 'unassigned' | 'pending' | 'member'; teamId: string | null };
 
 let athleteTeam: AthleteTeam = { status: 'unassigned', teamId: null };
 
@@ -118,4 +121,58 @@ export function setAthleteTeam(next: AthleteTeam) {
 
 export function useAthleteTeam() {
   return useSyncExternalStore(subscribe, () => athleteTeam, () => athleteTeam);
+}
+
+// Athlete page 1 ("Make it yours.") as typed, so going back and forth keeps it.
+// Memory only, per signed-in account: the birth date in particular is never
+// written to disk or to the server (only its age band is saved).
+export type AthleteDraft = { fullName: string; birthDate: string; grade: string | null; sport: string | null; jersey: string };
+
+let athleteDraft: AthleteDraft | null = null;
+
+export function setAthleteDraft(next: AthleteDraft) {
+  athleteDraft = next;
+}
+
+export function getAthleteDraft() {
+  return athleteDraft;
+}
+
+// Athlete page 2 ("Know your body.") as answered. Memory only, per signed-in account,
+// never written to disk: these are health answers. Whether they also reach Firestore
+// is decided in services/athlete-health.ts.
+export type BodyDraft = {
+  feet: string;
+  inches: string;
+  pounds: string;
+  previousHeatIllness: string | null;
+  previousHeatIllnessType: string | null;
+  heatConcerns: string[];
+  otherConcern: string;
+  heatAcclimatization: string | null;
+};
+
+let bodyDraft: BodyDraft | null = null;
+
+export function setBodyDraft(next: BodyDraft) {
+  bodyDraft = next;
+}
+
+export function getBodyDraft() {
+  return bodyDraft;
+}
+
+// Athlete page 3 ("Safety comes first.") as typed. Memory only, per signed-in account,
+// never written to disk: emergency contacts are personal information about other people.
+export type ContactDraft = { name: string; relationship: string | null; phone: string };
+export type SafetyDraft = { primary: ContactDraft; secondary: ContactDraft | null; notes: string };
+
+let safetyDraft: SafetyDraft | null = null;
+
+export function setSafetyDraft(next: SafetyDraft) {
+  safetyDraft = next;
+}
+
+export function getSafetyDraft() {
+  return safetyDraft;
 }

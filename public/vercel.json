@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/setup/:role", "destination": "/setup/[role]" },
+    { "source": "/team/:mode", "destination": "/team/[mode]" },
+    { "source": "/(.*)", "destination": "/+not-found" }
+  ]
+}
