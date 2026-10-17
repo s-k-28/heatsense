@@ -34,6 +34,7 @@ import {
   WristbandVisual,
 } from '@/components/onboarding-visuals';
 import { Fonts, MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
+import { useAuthSession } from '@/state/auth-session';
 
 const icons = {
   back: { ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' },
@@ -94,10 +95,11 @@ const steps = [
 
 type Role = 'Coach' | 'Athletic trainer' | 'Athlete';
 
-// The welcome screen is the app's entry; the step-by-step onboarding stays reachable at /?step=N.
+// Resume onboarding for an authenticated user; the step-by-step intro stays reachable at /?step=N.
 export default function OnboardingRoute() {
   const { step } = useLocalSearchParams<{ step?: string }>();
-  if (step === undefined) return <Redirect href="/welcome" />;
+  const { user } = useAuthSession();
+  if (step === undefined) return <Redirect href={user ? '/role' : '/welcome'} />;
   return <OnboardingScreen />;
 }
 

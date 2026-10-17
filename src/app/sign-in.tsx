@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -14,8 +14,8 @@ import { Button } from 'tamagui';
 
 import { GoogleLogo } from '@/components/brand-logos';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
-import { SKIP_SIGN_IN } from '@/constants/dev-flags';
 import { signInWithGoogle } from '@/services/google-auth';
+import { useAuthSession } from '@/state/auth-session';
 
 const SCREEN = '#090909';
 const DESKTOP = '#111111';
@@ -47,6 +47,12 @@ function SignInContent() {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signedInUid, setSignedInUid] = useState<string | null>(null);
+  const { user, ready } = useAuthSession();
+
+  useEffect(() => {
+    if (signedInUid && ready && user?.uid === signedInUid) router.replace('/role');
+  }, [ready, router, signedInUid, user?.uid]);
 
   const headlineSize = Math.max(34, Math.min(42, size.width * 0.1));
 
@@ -56,15 +62,11 @@ function SignInContent() {
   const back = () => (router.canGoBack() ? router.back() : router.replace('/welcome'));
   const signIn = async () => {
     if (pending) return;
-    if (SKIP_SIGN_IN) {
-      router.replace('/role');
-      return;
-    }
     setPending(true);
     setError(null);
     try {
       const result = await signInWithGoogle();
-      if (result === 'signed-in') router.replace('/role');
+      if (result !== 'cancelled') setSignedInUid(result.uid);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Sign in failed. Please try again.');
     } finally {
