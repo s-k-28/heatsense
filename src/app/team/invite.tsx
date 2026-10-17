@@ -292,7 +292,7 @@ function RegenerateControl({ invite, onRegenerated }: { invite: TeamInvite | nul
 
   if (!confirming) {
     return (
-      <Pressable accessibilityRole="button" disabled={!invite} onPress={() => setConfirming(true)} hitSlop={8} style={({ hovered, pressed }) => [styles.textAction, (hovered || pressed) && { opacity: 0.75 }]}>
+      <Pressable accessibilityRole="button" disabled={!invite} onPress={() => setConfirming(true)} hitSlop={8} style={({ pressed }) => [styles.textAction, pressed && { opacity: 0.75 }]}>
         <RefreshIcon />
         <Text style={[styles.textActionLabel, { fontFamily }]}>Generate a new code</Text>
       </Pressable>
@@ -317,7 +317,7 @@ function SmallPill({ label, onPress, disabled, strong }: { label: string; onPres
       aria-disabled={disabled}
       disabled={disabled}
       onPress={onPress}
-      style={({ hovered, pressed }) => [styles.smallPill, strong && styles.smallPillStrong, (hovered || pressed) && styles.smallPillActive, pressed && { transform: [{ scale: 0.985 }] }, disabled && { opacity: 0.6 }]}>
+      style={({ pressed }) => [styles.smallPill, strong && styles.smallPillStrong, pressed && styles.smallPillActive, pressed && { transform: [{ scale: 0.985 }] }, disabled && { opacity: 0.6 }]}>
       <Text style={[styles.smallPillText, { fontFamily }]}>{label}</Text>
     </Pressable>
   );
