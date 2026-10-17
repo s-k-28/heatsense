@@ -27,9 +27,9 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { HeatSenseLogo } from '@/components/heatsense-logo';
+import { AthleteHeader, AthletePillButton as JoinButton } from '@/components/athlete-onboarding';
 import { MobileViewport } from '@/components/mobile-viewport';
-import { INVITE_CODE_LENGTH, lookupInvite, requestToJoinTeam, type InviteLookup } from '@/services/team-invites';
+import { INVITE_CODE_LENGTH, lookupInvite, NETWORK_ERROR, requestToJoinTeam, watchMyMembership, type InviteLookup } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
 
 // Athlete onboarding, step 1: join a team with the coach's invitation code.
@@ -42,28 +42,21 @@ const fontFamily = Platform.select({ ios: 'Helvetica Neue', android: 'sans-serif
 
 const T = {
   surface: '#101010',
-  surfaceHover: '#161616',
   outline: 'rgba(255,255,255,0.85)',
   outlineIdle: 'rgba(255,255,255,0.5)',
   outlineStrong: '#FFFFFF',
-  outlineDisabled: 'rgba(255,255,255,0.22)',
   outlineError: 'rgba(255,185,167,0.75)',
 } as const;
 
 const easeOut = Easing.out(Easing.cubic);
-const FOCUS_RING = { outlineColor: '#FFFFFF', outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
-// The next athlete onboarding step isn't built yet; this is where the athlete flow lands today.
-const NEXT_STEP = '/dashboard?role=athlete';
+// Next: athlete onboarding page 1, "Make it yours." (whether or not they joined a team).
+const NEXT_STEP = '/athlete/profile';
 
 type Check =
   | { state: 'idle' }
   | { state: 'checking' }
   | { state: 'result'; lookup: InviteLookup }
   | { state: 'network-error' };
-
-function BackChevron() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="m15 5-7 7 7 7" /></Svg>;
-}
 
 function CheckIcon() {
   return (
@@ -91,48 +84,10 @@ function CodeBox({ digit, active, error, width, height }: { digit: string; activ
   );
 }
 
-// Matches "Continue with Google": full-width 60px pill, white outline, dark interior, white text.
-function JoinButton({ label, enabled, loading, onPress }: { label: string; enabled: boolean; loading: boolean; onPress: () => void }) {
-  const ms = useMs();
-  const [focused, setFocused] = useState(false);
-  const hover = useSharedValue(0);
-  const press = useSharedValue(0);
-  const frame = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(hover.value, [0, 1], [T.outline, T.outlineStrong]),
-    backgroundColor: interpolateColor(hover.value, [0, 1], [SCREEN, T.surfaceHover]),
-    transform: [{ scale: 1 - press.value * 0.015 }],
-  }));
-
-  if (!enabled) {
-    return (
-      <View accessible accessibilityRole="button" accessibilityLabel={label} aria-disabled aria-busy={loading} style={[styles.join, styles.joinDisabled]}>
-        {loading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={[styles.joinText, styles.joinTextDisabled, { fontFamily }]}>{label}</Text>}
-      </View>
-    );
-  }
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      onHoverIn={() => { hover.set(withTiming(1, { duration: ms(200), easing: easeOut })); }}
-      onHoverOut={() => { hover.set(withTiming(0, { duration: ms(200), easing: easeOut })); }}
-      onPressIn={() => { press.set(withTiming(1, { duration: ms(110), easing: easeOut })); }}
-      onPressOut={() => { press.set(withTiming(0, { duration: ms(200), easing: easeOut })); }}
-      style={[{ borderRadius: 9999 }, focused && FOCUS_RING]}>
-      <Animated.View style={[styles.join, frame]}>
-        <Text style={[styles.joinText, { fontFamily }]}>{label}</Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
 function lookupMessage(lookup: InviteLookup) {
   switch (lookup.status) {
-    case 'not-found': return "That code wasn't found. Check it and try again.";
-    case 'expired': return 'This code has expired. Ask your coach for a new one.';
+    case 'not-found': return 'Code not found. Try again.';
+    case 'expired': return 'This code has expired.';
     case 'rate-limited': return `Too many attempts. Try again in ${Math.max(1, Math.ceil(lookup.retryAfterSeconds / 60))} min.`;
     default: return null;
   }
@@ -154,13 +109,33 @@ function Content() {
   const [check, setCheck] = useState<Check>({ state: 'idle' });
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<'pending' | 'member' | null>(null);
   const [noCodeHover, setNoCodeHover] = useState(false);
+
+  // Live membership: picks up a request sent earlier (after a refresh) and the
+  // coach's approval or decline without the athlete reloading anything.
+  useEffect(() => {
+    const userId = getCurrentUserId();
+    if (!userId) return;
+    return watchMyMembership(userId, (membership) => {
+      if (membership?.status === 'active' || membership?.status === 'pending') {
+        const status = membership.status === 'active' ? 'member' : 'pending';
+        setPending(status);
+        setAthleteTeam({ status, teamId: membership.teamId });
+        return;
+      }
+      setPending((current) => {
+        if (current && membership?.status === 'declined') setJoinError('Your coach declined this request. Check the code with your coach.');
+        return null;
+      });
+      setAthleteTeam({ status: 'unassigned', teamId: null });
+    }, () => {});
+  }, []);
 
   const compact = size.height > 0 && size.height < 760;
   const headlineSize = Math.max(38, Math.min(46, Math.floor((size.width - 44) * 0.14)));
   const contentWidth = Math.max(0, size.width - 44);
-  const gap = 12;
+  const gap = 8;
   const boxWidth = Math.min(62, Math.floor((contentWidth - gap * (INVITE_CODE_LENGTH - 1)) / INVITE_CODE_LENGTH));
   const boxHeight = compact ? 62 : 66;
 
@@ -194,7 +169,7 @@ function Content() {
   };
 
   const valid = check.state === 'result' && check.lookup.status === 'valid' ? check.lookup : null;
-  const codeError = check.state === 'result' ? lookupMessage(check.lookup) : check.state === 'network-error' ? "We couldn't check that code. Check your connection and try again." : null;
+  const codeError = check.state === 'result' ? lookupMessage(check.lookup) : check.state === 'network-error' ? NETWORK_ERROR : null;
 
   const join = async () => {
     if (!valid || joining || pending) return;
@@ -206,11 +181,11 @@ function Content() {
     setJoining(true);
     setJoinError(null);
     try {
-      const request = await requestToJoinTeam(code, userId);
-      setAthleteTeam({ status: 'pending', teamId: request.teamId });
-      setPending(true);
+      const request = await requestToJoinTeam(code);
+      setAthleteTeam({ status: request.status, teamId: request.teamId });
+      setPending(request.status);
     } catch (reason) {
-      setJoinError(reason instanceof Error ? reason.message : "We couldn't send your request. Try again.");
+      setJoinError(reason instanceof Error ? reason.message : NETWORK_ERROR);
     } finally {
       setJoining(false);
     }
@@ -233,10 +208,7 @@ function Content() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 8, compact ? 36 : 56), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <Animated.View entering={fade(200)} style={styles.topRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={back} hitSlop={8} style={({ pressed }) => [styles.circle, pressed && styles.pressed]}>
-            <BackChevron />
-          </Pressable>
-          <View style={styles.logoPlate}><HeatSenseLogo height={24} /></View>
+          <AthleteHeader onBack={back} />
         </Animated.View>
 
         <Animated.Text
@@ -303,9 +275,12 @@ function Content() {
             </Animated.View>
           )}
           {pending && (
-            <Animated.Text entering={fade(0)} style={[styles.statusText, styles.pendingText, { fontFamily }]}>
-              Request sent. You’ll be added once your coach approves it.
-            </Animated.Text>
+            <Animated.View key={pending} entering={fade(0)} style={styles.pendingWrap}>
+              <Text style={[styles.pendingTitle, { fontFamily }]}>{pending === 'member' ? 'You’re on the team.' : 'Request sent.'}</Text>
+              <Text style={[styles.statusText, styles.pendingText, { fontFamily }]}>
+                {pending === 'member' ? 'Your coach approved your request.' : 'Your coach will approve your request to join the team.'}
+              </Text>
+            </Animated.View>
           )}
           {joinError && <Text accessibilityRole="alert" style={[styles.errorText, styles.joinError, { fontFamily }]}>{joinError}</Text>}
         </View>
@@ -341,9 +316,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 22 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  circle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: '#FFFFFF', backgroundColor: SCREEN, alignItems: 'center', justifyContent: 'center' },
-  logoPlate: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(9,9,9,0.62)', alignItems: 'center', justifyContent: 'center' },
-  pressed: { opacity: 0.6 },
   headline: { color: '#FFFFFF', fontWeight: '400', letterSpacing: -0.6 },
   description: { color: MUTED, fontSize: 16, lineHeight: 23, fontWeight: '400', marginTop: 10, maxWidth: 340 },
   codeWrap: { alignSelf: 'center' },
@@ -354,7 +326,9 @@ const styles = StyleSheet.create({
   status: { minHeight: 56, marginTop: 22, alignItems: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
   statusText: { color: MUTED, fontSize: 14.5, lineHeight: 20 },
-  pendingText: { textAlign: 'center', marginTop: 14 },
+  pendingWrap: { alignItems: 'center', marginTop: 14, gap: 4 },
+  pendingTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '500', textAlign: 'center' },
+  pendingText: { textAlign: 'center' },
   errorText: { color: ERROR, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   joinError: { marginTop: 12 },
   retry: { color: '#FFFFFF', fontSize: 14, lineHeight: 20, textDecorationLine: 'underline' },
@@ -363,10 +337,6 @@ const styles = StyleSheet.create({
   teamName: { color: '#FFFFFF', fontSize: 18, lineHeight: 23, fontWeight: '500', letterSpacing: -0.2 },
   teamMeta: { color: MUTED, fontSize: 14.5, lineHeight: 20 },
   spacer: { flexGrow: 1, minHeight: 24 },
-  join: { height: 60, borderRadius: 9999, borderWidth: 1.5, borderColor: T.outline, backgroundColor: SCREEN, alignItems: 'center', justifyContent: 'center' },
-  joinDisabled: { borderColor: T.outlineDisabled },
-  joinText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600', letterSpacing: -0.1 },
-  joinTextDisabled: { opacity: 0.4 },
   noCodeWrap: { alignItems: 'center', marginTop: 18 },
   noCode: { color: MUTED, fontSize: 14, lineHeight: 20 },
   underline: { textDecorationLine: 'underline' },

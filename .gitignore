@@ -44,3 +44,6 @@ example
 /android
 # Generated from the installed Skia version by postinstall/preweb.
 /public/canvaskit.wasm
+
+# Firebase emulator logs
+*-debug.log

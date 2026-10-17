@@ -41,8 +41,12 @@ function useTimedValue(target: number, duration: number) {
   return value;
 }
 
-// The pill itself: glass surface, outline, focus ring, and error ring, shared by both field types.
-function FieldFrame({ height, active, invalid, hover, press, children }: { height: number; active: boolean; invalid: boolean; hover: SharedValue<number>; press?: SharedValue<number>; children: React.ReactNode }) {
+// 'glass' is the coach onboarding look; 'flat' is the sign-in screen's look (plain
+// dark interior, no glass), used by athlete onboarding.
+export type FieldSurface = 'glass' | 'flat';
+
+// The pill itself: surface, outline, focus ring, and error ring, shared by both field types.
+function FieldFrame({ height, active, invalid, hover, press, surface = 'glass', children }: { height: number; active: boolean; invalid: boolean; hover: SharedValue<number>; press?: SharedValue<number>; surface?: FieldSurface; children: React.ReactNode }) {
   const focus = useTimedValue(active ? 1 : 0, 200);
   const error = useTimedValue(invalid ? 1 : 0, 200);
   const frame = useAnimatedStyle(() => ({ transform: [{ scale: 1 - (press?.value ?? 0) * 0.015 }] }));
@@ -55,10 +59,11 @@ function FieldFrame({ height, active, invalid, hover, press, children }: { heigh
   const lift = useAnimatedStyle(() => ({ opacity: Math.max(focus.value, hover.value * 0.5) }));
   const radius = height / 2;
   return (
-    <Animated.View style={[{ height, borderRadius: radius }, frame]}>
+    <Animated.View style={[{ height, borderRadius: radius }, surface === 'flat' && styles.flat, frame]}>
       {/* Decorative only: on web an absolutely positioned layer paints above the input, so it must not take touches. */}
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <GlassSurface radius={radius} sheen={0.8} style={StyleSheet.absoluteFill} />
+        {/* A flat field paints its fill on the frame itself: an opaque absolute layer would cover the text on web. */}
+        {surface === 'glass' && <GlassSurface radius={radius} sheen={0.8} style={StyleSheet.absoluteFill} />}
       </View>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.lift, { borderRadius: radius }, lift]} />
       {children}
@@ -88,25 +93,30 @@ type TextFieldProps = {
   inputRef?: Ref<TextInput>;
   onFocus?: () => void;
   onBlur?: () => void;
-} & Pick<TextInputProps, 'returnKeyType' | 'onSubmitEditing' | 'autoCapitalize' | 'textContentType' | 'autoComplete' | 'maxLength' | 'submitBehavior'>;
+  surface?: FieldSurface;
+  /** Keep `label` for screen readers but don't draw it (e.g. paired inputs under one shared label). */
+  hideLabel?: boolean;
+  /** Outline the field as invalid without a message under it (the message is shown elsewhere). */
+  invalid?: boolean;
+} & Pick<TextInputProps, 'returnKeyType' | 'onSubmitEditing' | 'autoCapitalize' | 'textContentType' | 'autoComplete' | 'maxLength' | 'submitBehavior' | 'keyboardType' | 'inputMode' | 'accessibilityHint' | 'autoCorrect'>;
 
-export function OnboardingTextField({ label, value, onChangeText, placeholder, error, height = 60, inputRef, onFocus, onBlur, ...inputProps }: TextFieldProps) {
+export function OnboardingTextField({ label, value, onChangeText, placeholder, error, height = 60, inputRef, onFocus, onBlur, surface, hideLabel, invalid, ...inputProps }: TextFieldProps) {
   const ms = useMs();
   const [focused, setFocused] = useState(false);
   const hover = useSharedValue(0);
   return (
     <View>
-      <FieldLabel>{label}</FieldLabel>
+      {!hideLabel && <FieldLabel>{label}</FieldLabel>}
       <Pressable
         accessible={false}
         focusable={false}
         onHoverIn={() => { hover.set(withTiming(1, { duration: ms(200), easing: ease })); }}
         onHoverOut={() => { hover.set(withTiming(0, { duration: ms(200), easing: ease })); }}>
-        <FieldFrame height={height} active={focused} invalid={!!error} hover={hover}>
+        <FieldFrame height={height} active={focused} invalid={!!error || !!invalid} hover={hover} surface={surface}>
           <TextInput
             ref={inputRef}
             accessibilityLabel={label}
-            aria-invalid={!!error}
+            aria-invalid={!!error || !!invalid}
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}
@@ -149,11 +159,12 @@ type SelectFieldProps = {
   height?: number;
   /** Rows shown before the menu scrolls. */
   maxVisibleRows?: number;
+  surface?: FieldSurface;
 };
 
 // The menu opens inline, pushing the fields below it down, so it can never be
 // clipped by the phone frame or the scroll view.
-export function OnboardingSelectField({ label, placeholder, options, value, onChange, open, onOpenChange, error, height = 60, maxVisibleRows = 5 }: SelectFieldProps) {
+export function OnboardingSelectField({ label, placeholder, options, value, onChange, open, onOpenChange, error, height = 60, maxVisibleRows = 5, surface }: SelectFieldProps) {
   const ms = useMs();
   const [focused, setFocused] = useState(false);
   const [mounted, setMounted] = useState(open);
@@ -196,7 +207,7 @@ export function OnboardingSelectField({ label, placeholder, options, value, onCh
         onPressIn={() => { press.set(withTiming(1, { duration: ms(110), easing: ease })); }}
         onPressOut={() => { press.set(withTiming(0, { duration: ms(200), easing: ease })); }}
         style={[{ borderRadius: height / 2 }, focused && !open && FOCUS_RING]}>
-        <FieldFrame height={height} active={open} invalid={!!error && !open} hover={hover} press={press}>
+        <FieldFrame height={height} active={open} invalid={!!error && !open} hover={hover} press={press} surface={surface}>
           <View style={styles.selectRow}>
             <Text numberOfLines={1} style={[value ? styles.inputText : styles.placeholder, styles.selectText, { fontFamily: onboardingFont }]}>{value ?? placeholder}</Text>
             <Chevron open={open} />
@@ -206,7 +217,7 @@ export function OnboardingSelectField({ label, placeholder, options, value, onCh
 
       {mounted && (
         <Animated.View style={[styles.menuClip, menu]}>
-          <View style={styles.menu}>
+          <View style={[styles.menu, surface === 'flat' && styles.menuFlat]}>
             <ScrollView role={LISTBOX} aria-label={label} nestedScrollEnabled scrollEnabled={scrolls} showsVerticalScrollIndicator={scrolls} style={{ maxHeight: rows * ROW_HEIGHT }} contentContainerStyle={styles.menuList}>
               {options.map((option) => (
                 <MenuOption key={option} label={option} selected={option === value} onPress={() => { onChange(option); onOpenChange(false); }} />
@@ -244,6 +255,8 @@ const styles = StyleSheet.create({
   label: { color: '#E8E8E8', fontSize: 13.5, fontWeight: '500', letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
   error: { color: ERROR, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
   lift: { backgroundColor: 'rgba(255,255,255,0.035)' },
+  flat: { backgroundColor: '#101010' },
+  menuFlat: { backgroundColor: '#141414', boxShadow: 'none' },
   outline: { borderWidth: 1.5 },
   // A full 2px white edge when focused, without shifting the layout.
   focusRing: { borderWidth: 2, borderColor: '#FFFFFF' },

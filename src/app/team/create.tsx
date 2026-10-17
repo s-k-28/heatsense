@@ -11,6 +11,7 @@ import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { OnboardingContinueButton, onboardingFont as fontFamily } from '@/components/onboarding-controls';
 import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
+import { SPORTS } from '@/constants/sports';
 import { setTeamDraft, useTeamDraft, type TeamDraft } from '@/state/onboarding';
 
 const PEACH = '#FF986B';
@@ -18,7 +19,6 @@ const MUTED = '#B8B8B8';
 const FOCUS_RING = { outlineColor: '#FFFFFF', outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
 const MAX_NAME = 80;
 
-const SPORTS = ['Football', 'Soccer', 'Cross Country', 'Track & Field', 'Baseball', 'Softball', 'Tennis', 'Basketball', 'Volleyball', 'Other'] as const;
 const LEVELS = ['Varsity', 'Junior Varsity', 'Freshman', 'Middle School', 'Club / Other'] as const;
 
 type Field = keyof TeamDraft;

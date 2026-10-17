@@ -104,6 +104,10 @@ export default function RootLayout() {
             <Stack.Screen name="detail" />
             <Stack.Screen name="setup/coach" />
             <Stack.Screen name="setup/athlete" />
+            <Stack.Screen name="athlete/profile" />
+            <Stack.Screen name="athlete/body" />
+            <Stack.Screen name="athlete/safety" />
+            <Stack.Screen name="athlete/done" />
             <Stack.Screen name="setup/[role]" />
             <Stack.Screen name="team/create" />
             <Stack.Screen name="team/invite" />
