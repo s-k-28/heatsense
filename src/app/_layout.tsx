@@ -16,9 +16,9 @@ import { createTamagui, TamaguiProvider } from 'tamagui';
 import { defaultConfig } from '@tamagui/config/v6';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
-import { SKIP_SIGN_IN } from '@/constants/dev-flags';
 import { Palette } from '@/constants/theme';
 import { firebaseAuth } from '@/services/firebase';
+import { AuthSessionContext } from '@/state/auth-session';
 import { hydrateOnboardingRole } from '@/state/onboarding';
 
 SplashScreen.preventAutoHideAsync();
@@ -27,6 +27,7 @@ const tamaguiConfig = createTamagui(defaultConfig);
 export default function RootLayout() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [initialAuthReady, setInitialAuthReady] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -56,8 +57,11 @@ export default function RootLayout() {
     const restore = async (nextUser: User | null) => {
       const version = ++restoreVersion;
       setUser(nextUser);
-      await hydrateOnboardingRole(nextUser?.uid ?? ((__DEV__ && !firebaseAuth) || SKIP_SIGN_IN ? 'local-demo' : null));
-      if (active && version === restoreVersion) setAuthReady(true);
+      await hydrateOnboardingRole(nextUser?.uid ?? (__DEV__ && !firebaseAuth ? 'local-demo' : null));
+      if (active && version === restoreVersion) {
+        setAuthReady(true);
+        setInitialAuthReady(true);
+      }
     };
     if (!firebaseAuth) {
       void restore(null);
@@ -66,41 +70,48 @@ export default function RootLayout() {
     const unsubscribe = onAuthStateChanged(firebaseAuth, (nextUser) => {
       setAuthReady(false);
       void restore(nextUser);
-    }, () => { if (active) setAuthReady(true); });
+    }, () => {
+      if (active) {
+        setAuthReady(true);
+        setInitialAuthReady(true);
+      }
+    });
     return () => { active = false; unsubscribe(); };
   }, []);
 
-  if ((!fontsLoaded && !fontError) || !authReady) {
+  if ((!fontsLoaded && !fontError) || !initialAuthReady) {
     return null;
   }
 
   // Unconfigured local development keeps design review routes reachable. A
   // configured build always uses the real session for navigation protection.
-  const canOpenAccountRoutes = (__DEV__ && !firebaseAuth) || SKIP_SIGN_IN || Boolean(user);
+  const canOpenAccountRoutes = (__DEV__ && !firebaseAuth) || Boolean(user);
 
   return (
-    <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
-      <Stack
-        screenOptions={{
-          animation: 'fade',
-          contentStyle: { backgroundColor: Palette.canvas },
-          headerShown: false,
-        }}
-      >
-        <Stack.Protected guard={canOpenAccountRoutes}>
-          <Stack.Screen name="role" />
-          <Stack.Screen name="ready" />
-          <Stack.Screen name="dashboard" />
-          <Stack.Screen name="detail" />
-          <Stack.Screen name="setup/coach" />
-          <Stack.Screen name="setup/athlete" />
-          <Stack.Screen name="setup/[role]" />
-          <Stack.Screen name="team/create" />
-          <Stack.Screen name="team/invite" />
-          <Stack.Screen name="team/[mode]" />
-          <Stack.Screen name="team/practice-location" />
-        </Stack.Protected>
-      </Stack>
-    </TamaguiProvider>
+    <AuthSessionContext.Provider value={{ user, ready: authReady }}>
+      <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+        <Stack
+          screenOptions={{
+            animation: 'fade',
+            contentStyle: { backgroundColor: Palette.canvas },
+            headerShown: false,
+          }}
+        >
+          <Stack.Protected guard={canOpenAccountRoutes}>
+            <Stack.Screen name="role" />
+            <Stack.Screen name="ready" />
+            <Stack.Screen name="dashboard" />
+            <Stack.Screen name="detail" />
+            <Stack.Screen name="setup/coach" />
+            <Stack.Screen name="setup/athlete" />
+            <Stack.Screen name="setup/[role]" />
+            <Stack.Screen name="team/create" />
+            <Stack.Screen name="team/invite" />
+            <Stack.Screen name="team/[mode]" />
+            <Stack.Screen name="team/practice-location" />
+          </Stack.Protected>
+        </Stack>
+      </TamaguiProvider>
+    </AuthSessionContext.Provider>
   );
 }
