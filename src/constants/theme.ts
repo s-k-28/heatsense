@@ -3,34 +3,50 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 export const Palette = {
-  // Matches the onboarding flow: charcoal ground, white type, quiet white
-  // outlines instead of filled panels, and a single peach-orange accent
-  // (eyebrows, the logo mark, small highlights). The semantic risk colors
-  // (safe/caution/warning/emergency) stay as-is.
-  canvas: '#222222',
-  surface: '#222222',
-  surfaceMuted: '#2A2A2A',
+  // Dashboard colors follow iOS dark-mode system colors: a true-black ground, elevated
+  // grouped surfaces, and system label tones. Brand orange is the tint and is only used
+  // on things you can tap; status colors are reserved for status.
+  canvas: '#000000',
+  grouped: '#000000',
+  surface: '#1C1C1E',
+  surfaceMuted: '#2C2C2E',
   ink: '#FFFFFF',
-  inkMuted: '#B8B8B8',
-  border: 'rgba(255,255,255,0.22)',
+  inkMuted: 'rgba(235,235,245,0.62)',
+  inkFaint: 'rgba(235,235,245,0.32)',
+  border: 'rgba(84,84,88,0.65)',
   outline: 'rgba(255,255,255,0.85)',
+  fill: 'rgba(120,120,128,0.24)',
   coral: '#FF996B',
   coralDark: '#FF996B',
   coralSoft: 'rgba(255,153,107,0.14)',
   peach: '#F4B29F',
   sage: '#96A99C',
-  safe: '#5ED3A0',
-  caution: '#E3B341',
-  warning: '#F0803C',
-  emergency: '#FF6B5E',
-  info: '#7AA7FF',
+  safe: '#30D158',
+  caution: '#FFD60A',
+  warning: '#FF9F0A',
+  emergency: '#FF453A',
+  info: '#0A84FF',
   white: '#FFFFFF',
-
-  // Deep tones for a sun glyph sitting on a light zone fill.
   zoneOrangeDeep: '#7A3A16',
   zoneYellowDeep: '#7A5C0E',
   zoneRedDeep: '#6E1C14',
   zoneBlackDeep: '#000000',
+} as const;
+
+// Apple's text styles (SF Pro, the iOS system font). No fontFamily on purpose: leaving it
+// unset gives the system font and lets text follow the user's Dynamic Type setting.
+export const Type = {
+  largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: '700', letterSpacing: 0.37 },
+  title2: { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: 0.35 },
+  title3: { fontSize: 20, lineHeight: 25, fontWeight: '600', letterSpacing: 0.38 },
+  headline: { fontSize: 17, lineHeight: 22, fontWeight: '600', letterSpacing: -0.43 },
+  body: { fontSize: 17, lineHeight: 22, fontWeight: '400', letterSpacing: -0.43 },
+  callout: { fontSize: 16, lineHeight: 21, fontWeight: '400', letterSpacing: -0.31 },
+  subhead: { fontSize: 15, lineHeight: 20, fontWeight: '400', letterSpacing: -0.23 },
+  footnote: { fontSize: 13, lineHeight: 18, fontWeight: '400', letterSpacing: -0.08 },
+  caption: { fontSize: 12, lineHeight: 16, fontWeight: '400', letterSpacing: 0 },
+  display: { fontSize: 48, lineHeight: 54, fontWeight: '600', letterSpacing: 0.3 },
+  tab: { fontSize: 11, lineHeight: 13, fontWeight: '500', letterSpacing: 0.55 },
 } as const;
 
 // HeatSense intentionally uses one warm visual system across light and dark
@@ -57,12 +73,13 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 // Helvetica Neue, like the onboarding screens. Weights are separate PostScript
 // faces on iOS; the onboarding headline weight (500) is the heaviest we use.
 const face = Platform.select({
-  ios: { light: 'HelveticaNeue-Light', regular: 'HelveticaNeue', medium: 'HelveticaNeue-Medium' },
-  android: { light: 'sans-serif-light', regular: 'sans-serif', medium: 'sans-serif-medium' },
+  ios: { light: 'HelveticaNeue-Light', regular: 'HelveticaNeue', medium: 'HelveticaNeue-Medium', bold: 'HelveticaNeue-Bold' },
+  android: { light: 'sans-serif-light', regular: 'sans-serif', medium: 'sans-serif-medium', bold: 'sans-serif-medium' },
   default: {
     light: '"Helvetica Neue", Helvetica, Arial, sans-serif',
     regular: '"Helvetica Neue", Helvetica, Arial, sans-serif',
     medium: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+    bold: '"Helvetica Neue", Helvetica, Arial, sans-serif',
   },
 })!;
 
@@ -71,8 +88,8 @@ export const Fonts = {
   regular: face.regular,
   medium: face.medium,
   semibold: face.medium,
-  bold: face.medium,
-  extrabold: face.medium,
+  bold: face.bold,
+  extrabold: face.bold,
   mono: Platform.select({ ios: 'ui-monospace', default: 'monospace' }),
   fallback: Platform.select({ ios: 'System', default: 'sans-serif' }),
 
@@ -101,9 +118,9 @@ export const Spacing = {
 } as const;
 
 export const Radius = {
-  small: 12,
-  medium: 24,
-  large: 30,
+  small: 10,
+  medium: 14,
+  large: 20,
   pill: 999,
 } as const;
 

@@ -1,257 +1,221 @@
-import { type ComponentProps } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import type { ComponentProps } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View } from 'react-native';
 
-import { ScreenIntro, SectionHeader } from '@/components/dashboard-shell';
-import FlameLogo from '@/components/FlameLogo';
+import { FieldCard, shareTeamCode } from '@/components/dashboard-content';
+import { LargeTitle, SectionHeader } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
-import { DepthButton } from '@/components/ui/depth-button';
-import WristbandIllustration from '@/components/WristbandIllustration';
-import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
+import { Button, Card, CardHeader, Group, Row } from '@/components/ui/list';
+import { Palette, Spacing, Type } from '@/constants/theme';
+import { useTeamDraft } from '@/state/onboarding';
+import { setPreference, useTemperature } from '@/state/preferences';
+
+type IconName = ComponentProps<typeof HeatIcon>['name'];
 
 const icons = {
-  alert: { ios: 'exclamationmark.triangle.fill', android: 'warning', web: 'warning' },
-  arrow: { ios: 'arrow.clockwise', android: 'refresh', web: 'refresh' },
-  band: { ios: 'applewatch', android: 'watch', web: 'watch' },
+  offline: { ios: 'wifi.exclamationmark', android: 'wifi_off', web: 'wifi_off' },
   check: { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },
-  cloud: { ios: 'wifi.exclamationmark', android: 'wifi_off', web: 'wifi_off' },
-  forward: { ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' },
-  people: { ios: 'person.3.fill', android: 'groups', web: 'groups' },
-  plus: { ios: 'plus', android: 'add', web: 'add' },
-  shield: { ios: 'lock.shield.fill', android: 'privacy_tip', web: 'privacy_tip' },
-} as const;
+  open: { ios: 'circle', android: 'radio_button_unchecked', web: 'radio_button_unchecked' },
+  band: { ios: 'applewatch', android: 'watch', web: 'watch' },
+} as const satisfies Record<string, IconName>;
 
 export type DashboardReviewState = 'weather-stale' | 'empty-team' | 'pairing' | 'no-band' | 'alert-acknowledged';
 
 export function DashboardState({ state }: { state: DashboardReviewState }) {
-  if (state === 'weather-stale') return <WeatherStaleState />;
-  if (state === 'empty-team') return <EmptyTeamState />;
-  if (state === 'pairing') return <PairingState />;
-  if (state === 'no-band') return <NoBandState />;
-  return <AlertAcknowledgedState />;
+  if (state === 'weather-stale') return <WeatherStale />;
+  if (state === 'empty-team') return <EmptyTeam />;
+  if (state === 'pairing') return <Pairing />;
+  if (state === 'no-band') return <NoBand />;
+  return <AlertAcknowledged />;
 }
 
-function WeatherStaleState() {
+/** Runs a timer that is cleaned up if the screen goes away first. */
+function useDelayed() {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  return (callback: () => void, ms: number) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(callback, ms);
+  };
+}
+
+function WeatherStale() {
+  const temp = useTemperature();
+  const later = useDelayed();
+  const [checking, setChecking] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const retry = () => {
+    if (checking) return;
+    setChecking(true);
+    setFailed(false);
+    // The sample sensor stays offline, so a retry reports that honestly instead of pretending to recover.
+    later(() => { setChecking(false); setFailed(true); }, 1400);
+  };
+
   return (
     <>
-      <ScreenIntro title="Weather data needs a refresh." />
-      <Text style={styles.introBody}>HeatSense will not calculate a new practice zone until the latest field conditions are available.</Text>
-      <View style={styles.weatherPanel}>
-        <View style={styles.panelTopline}>
-          <View style={styles.stalePill}><HeatIcon name={icons.cloud} size={15} tintColor={Palette.warning} /><Text style={styles.staleText}>Last update 28 min ago</Text></View>
-          <Text style={styles.mutedLabel}>Frisco, Texas</Text>
+      <LargeTitle title="Today" />
+      <Card style={styles.first}>
+        <CardHeader icon={icons.offline} label="Weather is out of date" tone={Palette.warning} trailing="28 min ago" />
+        <View style={styles.valueRow}>
+          <Text style={styles.value}>{temp.value(84)}</Text>
+          <Text style={styles.unit}>{temp.unit}</Text>
         </View>
-        <Text style={styles.weatherValue}>84</Text>
-        <Text style={styles.weatherUnit}>Last WBGT reading · not current guidance</Text>
-        <View style={styles.weatherRule} />
-        <Text style={styles.weatherInstruction}>Use the school’s backup measurement process before practice.</Text>
-      </View>
-      <PrimaryAction icon={icons.arrow} label="Try weather update again" />
-      <Text style={styles.supportText}>If data remains unavailable, follow district procedures and record a local WBGT measurement.</Text>
+        <Text style={styles.muted}>Last WBGT reading, not current guidance. HeatSense won’t set a new practice zone until it can reach the field sensor.</Text>
+        <Text style={styles.instruction}>Use the school’s backup measurement process before practice.</Text>
+        <View style={styles.action}>
+          {checking ? <View style={styles.checking}><ActivityIndicator color={Palette.inkMuted} /><Text style={styles.muted}>Checking the field sensor…</Text></View> : <Button label="Try again" onPress={retry} />}
+        </View>
+        {failed ? <Text accessibilityLiveRegion="polite" style={styles.error}>Still can’t reach the field sensor.</Text> : null}
+      </Card>
+      <Text style={styles.footnote}>If conditions stay unavailable, follow district procedures and record a local WBGT measurement.</Text>
     </>
   );
 }
 
-function EmptyTeamState() {
+function EmptyTeam() {
+  const draft = useTeamDraft();
   return (
     <>
-      <ScreenIntro title="Build your team roster." />
-      <Text style={styles.introBody}>The field plan works now. Add athletes when you are ready to share schedules and review optional wristband alerts.</Text>
-      <View style={styles.invitePanel}>
-        <View style={styles.panelTopline}><Text style={styles.mutedLabel}>Liberty varsity soccer</Text><HeatIcon name={icons.people} size={22} tintColor={Palette.coralDark} /></View>
-        <Text style={styles.inviteLabel}>Team invite code</Text>
-        <Text style={styles.inviteCode}>HEAT 284</Text>
-        <Text style={styles.inviteDetail}>Share this code with athletes and approved staff.</Text>
+      <LargeTitle title="Team" />
+      <View style={styles.first}>
+        <Text style={styles.headline}>No athletes yet</Text>
+        <Text style={styles.muted}>The field plan already works. Add athletes when you’re ready to share schedules and review optional band alerts.</Text>
       </View>
-      <SectionHeader title="Roster checklist" />
-      <View style={styles.flatList}>
-        <ChecklistRow label="Confirm the team schedule" complete />
+
+      <SectionHeader title="To do" />
+      <Group inset={56}>
+        <ChecklistRow done label="Confirm the team schedule" />
         <ChecklistRow label="Add coaching and training staff" />
         <ChecklistRow label="Invite athletes" />
-      </View>
-      <PrimaryAction icon={icons.plus} label="Add the first athlete" />
+      </Group>
+      <View style={styles.action}><Button label="Share team code" onPress={() => shareTeamCode(draft)} /></View>
     </>
   );
 }
 
-function PairingState() {
+function Pairing() {
+  const later = useDelayed();
+  const [paired, setPaired] = useState(false);
+  const [pairing, setPairing] = useState(false);
+
+  const pair = () => {
+    if (pairing) return;
+    setPairing(true);
+    later(() => { setPairing(false); setPaired(true); setPreference('bandConnected', true); }, 1600);
+  };
+
   return (
     <>
-      <View style={styles.wristbandHero}>
-        <View style={styles.wristbandHeroTop}>
-          <Text style={styles.wristbandHeroKicker}>Meet</Text>
-          <Pressable accessibilityLabel="Learn more about the band" accessibilityRole="button" style={styles.wristbandHeroButton}>
-            <HeatIcon name={icons.forward} size={16} tintColor={Palette.ink} />
-          </Pressable>
+      <LargeTitle title={paired ? 'Band paired' : 'Pair your band'} />
+      <Text style={styles.contextLine}>
+        {paired ? 'Personal trends will show up after your next session.' : 'Keep the band close to this phone. The team’s WBGT plan works without it.'}
+      </Text>
+
+      {!paired ? (
+        <View style={styles.searching}>
+          <ActivityIndicator color={Palette.inkMuted} />
+          <Text style={styles.muted}>{pairing ? 'Pairing…' : 'Searching nearby…'}</Text>
         </View>
-        <Text style={styles.wristbandHeroTitle}>Your HeatSense{'\n'}Band</Text>
-        <View style={styles.wristbandHeroArt}>
-          <WristbandIllustration size={200} />
-        </View>
+      ) : null}
+
+      <Group inset={56} style={paired ? styles.afterIntro : undefined}>
+        <Row
+          detail={paired ? 'Connected' : 'Nearby · ready to pair'}
+          leading={<HeatIcon name={paired ? icons.check : icons.band} size={24} tintColor={paired ? Palette.safe : Palette.ink} />}
+          title="HeatSense Band 02A7"
+        />
+      </Group>
+      <View style={styles.action}>
+        {paired
+          ? <Button label="Done" onPress={() => router.replace('/dashboard?role=athlete')} />
+          : <Button label={pairing ? 'Pairing…' : 'Pair this band'} onPress={pair} />}
       </View>
-      <Text style={styles.introBody}>Keep the band close to this phone. Pairing adds personal trends; the team’s WBGT plan works without it.</Text>
-      <View style={styles.pairingStage}>
-        <View style={styles.watchCore}><FlameLogo size={44} /></View>
-        <Text style={styles.scanningLabel}>Searching nearby</Text>
-      </View>
-      <View style={styles.deviceRow}>
-        <HeatIcon name={icons.band} size={24} tintColor={Palette.ink} />
-        <View style={styles.flexOne}><Text style={styles.deviceTitle}>HeatSense Band 02A7</Text><Text style={styles.deviceDetail}>Nearby · ready to pair</Text></View>
-        <View style={styles.nearbyDot} />
-      </View>
-      <View style={styles.privacyRow}><HeatIcon name={icons.shield} size={19} tintColor={Palette.safe} /><Text style={styles.privacyText}>Pairing does not make the band a medical device. Sharing stays under your control.</Text></View>
-      <PrimaryAction icon={icons.band} label="Pair this band" />
+      <Text style={styles.footnote}>Pairing adds recovery, skin, sweat and movement trends. The band isn’t a medical device, and you choose what to share.</Text>
     </>
   );
 }
 
-function NoBandState() {
+function NoBand() {
   return (
     <>
-      <ScreenIntro title="Your practice plan is ready." />
-      <Text style={styles.introBody}>No wristband is connected. You still receive the complete team-wide WBGT plan.</Text>
-      <View style={styles.noBandHero}>
-        <Text style={styles.mutedLabel}>Today’s field condition</Text>
-        <View style={styles.noBandMetric}><Text style={styles.noBandValue}>84</Text><Text style={styles.noBandUnit}>°F WBGT</Text></View>
-        <Text style={styles.noBandZone}>Orange zone</Text>
-        <Text style={styles.noBandGuidance}>Follow today’s scheduled work, rest, water, and equipment adjustments.</Text>
-      </View>
-      <View style={styles.optionalBandRow}>
-        <HeatIcon name={icons.band} size={25} tintColor={Palette.inkMuted} />
-        <View style={styles.flexOne}><Text style={styles.deviceTitle}>Personal signals are off</Text><Text style={styles.deviceDetail}>Pair later to add recovery, skin, sweat, and movement trends.</Text></View>
-      </View>
-      <PrimaryAction icon={icons.band} label="Pair a band later" secondary />
+      <LargeTitle title="Today" />
+      <View style={styles.first}><FieldCard /></View>
+      <SectionHeader title="Personal signals" />
+      <Group>
+        <Row detail="Pair a band to add recovery, skin, sweat and movement trends." title="Band not connected" value="Off" />
+      </Group>
+      <View style={styles.action}><Button label="Pair a band" onPress={() => router.replace('/dashboard?role=athlete&state=pairing')} /></View>
     </>
   );
 }
 
-function AlertAcknowledgedState() {
+function AlertAcknowledged() {
+  const [followUp, setFollowUp] = useState<string | null>(null);
+
+  const document = () => {
+    const save = (note?: string) => setFollowUp(note?.trim() ? note.trim() : 'Recorded with no notes');
+    if (Platform.OS === 'ios') {
+      Alert.prompt('Document follow-up', 'Hydration, cooling steps and what happened.', [
+        { style: 'cancel', text: 'Cancel' },
+        { onPress: save, text: 'Save' },
+      ]);
+    } else {
+      save();
+    }
+  };
+
   return (
     <>
-      <ScreenIntro title="Alert acknowledged." />
-      <View style={styles.ackBanner}>
-        <HeatIcon name={icons.check} size={30} tintColor={Palette.safe} />
-        <View style={styles.flexOne}>
-          <Text style={styles.ackTitle}>Coach Rivera is responding</Text>
-          <Text style={styles.ackBody}>Acknowledged at 2:15 PM. The alert stays open until follow-up is recorded.</Text>
-        </View>
-      </View>
-      <View style={styles.incidentSummary}>
-        <View>
-          <Text style={styles.incidentName}>Maya Chen</Text>
-          <Text style={styles.deviceDetail}>Varsity soccer · Field 2</Text>
-        </View>
-        <View style={styles.warningStatus}><Text style={styles.warningStatusText}>Warning</Text></View>
-      </View>
-      <SectionHeader title="Response timeline" />
-      <View style={styles.flatList}>
-        <TimelineRow detail="Recovery stalled while movement stayed low" label="Warning sent" time="2:14 PM" />
-        <TimelineRow detail="Coach Rivera opened the alert" label="Acknowledged" time="2:15 PM" />
-        <TimelineRow detail="Record hydration, cooling, and disposition" label="Follow-up pending" time="Now" pending />
-      </View>
-      <PrimaryAction icon={icons.check} label="Document follow-up" />
+      <LargeTitle title="Alert" />
+      <Card style={styles.first}>
+        <CardHeader icon={icons.check} label="Acknowledged" tone={Palette.safe} trailing="2:15 PM" />
+        <Text style={styles.headline}>Coach Rivera is responding</Text>
+        <Text style={styles.muted}>{followUp ? 'Follow-up recorded. This alert is closed.' : 'The alert stays open until follow-up is recorded.'}</Text>
+      </Card>
+
+      <SectionHeader title="Athlete" />
+      <Group>
+        <Row detail="Varsity soccer · Field 2" title="Maya Chen" value="Review" valueTone={Palette.warning} />
+      </Group>
+
+      <SectionHeader title="Timeline" />
+      <Group>
+        <Row detail="Recovery stalled while movement stayed low" title="Warning sent" value="2:14 PM" />
+        <Row detail="Coach Rivera opened the alert" title="Acknowledged" value="2:15 PM" />
+        {followUp
+          ? <Row detail={followUp} title="Follow-up recorded" value="Now" />
+          : <Row detail="Record hydration, cooling and what happened" title="Follow-up pending" value="Now" valueTone={Palette.warning} />}
+      </Group>
+      {followUp ? null : <View style={styles.action}><Button label="Document follow-up" onPress={document} /></View>}
     </>
   );
 }
 
-function PrimaryAction({ icon, label, secondary }: { icon: ComponentProps<typeof HeatIcon>['name']; label: string; secondary?: boolean }) {
-  // The main action uses the same peach depth button as the welcome screen; the optional one stays a quiet outlined pill.
-  if (!secondary) return <View style={styles.depthAction}><DepthButton label={label} onPress={() => {}} /></View>;
+function ChecklistRow({ done, label }: { done?: boolean; label: string }) {
   return (
-    <Pressable accessibilityRole="button" style={({ pressed }) => [styles.primaryAction, styles.primaryActionSecondary, pressed && styles.pressed]}>
-      <Text style={[styles.primaryActionText, styles.primaryActionTextSecondary]}>{label}</Text>
-      <HeatIcon name={icon} size={18} tintColor={Palette.ink} />
-    </Pressable>
+    <Row
+      leading={<HeatIcon name={done ? icons.check : icons.open} size={24} tintColor={done ? Palette.safe : Palette.inkFaint} />}
+      title={label}
+    />
   );
-}
-
-function ChecklistRow({ complete, label }: { complete?: boolean; label: string }) {
-  return <View style={styles.checklistRow}><View style={[styles.checkCircle, complete && styles.checkCircleComplete]}>{complete ? <HeatIcon name={icons.check} size={14} tintColor={Palette.surface} /> : null}</View><Text style={styles.checklistLabel}>{label}</Text></View>;
-}
-
-function TimelineRow({ detail, label, pending, time }: { detail: string; label: string; pending?: boolean; time: string }) {
-  return <View style={styles.timelineRow}><View style={[styles.timelineMarker, pending && styles.timelineMarkerPending]} /><View style={styles.flexOne}><Text style={styles.deviceTitle}>{label}</Text><Text style={styles.deviceDetail}>{detail}</Text></View><Text style={styles.timelineTime}>{time}</Text></View>;
 }
 
 const styles = StyleSheet.create({
-  flexOne: { flex: 1 },
-  introBody: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 15, lineHeight: 21, marginTop: Spacing.three, maxWidth: 380 },
-  wristbandHero: {
-    backgroundColor: '#14120F',
-    borderRadius: Radius.large,
-    overflow: 'hidden',
-    padding: Spacing.five,
-  },
-  wristbandHeroTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  wristbandHeroKicker: { color: 'rgba(255,255,255,0.6)', fontFamily: Fonts.uiRegular, fontSize: 13 },
-  wristbandHeroButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderRadius: 18,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  wristbandHeroTitle: {
-    color: '#FFFFFF',
-    fontFamily: Fonts.uiRegular,
-    fontSize: 32,
-    letterSpacing: 0,
-    lineHeight: 38,
-    marginTop: Spacing.four,
-  },
-  wristbandHeroArt: { alignItems: 'center', marginTop: Spacing.five },
-  weatherPanel: { borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, minHeight: 300, padding: Spacing.six },
-  panelTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  stalePill: { alignItems: 'center', borderColor: Palette.border, borderRadius: Radius.pill, borderWidth: 1, flexDirection: 'row', gap: 6, paddingHorizontal: 12, paddingVertical: 7 },
-  staleText: { color: Palette.warning, fontFamily: Fonts.medium, fontSize: 12 },
-  mutedLabel: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13 },
-  weatherValue: { color: Palette.inkMuted, fontFamily: Fonts.light, fontSize: 84, letterSpacing: -3, lineHeight: 90, marginTop: Spacing.five },
-  weatherUnit: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13 },
-  weatherRule: { backgroundColor: Palette.border, height: 1, marginTop: 'auto' },
-  weatherInstruction: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 15, lineHeight: 21, marginTop: Spacing.four, maxWidth: 300 },
-  supportText: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 18, marginTop: Spacing.four, paddingHorizontal: Spacing.two, textAlign: 'center' },
-  invitePanel: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.large, borderWidth: 1, marginTop: Spacing.five, padding: Spacing.five },
-  inviteLabel: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, marginTop: Spacing.five },
-  inviteCode: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 35, letterSpacing: 2, marginTop: 3 },
-  inviteDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12, marginTop: 3 },
-  flatList: { borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1 },
-  checklistRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 62 },
-  checkCircle: { borderColor: Palette.border, borderRadius: 10, borderWidth: 1, height: 20, width: 20 },
-  checkCircleComplete: { alignItems: 'center', backgroundColor: Palette.safe, borderColor: Palette.safe, justifyContent: 'center' },
-  checklistLabel: { color: Palette.ink, fontFamily: Fonts.semibold, fontSize: 12 },
-  pairingStage: { alignItems: 'center', height: 260, justifyContent: 'center', marginTop: Spacing.four },
-  pairingRingOuter: { borderColor: '#9CCDB7', borderRadius: 100, borderWidth: 1, height: 200, position: 'absolute', width: 200 },
-  pairingRingInner: { borderColor: '#75B99C', borderRadius: 75, borderWidth: 1, height: 150, position: 'absolute', width: 150 },
-  watchCore: { alignItems: 'center', backgroundColor: 'rgba(76,155,118,0.16)', borderRadius: 55, height: 110, justifyContent: 'center', width: 110 },
-  scanningLabel: { bottom: 5, color: Palette.inkMuted, fontFamily: Fonts.semibold, fontSize: 12, position: 'absolute' },
-  deviceRow: { alignItems: 'center', backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: Radius.medium, borderWidth: 1, flexDirection: 'row', gap: Spacing.three, minHeight: 76, paddingHorizontal: Spacing.four },
-  deviceTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12 },
-  deviceDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 13, marginTop: 3 },
-  nearbyDot: { backgroundColor: Palette.safe, borderRadius: 5, height: 10, width: 10 },
-  privacyRow: { alignItems: 'flex-start', flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.four, paddingHorizontal: Spacing.two },
-  privacyText: { color: Palette.inkMuted, flex: 1, fontFamily: Fonts.regular, fontSize: 13, lineHeight: 18 },
-  noBandHero: { borderColor: Palette.outline, borderRadius: Radius.large, borderWidth: 1.5, marginTop: Spacing.six, minHeight: 300, padding: Spacing.six },
-  noBandMetric: { alignItems: 'baseline', flexDirection: 'row', marginTop: Spacing.five },
-  noBandValue: { color: Palette.ink, fontFamily: Fonts.light, fontSize: 80, letterSpacing: -3 },
-  noBandUnit: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14, marginLeft: 8 },
-  noBandZone: { color: Palette.warning, fontFamily: Fonts.medium, fontSize: 24, letterSpacing: -0.5, marginTop: 'auto' },
-  noBandGuidance: { color: 'rgba(255,255,255,0.82)', fontFamily: Fonts.regular, fontSize: 15, lineHeight: 21, marginTop: Spacing.two, maxWidth: 300 },
-  optionalBandRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.five, minHeight: 78, paddingHorizontal: Spacing.two },
-  ackBanner: { alignItems: 'flex-start', borderColor: Palette.safe, borderRadius: Radius.medium, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.six, padding: Spacing.five },
-  ackTitle: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 17, letterSpacing: -0.3 },
-  ackBody: { color: Palette.inkMuted, fontFamily: Fonts.regular, fontSize: 14, lineHeight: 19, marginTop: 3 },
-  incidentSummary: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.five, paddingBottom: Spacing.four, paddingHorizontal: Spacing.two },
-  incidentName: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 18, letterSpacing: -0.3 },
-  warningStatus: { backgroundColor: 'rgba(224,124,62,0.18)', borderRadius: Radius.pill, paddingHorizontal: 11, paddingVertical: 6 },
-  warningStatusText: { color: Palette.warning, fontFamily: Fonts.bold, fontSize: 11 },
-  timelineRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 72 },
-  timelineMarker: { backgroundColor: Palette.safe, borderRadius: 5, height: 10, width: 10 },
-  timelineMarkerPending: { backgroundColor: Palette.caution },
-  timelineTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
-  depthAction: { marginTop: Spacing.six },
-  primaryAction: { alignItems: 'center', borderColor: Palette.ink, borderRadius: 9999, borderWidth: 1.5, flexDirection: 'row', gap: Spacing.two, justifyContent: 'center', marginTop: Spacing.six, minHeight: 60 },
-  primaryActionSecondary: { borderColor: Palette.border },
-  primaryActionText: { color: Palette.ink, fontFamily: Fonts.medium, fontSize: 17.5, letterSpacing: -0.2 },
-  primaryActionTextSecondary: { color: Palette.ink },
-  pressed: { opacity: 0.7 },
+  first: { marginTop: Spacing.three },
+  action: { marginTop: Spacing.five },
+  contextLine: { color: Palette.inkMuted, ...Type.subhead, marginTop: 2 },
+  valueRow: { alignItems: 'baseline', flexDirection: 'row', gap: 4, marginTop: Spacing.two },
+  value: { color: Palette.ink, ...Type.display },
+  unit: { color: Palette.inkMuted, ...Type.body, fontWeight: '500' },
+  muted: { color: Palette.inkMuted, ...Type.subhead, marginTop: 2 },
+  headline: { color: Palette.ink, ...Type.title2 },
+  instruction: { color: Palette.ink, ...Type.callout, fontWeight: '600', marginTop: Spacing.three },
+  error: { color: Palette.emergency, ...Type.footnote, marginTop: Spacing.three },
+  checking: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 50 },
+  footnote: { color: Palette.inkMuted, ...Type.footnote, marginHorizontal: Spacing.four, marginTop: Spacing.three },
+  afterIntro: { marginTop: Spacing.five },
+  searching: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, marginVertical: Spacing.five, minHeight: 24 },
 });
