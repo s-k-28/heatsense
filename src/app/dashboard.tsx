@@ -110,7 +110,7 @@ export default function DashboardScreen() {
   });
   // A new screen starts at the top, so the header goes back to its resting style.
   useEffect(() => {
-    scrollY.value = 0;
+    scrollY.set(0);
   }, [contentKey, scrollY]);
 
   const [refreshing, setRefreshing] = useState(false);
