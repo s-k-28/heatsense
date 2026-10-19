@@ -16,6 +16,7 @@ import { createTamagui, TamaguiProvider } from 'tamagui';
 import { defaultConfig } from '@tamagui/config/v6';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
+import { PhoneFrame } from '@/components/mobile-viewport';
 import { Palette } from '@/constants/theme';
 import { firebaseAuth } from '@/services/firebase';
 import { AuthSessionContext } from '@/state/auth-session';
@@ -90,6 +91,7 @@ export default function RootLayout() {
   return (
     <AuthSessionContext.Provider value={{ user, ready: authReady }}>
       <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+        <PhoneFrame>
         <Stack
           screenOptions={{
             animation: 'fade',
@@ -115,6 +117,7 @@ export default function RootLayout() {
             <Stack.Screen name="team/practice-location" />
           </Stack.Protected>
         </Stack>
+        </PhoneFrame>
       </TamaguiProvider>
     </AuthSessionContext.Provider>
   );

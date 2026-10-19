@@ -1,14 +1,16 @@
 import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Animated, { Easing, interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GlassSurface } from '@/components/glass-surface';
+import { isKeyboardFocus } from '@/components/entry-ui';
+import { FramedModalContent } from '@/components/mobile-viewport';
 import { HeatIcon } from '@/components/heat-icon';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { Group, IconTile, Row, TextLink } from '@/components/ui/list';
-import { Palette, Spacing, Type } from '@/constants/theme';
+import { Entry } from '@/constants/entry-theme';
+import { MaxContentWidth, Palette, Spacing, Type } from '@/constants/theme';
 import { markNotificationsRead, usePreferences } from '@/state/preferences';
 
 export type DashboardRole = 'coach' | 'trainer' | 'athlete';
@@ -23,8 +25,7 @@ export type DashboardTab = {
 export const TAB_BAR_HEIGHT = 80;
 /** Height of the fixed top row, below the status bar. */
 export const HEADER_ROW = 52;
-const PILL_HEIGHT = 64;
-const PILL_PADDING = 6;
+const PILL_HEIGHT = 60;
 
 const bell = { ios: 'bell.fill', android: 'notifications', web: 'notifications' } as const;
 const sun = { ios: 'cloud.sun.fill', android: 'partly_cloudy_day', web: 'partly_cloudy_day' } as const;
@@ -46,12 +47,17 @@ function initialsOf(name: string) {
  * Once the large title scrolls away, the bar picks up a backdrop and a small centered title.
  */
 export function DashboardHeader({
+  backdropColor = Palette.canvas,
+  contentWidth = MaxContentWidth,
   name,
   onProfile,
   scrollY,
   showLogo,
   title,
 }: {
+  backdropColor?: string;
+  /** Widest the header row gets, matching the content column under it. */
+  contentWidth?: number;
   name: string;
   onProfile: () => void;
   scrollY: SharedValue<number>;
@@ -69,11 +75,11 @@ export function DashboardHeader({
 
   return (
     <View pointerEvents="box-none" style={[styles.headerWrap, { paddingTop: insets.top }]}>
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.headerBackdrop, backdrop]} />
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.headerBackdrop, { backgroundColor: backdropColor }, backdrop]} />
       <View pointerEvents="none" style={[styles.headerTitleWrap, { top: insets.top }]}>
         <Animated.Text accessibilityElementsHidden importantForAccessibility="no" numberOfLines={1} style={[styles.headerTitle, backdrop]}>{title}</Animated.Text>
       </View>
-    <View style={[styles.header, !showLogo && styles.headerEnd]}>
+    <View style={[styles.header, { maxWidth: contentWidth }, !showLogo && styles.headerEnd]}>
       {showLogo ? <HeatSenseLogo height={28} /> : null}
       <View style={styles.headerActions}>
         <Pressable accessibilityLabel={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} new` : 'Notifications'} accessibilityRole="button" hitSlop={4} onPress={() => setOpen(true)} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
@@ -85,7 +91,8 @@ export function DashboardHeader({
         </Pressable>
       </View>
 
-      <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={open}>
+      <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" transparent={Platform.OS === 'web'} visible={open}>
+        <FramedModalContent backdrop>
         <View style={styles.sheet}>
           <View style={styles.sheetBar}>
             <Text style={styles.sheetTitle}>Notifications</Text>
@@ -104,6 +111,7 @@ export function DashboardHeader({
             </Group>
           </ScrollView>
         </View>
+        </FramedModalContent>
       </Modal>
     </View>
     </View>
@@ -123,63 +131,58 @@ export function SectionHeader({ action, onActionPress, title }: { action?: strin
   );
 }
 
-/** Floating pill with a smaller pill inside it that slides to the selected tab. */
+/**
+ * Floating dock: one solid surface, no outline, no sliding pill. The selected tab is peach, and its
+ * icon settles in over 180ms so the change registers without a second layer.
+ */
 export function TabBar({ activeTab, onChange, tabs }: { activeTab: string; onChange: (tab: string) => void; tabs: DashboardTab[] }) {
   const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotion();
-  const [width, setWidth] = useState(0);
-  const index = Math.max(0, tabs.findIndex((tab) => tab.id === activeTab));
-  const tabWidth = Math.max(0, (width - PILL_PADDING * 2) / tabs.length);
-  const x = useSharedValue(0);
-  const placed = useRef(false);
-
-  useEffect(() => {
-    if (tabWidth === 0) return;
-    const target = index * tabWidth;
-    // First layout: jump straight to the selected tab. After that, glide.
-    if (!placed.current || reducedMotion) {
-      x.value = target;
-      placed.current = true;
-      return;
-    }
-    x.value = withTiming(target, { duration: 280, easing: Easing.out(Easing.cubic) });
-  }, [index, reducedMotion, tabWidth, x]);
-
-  const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }], width: tabWidth }));
-
   return (
     <View style={[styles.pillWrap, { bottom: Math.max(insets.bottom - 6, Spacing.three) }]}>
-      <GlassSurface radius={PILL_HEIGHT / 2} style={styles.pill}>
-        <View onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)} style={styles.pillInner}>
-          {tabWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.indicator, indicator]} /> : null}
-          {tabs.map((tab) => {
-            const active = tab.id === activeTab;
-            return (
-              <Pressable
-                accessibilityLabel={tab.label}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                key={tab.id}
-                onPress={() => onChange(tab.id)}
-                style={styles.tab}>
-                <HeatIcon name={tab.icon} size={22} tintColor={active ? Palette.coral : Palette.inkMuted} />
-                <Text maxFontSizeMultiplier={1.15} numberOfLines={1} style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </GlassSurface>
+      <View accessibilityRole="tablist" style={styles.pill}>
+        {tabs.map((tab) => <TabButton active={tab.id === activeTab} key={tab.id} onPress={() => onChange(tab.id)} tab={tab} />)}
+      </View>
     </View>
+  );
+}
+
+function TabButton({ active, onPress, tab }: { active: boolean; onPress: () => void; tab: DashboardTab }) {
+  const reducedMotion = useReducedMotion();
+  const [focused, setFocused] = useState(false);
+  const settle = useSharedValue(1);
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current && !reducedMotion) {
+      settle.set(0.88);
+      settle.set(withTiming(1, { duration: 180, easing: Easing.out(Easing.quad) }));
+    }
+    wasActive.current = active;
+  }, [active, reducedMotion, settle]);
+  const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: settle.value }] }));
+  return (
+    <Pressable
+      accessibilityLabel={tab.label}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      onBlur={() => setFocused(false)}
+      onFocus={(event) => setFocused(isKeyboardFocus(event))}
+      onPress={onPress}
+      style={({ hovered }: { hovered?: boolean }) => [styles.tab, styles.noOutline, hovered && !active && styles.tabHover, focused && styles.tabFocus]}>
+      <Animated.View style={iconStyle}>
+        <HeatIcon name={tab.icon} size={22} tintColor={active ? Entry.peach : Entry.muted} />
+      </Animated.View>
+      <Text maxFontSizeMultiplier={1.15} numberOfLines={1} style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.55 },
   headerWrap: { left: 0, position: 'absolute', right: 0, top: 0, zIndex: 10 },
-  headerBackdrop: { backgroundColor: 'rgba(0,0,0,0.98)', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth },
+  headerBackdrop: { borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitleWrap: { alignItems: 'center', height: HEADER_ROW, justifyContent: 'center', left: 0, position: 'absolute', right: 0 },
   headerTitle: { color: Palette.ink, ...Type.headline },
-  header: { alignItems: 'center', flexDirection: 'row', height: HEADER_ROW, justifyContent: 'space-between', paddingHorizontal: Spacing.four },
+  header: { alignItems: 'center', alignSelf: 'center', flexDirection: 'row', height: HEADER_ROW, justifyContent: 'space-between', paddingHorizontal: Spacing.four, width: '100%' },
   headerEnd: { justifyContent: 'flex-end' },
   headerActions: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
@@ -193,12 +196,13 @@ const styles = StyleSheet.create({
   largeTitle: { color: Palette.ink, ...Type.largeTitle, marginTop: Spacing.one },
   sectionHeader: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.two, marginTop: Spacing.seven },
   sectionTitle: { color: Palette.ink, ...Type.title3 },
-  pillWrap: { elevation: 10, left: Spacing.four, position: 'absolute', right: Spacing.four, shadowColor: '#000', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.45, shadowRadius: 18 },
-  // The translucent fill keeps labels readable over scrolled content wherever glass blur isn't available.
-  pill: { backgroundColor: 'rgba(28,28,30,0.78)', borderCurve: 'continuous', height: PILL_HEIGHT },
-  pillInner: { flex: 1, flexDirection: 'row', padding: PILL_PADDING },
-  indicator: { backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: (PILL_HEIGHT - PILL_PADDING * 2) / 2, bottom: PILL_PADDING, left: PILL_PADDING, position: 'absolute', top: PILL_PADDING },
+  // A floating dock, as wide as the content column at most, so it doesn't stretch across a desktop window.
+  pillWrap: { alignItems: 'center', left: Spacing.four, position: 'absolute', right: Spacing.four },
+  pill: { backgroundColor: Entry.surface, borderCurve: 'continuous', borderRadius: PILL_HEIGHT / 2, elevation: 10, flexDirection: 'row', height: PILL_HEIGHT, maxWidth: 420, paddingHorizontal: 6, shadowColor: '#000', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.45, shadowRadius: 18, width: '100%' },
   tab: { alignItems: 'center', flex: 1, gap: 3, justifyContent: 'center' },
-  tabLabel: { color: Palette.inkMuted, ...Type.tab },
-  tabLabelActive: { color: Palette.coral },
+  tabHover: { opacity: 0.8 },
+  tabFocus: { borderColor: Entry.blue, borderRadius: 22, borderWidth: 2 },
+  noOutline: Platform.select({ web: { outlineStyle: 'none' } as unknown as ViewStyle, default: {} }),
+  tabLabel: { color: Entry.muted, fontFamily: Entry.medium, fontSize: 11, letterSpacing: 0.3, lineHeight: 13 },
+  tabLabelActive: { color: Entry.peach },
 });

@@ -10,7 +10,6 @@ import {
   View,
   type StyleProp,
   type ViewStyle,
-  useWindowDimensions,
 } from 'react-native';
 import Animated, {
   FadeIn,
@@ -24,6 +23,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HeatIcon } from '@/components/heat-icon';
+import { useViewportSize } from '@/components/mobile-viewport';
 import {
   AlertLevelsVisual,
   ContextVisual,
@@ -106,7 +106,7 @@ export default function OnboardingRoute() {
 function OnboardingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ role?: string; step?: string }>();
-  const { height } = useWindowDimensions();
+  const { height } = useViewportSize();
   const requestedStep = Number.parseInt(params.step ?? '1', 10) - 1;
   const initialStep = Number.isFinite(requestedStep) ? Math.max(0, Math.min(requestedStep, steps.length - 1)) : 0;
   const initialRole: Role = params.role === 'Athlete' || params.role === 'Athletic trainer' ? params.role : 'Coach';
