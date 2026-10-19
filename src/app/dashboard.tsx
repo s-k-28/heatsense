@@ -2,10 +2,12 @@ import { useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedScrollHandler, useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { COACH_HOME_WIDE } from '@/components/coach-home';
 import { DashboardContent } from '@/components/dashboard-content';
+import { useViewportSize } from '@/components/mobile-viewport';
 import { DashboardState, type DashboardReviewState } from '@/components/dashboard-states';
 import {
   DashboardHeader,
@@ -15,8 +17,10 @@ import {
   type DashboardRole,
   type DashboardTab,
 } from '@/components/dashboard-shell';
+import { Entry } from '@/constants/entry-theme';
 import { MaxContentWidth, Palette, Spacing } from '@/constants/theme';
 import { endPracticeActivity, startPracticeActivity } from '@/lib/practice-activity';
+import { useAuthSession } from '@/state/auth-session';
 import { markRefreshed, usePreferences } from '@/state/preferences';
 
 const icons = {
@@ -69,8 +73,11 @@ function normalizeRole(value?: string): DashboardRole {
 }
 
 export default function DashboardScreen() {
-  const params = useLocalSearchParams<{ role?: string; state?: string; tab?: string }>();
+  const params = useLocalSearchParams<{ role?: string; sample?: string; state?: string; tab?: string }>();
   const insets = useSafeAreaInsets();
+  const { user } = useAuthSession();
+  const reducedMotion = useReducedMotion();
+  const { width } = useViewportSize();
   const { celsius, practiceLiveActivity } = usePreferences();
 
   // The Dynamic Island / Lock Screen practice activity follows the Profile switch and the unit choice.
@@ -88,11 +95,20 @@ export default function DashboardScreen() {
     : requestedTab;
 
   const identity = roleIdentity[role];
+  // Coaches see their own account initials; the other roles still use their sample identities.
+  const accountName = role === 'coach' ? user?.displayName?.trim() || user?.email || identity.name : identity.name;
   const reviewState = ['weather-stale', 'empty-team', 'pairing', 'no-band', 'alert-acknowledged'].includes(params.state ?? '')
     ? params.state as DashboardReviewState
     : null;
   const contentKey = useMemo(() => `${role}-${activeTab}-${reviewState ?? 'default'}`, [activeTab, reviewState, role]);
   const select = (value: string) => setManualSelection({ role, sourceTab: requestedTab, value });
+  // Coach Home uses the onboarding charcoal; the other tabs keep their own ground until they're redesigned.
+  const coachHome = role === 'coach' && activeTab === 'home' && !reviewState;
+  // Coach screens already on the design system share its charcoal ground and the logo header.
+  const designSystem = role === 'coach' && !reviewState;
+  const canvas = designSystem ? Entry.canvas : Palette.canvas;
+  // Coach Home gets a phone-width column on phones and tablets, and a two-column layout on desktop.
+  const columnWidth = coachHome ? (width >= COACH_HOME_WIDE ? 1120 : 600) : MaxContentWidth;
 
   // The small title in the header matches the large one that scrolls away beneath it.
   const reviewTitles: Record<DashboardReviewState, string> = {
@@ -102,7 +118,7 @@ export default function DashboardScreen() {
     pairing: 'Pair your band',
     'weather-stale': 'Today',
   };
-  const title = reviewState ? reviewTitles[reviewState] : activeTab === 'home' ? 'Today' : tabs.find((item) => item.id === activeTab)?.label ?? 'Today';
+  const title = reviewState ? reviewTitles[reviewState] : coachHome ? 'Home' : activeTab === 'home' ? 'Today' : tabs.find((item) => item.id === activeTab)?.label ?? 'Today';
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((event) => {
@@ -125,7 +141,7 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: canvas }]}>
       <StatusBar style="light" />
       <Animated.ScrollView
         contentContainerStyle={[
@@ -137,11 +153,11 @@ export default function DashboardScreen() {
         refreshControl={<RefreshControl onRefresh={refresh} progressViewOffset={insets.top + HEADER_ROW} refreshing={refreshing} tintColor={Palette.inkMuted} />}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.column}>
-          {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent onNavigate={select} role={role} tab={activeTab} />}
-        </View>
+        <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(180)} style={[styles.column, { maxWidth: columnWidth }]}>
+          {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent onNavigate={select} role={role} sample={params.sample === '1'} tab={activeTab} />}
+        </Animated.View>
       </Animated.ScrollView>
-      <DashboardHeader name={identity.name} onProfile={() => select('profile')} scrollY={scrollY} showLogo={activeTab === 'home' && !reviewState} title={title} />
+      <DashboardHeader backdropColor={canvas} contentWidth={columnWidth} name={accountName} onProfile={() => select('profile')} scrollY={scrollY} showLogo={(activeTab === 'home' || designSystem) && !reviewState} title={title} />
       <TabBar activeTab={activeTab} onChange={select} tabs={tabs} />
     </View>
   );
@@ -150,5 +166,5 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   screen: { backgroundColor: Palette.canvas, flex: 1 },
   scrollContent: { alignItems: 'center' },
-  column: { maxWidth: MaxContentWidth, paddingHorizontal: Spacing.four, width: '100%' },
+  column: { paddingHorizontal: Spacing.four, width: '100%' },
 });

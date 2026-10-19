@@ -5,12 +5,17 @@ import type { ComponentProps } from 'react';
 import { createContext, useContext, useState } from 'react';
 import { Alert, Linking, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { CoachHome } from '@/components/coach-home';
+import { CoachAlerts } from '@/components/coach-alerts';
+import { CoachPlan } from '@/components/coach-plan';
+import { CoachProfile } from '@/components/coach-profile';
+import { CoachTeam } from '@/components/coach-team';
 import { LargeTitle, SectionHeader, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
 import { BarChart, LineChart } from '@/components/ui/charts';
-import { Button, Card, CardHeader, Group, IconTile, Initials, Row, TextLink, chevron, textStyles } from '@/components/ui/list';
+import { Card, CardHeader, Group, IconTile, Initials, Row, chevron, textStyles } from '@/components/ui/list';
 import { Palette, Spacing, Type } from '@/constants/theme';
-import { TODAY, ZONES } from '@/lib/practice';
+import { SAMPLE_HOURLY_WBGT as HOURLY_WBGT, TODAY, ZONES } from '@/lib/practice';
 import { ensureTeamInvite, getMyTeamInvite } from '@/services/team-invites';
 import { firebaseAuth } from '@/services/firebase';
 import { useTeamDraft, type TeamDraft } from '@/state/onboarding';
@@ -37,8 +42,6 @@ const roster = [
   { name: 'Eli Brooks', detail: 'Within baseline', status: 'Normal', tone: Palette.safe },
 ];
 
-// Hourly readings from 7 AM up to now (4:10 PM). There is no forecast, so the line stops at the latest reading.
-const HOURLY_WBGT = [62, 64, 67, 71, 75, 79, 82, 84, 84];
 const RECOVERY_BPM = [158, 154, 151, 149, 147, 145, 144, 143, 142];
 
 /** Lets a section's "Show All" link switch tabs without threading props through every screen. */
@@ -69,17 +72,18 @@ export async function shareTeamCode(draft: TeamDraft) {
   }
 }
 
-export function DashboardContent({ onNavigate, role, tab }: { onNavigate?: (tab: string) => void; role: DashboardRole; tab: string }) {
-  const content = role === 'coach' ? <CoachContent tab={tab} /> : role === 'trainer' ? <TrainerContent tab={tab} /> : <AthleteContent tab={tab} />;
+export function DashboardContent({ onNavigate, role, sample = false, tab }: { onNavigate?: (tab: string) => void; role: DashboardRole; sample?: boolean; tab: string }) {
+  const content = role === 'coach' ? <CoachContent sample={sample} tab={tab} /> : role === 'trainer' ? <TrainerContent tab={tab} /> : <AthleteContent tab={tab} />;
   return <NavContext.Provider value={onNavigate ?? (() => {})}>{content}</NavContext.Provider>;
 }
 
-function CoachContent({ tab }: { tab: string }) {
-  if (tab === 'plan') return <PlanScreen />;
-  if (tab === 'team') return <RosterScreen title="Team" variant="coach" />;
-  if (tab === 'alerts') return <AlertsScreen />;
-  if (tab === 'profile') return <ProfileScreen role="Coach" />;
-  return <CoachHome />;
+function CoachContent({ sample, tab }: { sample: boolean; tab: string }) {
+  const go = useContext(NavContext);
+  if (tab === 'plan') return <CoachPlan sample={sample} />;
+  if (tab === 'team') return <CoachTeam />;
+  if (tab === 'alerts') return <CoachAlerts sample={sample} />;
+  if (tab === 'profile') return <CoachProfile />;
+  return <CoachHome onNavigate={go} sample={sample} />;
 }
 
 function TrainerContent({ tab }: { tab: string }) {
@@ -99,36 +103,6 @@ function AthleteContent({ tab }: { tab: string }) {
 }
 
 /* ─────────────────────────────── Home screens ─────────────────────────────── */
-
-function CoachHome() {
-  const go = useContext(NavContext);
-  const { draft, name } = useTeam();
-  return (
-    <>
-      <LargeTitle title="Today" />
-      <View style={styles.firstBlock}><FieldCard onPress={() => go('plan')} /></View>
-
-      <SectionHeader action="Show All" onActionPress={() => go('plan')} title="Practice plan" />
-      <Group>
-        <Row title="Work and rest" value="20 / 10 min" />
-        <Row title="Water" value="Every 10 min" />
-        <Row title="Equipment" value="Off during breaks" />
-      </Group>
-
-      <SectionHeader action="Show All" onActionPress={() => go('team')} title="Needs attention" />
-      <Group inset={68}>
-        {roster.slice(0, 2).map((item) => <PersonRow key={item.name} {...item} />)}
-      </Group>
-
-      <Suggestion
-        action="Share team code"
-        body={`Athletes join ${name} with a team code. You can resend it any time.`}
-        onAction={() => shareTeamCode(draft)}
-        title="Invite your athletes"
-      />
-    </>
-  );
-}
 
 function TrainerHome() {
   const go = useContext(NavContext);
@@ -218,29 +192,6 @@ export function RiskHero(_props: { mode: 'coach' }) {
 
 /* ─────────────────────────────── Other screens ─────────────────────────────── */
 
-function PlanScreen() {
-  const temp = useTemperature();
-  return (
-    <>
-      <LargeTitle title="Plan" />
-      <Text style={styles.contextLine}>Orange zone · {temp.value(84)}{temp.unit} WBGT at 4:10 PM</Text>
-
-      <SectionHeader title="Adjustments" />
-      <Group>
-        <Row title="Work and rest" value="20 / 10 min" />
-        <Row title="Water" value="Every 10 min" />
-        <Row title="Equipment" value="Off during breaks" />
-      </Group>
-
-      <SectionHeader title="Timeline" />
-      <Group>
-        <Row detail="Water available before warm-up" title="Arrival and baseline check" value="4:00" />
-        <Row detail="Helmets and heavy equipment monitored" title="Work block, 20 min" value="4:10" />
-        <Row detail="Shade, water, and an athlete check" title="Recovery, 10 min" value="4:30" />
-      </Group>
-    </>
-  );
-}
 
 function RosterScreen({ title, variant }: { title: string; variant: 'coach' | 'trainer' }) {
   const [filter, setFilter] = useState<'all' | 'attention' | 'normal'>(variant === 'trainer' ? 'attention' : 'all');
@@ -288,34 +239,6 @@ function RosterScreen({ title, variant }: { title: string; variant: 'coach' | 't
   );
 }
 
-function AlertsScreen() {
-  return (
-    <>
-      <LargeTitle title="Alerts" />
-      <Card style={styles.firstBlock}>
-        <CardHeader icon={icons.warning} label="Needs a response" tone={Palette.emergency} trailing="Now" />
-        <Text style={styles.cardName}>Maya needs a recovery check</Text>
-        <Text style={styles.cardBody}>Her heart rate and skin temperature stayed up through a low-movement break.</Text>
-        <View style={styles.cardAction}>
-          <Button label="Acknowledge and locate" onPress={() => router.push({ pathname: '/detail', params: { kind: 'alert' } })} />
-        </View>
-      </Card>
-
-      <SectionHeader title="Earlier today" />
-      <Group>
-        <Row detail="Jordan Lee acknowledged" title="Hydration reminder" value="3:52 PM" />
-        <Row detail="Practice plan updated" title="WBGT entered the Orange zone" value="3:35 PM" />
-        <Row detail="No readings above the Yellow zone" title="Pre-practice weather check" value="2:58 PM" />
-      </Group>
-
-      <SectionHeader title="Yesterday" />
-      <Group>
-        <Row detail="Eli Brooks · acknowledged by Alex Thompson" title="Recovery check" value="5:12 PM" />
-        <Row detail="Practice moved indoors for the last 20 minutes" title="WBGT entered the Red zone" value="4:41 PM" />
-      </Group>
-    </>
-  );
-}
 
 function MonitorScreen() {
   const temp = useTemperature();
@@ -707,23 +630,6 @@ function Guide({ body, expanded, onPress, title }: { body: string; expanded: boo
   );
 }
 
-function Suggestion({ action, body, onAction, title }: { action: string; body: string; onAction: () => void; title: string }) {
-  const [dismissed, setDismissed] = useState(false);
-  if (dismissed) return null;
-  return (
-    <>
-      <SectionHeader title={title} />
-      <Card>
-        <Text style={styles.suggestionBody}>{body}</Text>
-        <View style={styles.suggestionAction}><TextLink label={action} onPress={onAction} /></View>
-        <Pressable accessibilityLabel={`Dismiss ${title}`} accessibilityRole="button" hitSlop={14} onPress={() => setDismissed(true)} style={styles.dismiss}>
-          <HeatIcon name={icons.close} size={12} tintColor={Palette.inkMuted} weight="bold" />
-        </Pressable>
-      </Card>
-    </>
-  );
-}
-
 const styles = StyleSheet.create({
   firstBlock: { marginTop: Spacing.three },
   block: { marginTop: Spacing.three },
@@ -759,7 +665,4 @@ const styles = StyleSheet.create({
   guideTitle: { color: Palette.ink, ...Type.body },
   guideBody: { color: Palette.inkMuted, ...Type.subhead, paddingBottom: Spacing.four, paddingHorizontal: Spacing.four },
   rotated: { transform: [{ rotate: '90deg' }] },
-  suggestionBody: { color: Palette.ink, ...Type.subhead, paddingRight: Spacing.five },
-  suggestionAction: { alignItems: 'flex-start', marginTop: Spacing.three },
-  dismiss: { position: 'absolute', right: Spacing.three, top: Spacing.three },
 });
