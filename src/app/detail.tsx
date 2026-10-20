@@ -7,7 +7,7 @@ import { LargeTitle, SectionHeader } from '@/components/dashboard-shell';
 import { BarChart, LineChart } from '@/components/ui/charts';
 import { Button, Card, CardHeader, Group, Row } from '@/components/ui/list';
 import { MaxContentWidth, Palette, Spacing, Type } from '@/constants/theme';
-import { useTemperature } from '@/state/preferences';
+import { acknowledgeIncident, useTemperature } from '@/state/preferences';
 
 const icons = {
   alert: { ios: 'exclamationmark.triangle.fill', android: 'warning', web: 'warning' },
@@ -97,7 +97,7 @@ function AlertDetail() {
         <CardHeader icon={icons.alert} label="Needs a response" tone={Palette.emergency} />
         <Text style={styles.body}>Heart rate didn’t recover during a low-movement break, and skin temperature kept rising.</Text>
         <View style={styles.cardAction}>
-          <Button label="Acknowledge and locate" onPress={() => router.replace('/dashboard?role=coach&tab=alerts&state=alert-acknowledged')} />
+          <Button label="Acknowledge and locate" onPress={() => { acknowledgeIncident(); router.replace('/dashboard?role=coach&tab=alerts&state=alert-acknowledged'); }} />
         </View>
       </Card>
 

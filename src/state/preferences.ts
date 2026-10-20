@@ -3,10 +3,10 @@ import { useSyncExternalStore } from 'react';
 
 // Dashboard preferences. The two switches persist on the device; the unread count is session-only
 // until notifications come from a server.
-type Preferences = { compactRoster: boolean; celsius: boolean; bandConnected: boolean; practiceLiveActivity: boolean; unreadNotifications: number; refreshedAt: number | null };
+type Preferences = { compactRoster: boolean; celsius: boolean; bandConnected: boolean; practiceLiveActivity: boolean; unreadNotifications: number; refreshedAt: number | null; incidentAcknowledged: boolean };
 
 const STORAGE_KEY = 'heatsense.preferences.v1';
-let state: Preferences = { compactRoster: false, celsius: false, bandConnected: true, practiceLiveActivity: true, unreadNotifications: 3, refreshedAt: null };
+let state: Preferences = { compactRoster: false, celsius: false, bandConnected: true, practiceLiveActivity: true, unreadNotifications: 3, refreshedAt: null, incidentAcknowledged: false };
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -26,6 +26,12 @@ export function setPreference(key: 'compactRoster' | 'celsius' | 'bandConnected'
   state = { ...state, [key]: value };
   emit();
   AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ compactRoster: state.compactRoster, celsius: state.celsius, bandConnected: state.bandConnected, practiceLiveActivity: state.practiceLiveActivity })).catch(() => {});
+}
+
+/** The coach has acknowledged the open incident, so the Dynamic Island goes back to normal. */
+export function acknowledgeIncident() {
+  state = { ...state, incidentAcknowledged: true };
+  emit();
 }
 
 /** Called when the user pulls to refresh, so readings can say they were just updated. */

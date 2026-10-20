@@ -10,6 +10,9 @@ export type PracticeActivityProps = {
   endsAt: string;
   nextBreakAt: string;
   logoUri: string;
+  /** Empty when all clear. Otherwise the island shows a warning instead of the zone dot. */
+  incident: string;
+  incidentDetail: string;
 };
 
 // Runs in the widget's own isolated runtime: no hooks, no outside variables, only SwiftUI
@@ -24,9 +27,15 @@ const PracticeActivity = (props: PracticeActivityProps) => {
   const ends = new Date(props.endsAt);
   const nextBreak = new Date(props.nextBreakAt);
 
-  // The Black zone is black on a black island, so it gets a thin white ring to stay visible.
+  const warning = props.incident !== '';
+  const alertRed = '#FF453A';
+
+  // While an incident is open the dot becomes a red warning triangle.
+  // The Black zone is black on a black island, so its dot gets a thin white ring to stay visible.
   const dot = (size: number) =>
-    props.zone === 'black' ? (
+    warning ? (
+      <Image systemName="exclamationmark.triangle.fill" color={alertRed} size={size} />
+    ) : props.zone === 'black' ? (
       <ZStack>
         <Circle modifiers={[foregroundStyle('#FFFFFF'), frame({ width: size, height: size })]} />
         <Circle modifiers={[foregroundStyle('#000000'), frame({ width: size - 4, height: size - 4 })]} />
@@ -52,8 +61,8 @@ const PracticeActivity = (props: PracticeActivityProps) => {
       <HStack modifiers={[padding({ all: 14 })]}>
         {logo(36)}
         <VStack alignment="leading">
-          <Text modifiers={[font({ size: 16, weight: 'semibold' }), foregroundStyle('#FFFFFF')]}>{props.zoneLabel}</Text>
-          <Text modifiers={[font({ size: 13 }), foregroundStyle('#AEAEB2')]}>{`WBGT ${props.wbgt}`}</Text>
+          <Text modifiers={[font({ size: 16, weight: 'semibold' }), foregroundStyle(warning ? alertRed : '#FFFFFF')]}>{warning ? props.incident : props.zoneLabel}</Text>
+          <Text modifiers={[font({ size: 13 }), foregroundStyle('#AEAEB2')]}>{warning ? props.incidentDetail : `WBGT ${props.wbgt}`}</Text>
         </VStack>
         <Spacer />
         <VStack alignment="trailing">
@@ -68,7 +77,7 @@ const PracticeActivity = (props: PracticeActivityProps) => {
     expandedLeading: (
       <VStack alignment="leading" modifiers={[padding({ all: 10 })]}>
         {logo(30)}
-        <Text modifiers={[font({ size: 13, weight: 'semibold' }), foregroundStyle(props.zone === 'black' ? '#FFFFFF' : color)]}>{props.zoneLabel}</Text>
+        <Text modifiers={[font({ size: 13, weight: 'semibold' }), foregroundStyle(warning ? alertRed : props.zone === 'black' ? '#FFFFFF' : color)]}>{warning ? 'Warning' : props.zoneLabel}</Text>
       </VStack>
     ),
     expandedTrailing: (
@@ -77,7 +86,19 @@ const PracticeActivity = (props: PracticeActivityProps) => {
         <Text modifiers={[font({ size: 26, weight: 'bold' }), foregroundStyle('#FFFFFF')]}>{props.wbgt}</Text>
       </VStack>
     ),
-    expandedBottom: (
+    expandedBottom: warning ? (
+      // One line for what happened, one line for the clocks, so the whole thing fits under the island.
+      <VStack alignment="leading" modifiers={[padding({ all: 10 })]}>
+        <Text modifiers={[font({ size: 15, weight: 'semibold' }), foregroundStyle('#FFFFFF')]}>{props.incident}</Text>
+        <HStack>
+          <Text modifiers={[font({ size: 12 }), foregroundStyle('#AEAEB2')]}>Ends in</Text>
+          {countdown(ends, 13)}
+          <Spacer />
+          <Text modifiers={[font({ size: 12 }), foregroundStyle('#AEAEB2')]}>Water in</Text>
+          {countdown(nextBreak, 13)}
+        </HStack>
+      </VStack>
+    ) : (
       <HStack modifiers={[padding({ all: 10 })]}>
         <VStack alignment="leading">
           <Text modifiers={[font({ size: 12 }), foregroundStyle('#AEAEB2')]}>Practice ends in</Text>

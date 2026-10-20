@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
@@ -20,6 +20,7 @@ import { EntryButton, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { FIELD_LINES, FIELDLINE_FILL, FIELDLINE_LINE, FIELDLINE_PARTS, FIELDLINE_VIEWBOX } from '@/components/fieldline-character';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { Entry } from '@/constants/entry-theme';
+import { introSeenNow, loadIntroSeen, markIntroSeen } from '@/state/first-launch';
 
 // Welcome, with a one-time brand intro. A single clock (0 → T.end ms) drives every element, so the
 // sequence reads as one piece and Get started can finish it instantly. Phases overlap on purpose:
@@ -28,7 +29,8 @@ import { Entry } from '@/constants/entry-theme';
 //   copy     each headline line rises out of its own mask, then the subtitle
 //   close    Heat / Plan / Protect, Get started, footer
 // Afterward he idles on loops of different lengths, so the motion never looks mechanical.
-// The intro plays once per app session and never under reduced motion.
+// The intro plays only the first time the app is ever opened on a device (see state/first-launch) and
+// never under reduced motion. In a dev build, /welcome?replay=1 plays it again for design review.
 
 /** Timing tokens, in ms on the intro clock. */
 const T = {
@@ -52,8 +54,6 @@ const T = {
   end: 4250,
 } as const;
 const STAGE = 650; // how long each Heat / Plan / Protect mark takes to arrive
-
-let introPlayed = false;
 
 const LOGO_TOP = require('@/assets/images/heatsense-logo-top.png');
 const LOGO_BOTTOM = require('@/assets/images/heatsense-logo-bottom.png');
@@ -376,10 +376,24 @@ function MaskedLine({ children, clock, compact, window }: { children: string; cl
 /* ─────────────────────────────── Screen ─────────────────────────────── */
 
 export default function WelcomeScreen() {
+  const { replay } = useLocalSearchParams<{ replay?: string }>();
+  const [introSeen, setIntroSeen] = useState<boolean | null>(introSeenNow());
+
+  useEffect(() => {
+    if (introSeen === null) loadIntroSeen().then(setIntroSeen);
+  }, [introSeen]);
+
+  // The saved flag reads in a few milliseconds; until then, show only the background.
+  if (introSeen === null) return <View style={styles.root} />;
+  // Keyed on the replay flag so opening /welcome?replay=1 restarts the screen even if it is already showing.
+  return <Welcome firstLaunch={!introSeen || (__DEV__ && replay === '1')} key={replay ?? 'default'} />;
+}
+
+function Welcome({ firstLaunch }: { firstLaunch: boolean }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
-  // Decided once on mount: the intro plays on the first visit of a session only.
-  const [playIntro] = useState(() => !introPlayed && !reducedMotion);
+  // Decided once on mount: the intro plays only on the very first launch.
+  const [playIntro] = useState(() => firstLaunch && !reducedMotion);
   const clock = useSharedValue<number>(playIntro ? 0 : T.end);
   const rootRef = useRef<View>(null);
   const logoRef = useRef<View>(null);
@@ -393,7 +407,7 @@ export default function WelcomeScreen() {
     const start = () => {
       if (started) return;
       started = true;
-      introPlayed = true;
+      markIntroSeen();
       clock.set(withTiming(T.end, { duration: T.end, easing: Easing.linear }));
     };
     const frame = requestAnimationFrame(() => {
@@ -419,7 +433,7 @@ export default function WelcomeScreen() {
     // Tapping mid-intro finishes it cleanly, then continues as usual.
     cancelAnimation(clock);
     clock.set(T.end);
-    introPlayed = true;
+    markIntroSeen();
     router.push('/sign-in');
   };
 
