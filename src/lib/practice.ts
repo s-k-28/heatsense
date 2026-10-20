@@ -66,3 +66,12 @@ export function readinessFor(reading: FieldReading | null, plan: PracticePlan | 
   if (plan && plan.zone !== reading.zone) return 'plan-needs-review';
   return 'review-plan';
 }
+
+/**
+ * An incident that needs the coach right now (sample data; null means all clear). The Dynamic Island
+ * switches to a warning while one is open, and goes back once the coach acknowledges it.
+ */
+export const INCIDENT: { detail: string; title: string } | null = {
+  title: 'Maya Chen needs a recovery check',
+  detail: 'Heart rate and skin temperature stayed up through a low-movement break.',
+};

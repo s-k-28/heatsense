@@ -2,7 +2,7 @@ import { Asset } from 'expo-asset';
 import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
-import { PRACTICE_MINUTES, TODAY, WATER_BREAK_MINUTES, ZONES, formatWbgt } from '@/lib/practice';
+import { INCIDENT, PRACTICE_MINUTES, TODAY, WATER_BREAK_MINUTES, ZONES, formatWbgt } from '@/lib/practice';
 
 // The sample session starts the first time this runs in an app launch.
 const session = { startedAt: Date.now() };
@@ -21,7 +21,7 @@ async function shareLogo(widgetsDirectory: string) {
 }
 
 /** Starts the practice Live Activity, or refreshes it if it's already running. Never throws. */
-export async function startPracticeActivity({ celsius }: { celsius: boolean }) {
+export async function startPracticeActivity({ celsius, incidentOpen = true }: { celsius: boolean; incidentOpen?: boolean }) {
   if (Platform.OS !== 'ios') return;
   try {
     const { widgetsDirectory } = require('expo-widgets') as typeof import('expo-widgets');
@@ -37,6 +37,8 @@ export async function startPracticeActivity({ celsius }: { celsius: boolean }) {
       endsAt: new Date(session.startedAt + PRACTICE_MINUTES * 60_000).toISOString(),
       nextBreakAt: new Date(session.startedAt + WATER_BREAK_MINUTES * 60_000).toISOString(),
       logoUri: await shareLogo(widgetsDirectory),
+      incident: incidentOpen && INCIDENT ? INCIDENT.title : '',
+      incidentDetail: incidentOpen && INCIDENT ? INCIDENT.detail : '',
     };
 
     const running = PracticeActivity.getInstances();
