@@ -1,4 +1,5 @@
-import { useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
@@ -19,6 +20,7 @@ import { MaxContentWidth, Palette, Spacing } from '@/constants/theme';
 import { endPracticeActivity, startPracticeActivity } from '@/lib/practice-activity';
 import { useAuthSession } from '@/state/auth-session';
 import { markRefreshed, usePreferences } from '@/state/preferences';
+import { usePracticePlans } from '@/state/practice-plans';
 
 const icons = {
   alert: { ios: 'bell.badge.fill', android: 'notifications_active', web: 'notifications_active' },
@@ -73,13 +75,14 @@ export default function DashboardScreen() {
   const params = useLocalSearchParams<{ role?: string; state?: string; tab?: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuthSession();
-  const { celsius, incidentAcknowledged, practiceLiveActivity } = usePreferences();
+  const { celsius, incidentAcknowledged, practiceLiveActivity, practiceStartedAt } = usePreferences();
+  const { active: plan } = usePracticePlans();
 
   // The Dynamic Island / Lock Screen practice activity follows the Profile switch and the unit choice.
   useEffect(() => {
-    if (practiceLiveActivity) startPracticeActivity({ celsius, incidentOpen: !incidentAcknowledged });
+    if (practiceLiveActivity) startPracticeActivity({ celsius, incidentOpen: !incidentAcknowledged, startedAt: practiceStartedAt });
     else endPracticeActivity();
-  }, [celsius, incidentAcknowledged, practiceLiveActivity]);
+  }, [celsius, incidentAcknowledged, plan, practiceLiveActivity, practiceStartedAt]);
 
   const role = normalizeRole(params.role);
   const tabs = roleTabs[role];
@@ -96,7 +99,12 @@ export default function DashboardScreen() {
     ? params.state as DashboardReviewState
     : null;
   const contentKey = useMemo(() => `${role}-${activeTab}-${reviewState ?? 'default'}`, [activeTab, reviewState, role]);
-  const select = (value: string) => setManualSelection({ role, sourceTab: requestedTab, value });
+  const select = (value: string) => {
+    setManualSelection({ role, sourceTab: requestedTab, value });
+    // A one-off state from a link (like "alert acknowledged") belongs to the screen it opened on.
+    // Choosing any tab, the same one included, drops it so the tab's own content shows.
+    if (params.state) router.setParams({ state: undefined });
+  };
 
   // The small title in the header matches the large one that scrolls away beneath it.
   const reviewTitles: Record<DashboardReviewState, string> = {
@@ -114,7 +122,7 @@ export default function DashboardScreen() {
   });
   // A new screen starts at the top, so the header goes back to its resting style.
   useEffect(() => {
-    scrollY.value = 0;
+    scrollY.set(0);
   }, [contentKey, scrollY]);
 
   const [refreshing, setRefreshing] = useState(false);
@@ -131,6 +139,8 @@ export default function DashboardScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
+      {/* Slate at the top fading to black, so cards read as layers over it rather than gray boxes on black. */}
+      <LinearGradient colors={['#2A3139', '#161A1F', '#0A0B0D']} locations={[0, 0.38, 0.75]} pointerEvents="none" style={StyleSheet.absoluteFill} />
       <Animated.ScrollView
         contentContainerStyle={[
           styles.scrollContent,
@@ -145,14 +155,14 @@ export default function DashboardScreen() {
           {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent onNavigate={select} role={role} tab={activeTab} />}
         </View>
       </Animated.ScrollView>
-      <DashboardHeader name={accountName} onProfile={() => select('profile')} scrollY={scrollY} showLogo={activeTab === 'home' && !reviewState} title={title} />
+      <DashboardHeader name={accountName} onProfile={() => select('profile')} scrollY={scrollY} title={title} />
       <TabBar activeTab={activeTab} onChange={select} tabs={tabs} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: Palette.canvas, flex: 1 },
+  screen: { backgroundColor: '#0A0B0D', flex: 1 },
   scrollContent: { alignItems: 'center' },
   column: { maxWidth: MaxContentWidth, paddingHorizontal: Spacing.four, width: '100%' },
 });

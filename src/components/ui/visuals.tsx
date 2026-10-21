@@ -5,17 +5,20 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Line, Path, Polyline, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
-import { Palette, Spacing, Type } from '@/constants/theme';
+import { Face, Palette, Spacing, Type } from '@/constants/theme';
 
 /** A ring made of segments. The centre holds whatever you pass as children. */
 export function Ring({
   children,
+  max,
   segments,
   size = 132,
   stroke = 14,
   summary,
 }: {
   children?: ReactNode;
+  /** The value a full ring stands for. Leave it out and the segments fill the whole ring. */
+  max?: number;
   segments: { color: string; value: number }[];
   size?: number;
   stroke?: number;
@@ -23,13 +26,13 @@ export function Ring({
 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const total = segments.reduce((sum, segment) => sum + segment.value, 0) || 1;
+  const total = max ?? (segments.reduce((sum, segment) => sum + segment.value, 0) || 1);
   const gap = segments.filter((segment) => segment.value > 0).length > 1 ? 4 : 0;
   let offset = 0;
   return (
     <View accessible accessibilityLabel={summary} style={{ height: size, width: size }}>
       <Svg height={size} width={size}>
-        <Circle cx={size / 2} cy={size / 2} fill="none" r={r} stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} />
+        <Circle cx={size / 2} cy={size / 2} fill="none" r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
         {segments.map((segment, index) => {
           const length = Math.max(0, (segment.value / total) * c - gap);
           const start = offset;
@@ -169,72 +172,6 @@ export function DateTile({ day, month }: { day: string; month: string }) {
   );
 }
 
-/**
- * The day's heat as one curve. The line runs up to the latest reading, and the planned practice window
- * is shaded so you can see what the afternoon looked like when athletes took the field.
- */
-export function HeatDayChart({
-  color,
-  nowHour,
-  startHour,
-  values,
-  window,
-}: {
-  color: string;
-  nowHour: number;
-  startHour: number;
-  values: number[];
-  window: [number, number];
-}) {
-  const [width, setWidth] = useState(0);
-  const height = 150;
-  const padX = 8;
-  const top = 22;
-  const bottom = 6;
-  const endHour = startHour + values.length - 1;
-  const lo = Math.min(...values) - 6;
-  const hi = Math.max(...values) + 5;
-  const x = (hour: number) => padX + ((hour - startHour) / (endHour - startHour)) * Math.max(0, width - padX * 2);
-  const y = (value: number) => top + (1 - (value - lo) / (hi - lo)) * (height - top - bottom);
-  const hours = values.map((_, index) => startHour + index).filter((hour) => hour <= nowHour);
-  const seen = hours.map((hour) => ({ x: x(hour), y: y(values[hour - startHour]) }));
-  const nowValue = values[Math.floor(nowHour) - startHour];
-  const nowPoint = { x: x(nowHour), y: y(nowValue) };
-  const line = [...seen.filter((point) => point.x < nowPoint.x), nowPoint].map((point) => `${point.x},${point.y}`).join(' ');
-  const area = width > 0 ? `M${seen[0].x},${height - bottom} L${line.split(' ').join(' L')} L${nowPoint.x},${height - bottom} Z` : '';
-  const label = (hour: number) => `${hour % 12 === 0 ? 12 : hour % 12} ${hour < 12 ? 'AM' : 'PM'}`;
-  return (
-    <View accessible accessibilityLabel={`WBGT through the day, from ${values[0]} at ${label(startHour)} to ${nowValue} now. Practice is planned from ${label(window[0])} to ${label(Math.ceil(window[1]))}.`} onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}>
-      <Svg height={height} width="100%">
-        <Defs>
-          <SvgGradient id="heatday-fill" x1="0" x2="0" y1="0" y2="1">
-            <Stop offset="0" stopColor={color} stopOpacity={0.38} />
-            <Stop offset="1" stopColor={color} stopOpacity={0} />
-          </SvgGradient>
-        </Defs>
-        {width > 0 ? (
-          <>
-            {[0.33, 0.66].map((fraction) => (
-              <Line key={fraction} stroke={Palette.border} strokeWidth={StyleSheet.hairlineWidth} x1={0} x2={width} y1={top + fraction * (height - top - bottom)} y2={top + fraction * (height - top - bottom)} />
-            ))}
-            <Rect fill="rgba(255,255,255,0.07)" height={height - 4} rx={8} width={x(window[1]) - x(window[0])} x={x(window[0])} y={2} />
-            <Line stroke="rgba(255,255,255,0.22)" strokeDasharray="3 4" strokeWidth={1} x1={x(window[1])} x2={x(window[1])} y1={22} y2={height - bottom} />
-            <SvgText fill="rgba(235,235,245,0.7)" fontSize={11} fontWeight="600" textAnchor="end" x={Math.min(width - 4, x(window[1]) - 4)} y={16}>Practice</SvgText>
-            <Path d={area} fill="url(#heatday-fill)" />
-            <Polyline fill="none" points={line} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} />
-            <Circle cx={nowPoint.x} cy={nowPoint.y} fill="#000000" r={6} stroke={color} strokeWidth={3} />
-          </>
-        ) : null}
-      </Svg>
-      <View style={styles.axisRow}>
-        <Text style={styles.axisText}>{label(startHour)}</Text>
-        <Text style={styles.axisText}>{label(Math.round((startHour + endHour) / 2))}</Text>
-        <Text style={styles.axisText}>{label(endHour)}</Text>
-      </View>
-    </View>
-  );
-}
-
 /** A reading drawn against a person's own usual range, so "elevated" is something you can see. */
 export function BaselineChart({
   band,
@@ -275,7 +212,7 @@ export function BaselineChart({
           <>
             <Rect fill="rgba(48,209,88,0.16)" height={y(band[0]) - y(band[1])} rx={6} width={width} x={0} y={y(band[1])} />
             <Line stroke="rgba(48,209,88,0.55)" strokeDasharray="4 4" strokeWidth={1} x1={0} x2={width} y1={y(band[1])} y2={y(band[1])} />
-            <SvgText fill="rgba(48,209,88,0.95)" fontSize={11} fontWeight="600" textAnchor="end" x={width - 8} y={y(band[1]) + 15}>Her usual range</SvgText>
+            <SvgText fill="rgba(48,209,88,0.95)" fontFamily={Face.label} fontSize={12} letterSpacing={1} textAnchor="end" x={width - 8} y={y(band[1]) + 15}>HER USUAL RANGE</SvgText>
             <Path d={`M${x(0)},${height - padBottom} L${points.split(' ').join(' L')} L${last.x},${height - padBottom} Z`} fill="url(#baseline-fill)" />
             <Polyline fill="none" points={points} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} />
             <Circle cx={last.x} cy={last.y} fill="#000000" r={6} stroke={color} strokeWidth={3} />
@@ -292,34 +229,34 @@ export function BaselineChart({
 
 const styles = StyleSheet.create({
   axisRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  axisText: { color: Palette.inkMuted, ...Type.caption },
+  axisText: { color: Palette.inkMuted, ...Type.labelSmall, letterSpacing: 0.6, textTransform: 'none' },
   ringCenter: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
   avatar: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderWidth: 2, justifyContent: 'center' },
-  avatarText: { color: Palette.ink, fontWeight: '600' },
+  avatarText: { color: Palette.ink, fontFamily: Face.label, letterSpacing: 0.5 },
   strip: { flexDirection: 'row' },
   stripItem: { alignItems: 'center', flex: 1, gap: 2, paddingVertical: Spacing.one },
   stripDivider: { borderLeftColor: Palette.border, borderLeftWidth: StyleSheet.hairlineWidth },
-  stripValue: { color: Palette.ink, fontSize: 24, fontWeight: '700', letterSpacing: 0.3, lineHeight: 29 },
-  stripLabel: { color: Palette.inkMuted, ...Type.footnote },
+  stripValue: { color: Palette.ink, ...Type.figure, fontSize: 30, lineHeight: 34 },
+  stripLabel: { color: Palette.inkMuted, ...Type.labelSmall },
   segmentRow: { borderRadius: 7, flexDirection: 'row', gap: 3, height: 14, overflow: 'hidden' },
   segment: { borderRadius: 7 },
   segmentLabels: { flexDirection: 'row', gap: 3, marginTop: Spacing.two },
-  segmentTime: { color: Palette.ink, ...Type.footnote, fontWeight: '600' },
-  segmentName: { color: Palette.inkMuted, ...Type.caption },
+  segmentTime: { color: Palette.ink, ...Type.figure, fontSize: 18, lineHeight: 21 },
+  segmentName: { color: Palette.inkMuted, ...Type.labelSmall },
   tlRow: { flexDirection: 'row', minHeight: 64 },
-  tlTime: { color: Palette.inkMuted, ...Type.footnote, fontVariant: ['tabular-nums'], paddingTop: 3, width: 64 },
+  tlTime: { color: Palette.inkMuted, ...Type.labelSmall, fontSize: 14, lineHeight: 18, paddingTop: 2, width: 64 },
   tlTrack: { alignItems: 'center', width: 24 },
   tlDot: { alignItems: 'center', borderRadius: 11, height: 22, justifyContent: 'center', width: 22 },
-  tlMark: { color: '#1A0E07', fontSize: 12, fontWeight: '700' },
+  tlMark: { color: '#1A0E07', fontFamily: Face.figure, fontSize: 14 },
   tlLine: { backgroundColor: Palette.border, flex: 1, marginVertical: 3, width: 2 },
   tlCopy: { flex: 1, gap: 1, paddingBottom: Spacing.four, paddingLeft: Spacing.three },
   tlTitle: { color: Palette.ink, ...Type.body, fontWeight: '500' },
   tlDetail: { color: Palette.inkMuted, ...Type.subhead },
-  photo: { backgroundColor: Palette.surface, borderCurve: 'continuous', borderRadius: 24, justifyContent: 'flex-end', overflow: 'hidden' },
+  photo: { backgroundColor: Palette.surface, borderCurve: 'continuous', borderRadius: 18, justifyContent: 'flex-end', overflow: 'hidden' },
   photoCopy: { padding: Spacing.four },
   photoTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: '600', letterSpacing: 0.3 },
   photoSub: { color: 'rgba(255,255,255,0.82)', ...Type.subhead, marginTop: 1 },
-  dateTile: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderCurve: 'continuous', borderRadius: 12, height: 46, justifyContent: 'center', width: 46 },
-  dateMonth: { color: Palette.coral, fontSize: 10, fontWeight: '700', letterSpacing: 0.6, lineHeight: 12 },
-  dateDay: { color: Palette.ink, fontSize: 19, fontWeight: '700', lineHeight: 22 },
+  dateTile: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)', borderCurve: 'continuous', borderRadius: 10, height: 46, justifyContent: 'center', width: 46 },
+  dateMonth: { color: Palette.coral, fontFamily: Face.label, fontSize: 11, letterSpacing: 1, lineHeight: 13 },
+  dateDay: { color: Palette.ink, fontFamily: Face.figure, fontSize: 22, lineHeight: 24 },
 });

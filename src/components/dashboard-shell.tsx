@@ -24,7 +24,11 @@ export const TAB_BAR_HEIGHT = 80;
 /** Height of the fixed top row, below the status bar. */
 export const HEADER_ROW = 52;
 const PILL_HEIGHT = 64;
-const PILL_PADDING = 6;
+const PILL_PADDING = 4;
+// The sliding pill's motion: quick, with a long soft landing.
+const SLIDE_MS = 250;
+const SLIDE_EASE = Easing.bezier(0.22, 1, 0.36, 1);
+const TAB_MUTED = 'rgba(193,193,193,0.8)';
 
 const bell = { ios: 'bell.fill', android: 'notifications', web: 'notifications' } as const;
 const sun = { ios: 'cloud.sun.fill', android: 'partly_cloudy_day', web: 'partly_cloudy_day' } as const;
@@ -49,13 +53,11 @@ export function DashboardHeader({
   name,
   onProfile,
   scrollY,
-  showLogo,
   title,
 }: {
   name: string;
   onProfile: () => void;
   scrollY: SharedValue<number>;
-  showLogo: boolean;
   title: string;
 }) {
   const insets = useSafeAreaInsets();
@@ -73,8 +75,8 @@ export function DashboardHeader({
       <View pointerEvents="none" style={[styles.headerTitleWrap, { top: insets.top }]}>
         <Animated.Text accessibilityElementsHidden importantForAccessibility="no" numberOfLines={1} style={[styles.headerTitle, backdrop]}>{title}</Animated.Text>
       </View>
-    <View style={[styles.header, !showLogo && styles.headerEnd]}>
-      {showLogo ? <HeatSenseLogo height={28} /> : null}
+    <View style={styles.header}>
+      <HeatSenseLogo height={28} />
       <View style={styles.headerActions}>
         <Pressable accessibilityLabel={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} new` : 'Notifications'} accessibilityRole="button" hitSlop={4} onPress={() => setOpen(true)} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
           <HeatIcon name={bell} size={20} tintColor={Palette.ink} />
@@ -142,7 +144,7 @@ export function TabBar({ activeTab, onChange, tabs }: { activeTab: string; onCha
       placed.current = true;
       return;
     }
-    x.value = withTiming(target, { duration: 280, easing: Easing.out(Easing.cubic) });
+    x.value = withTiming(target, { duration: SLIDE_MS, easing: SLIDE_EASE });
   }, [index, reducedMotion, tabWidth, x]);
 
   const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }], width: tabWidth }));
@@ -152,35 +154,64 @@ export function TabBar({ activeTab, onChange, tabs }: { activeTab: string; onCha
       <GlassSurface radius={PILL_HEIGHT / 2} style={styles.pill}>
         <View onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)} style={styles.pillInner}>
           {tabWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.indicator, indicator]} /> : null}
-          {tabs.map((tab) => {
-            const active = tab.id === activeTab;
-            return (
-              <Pressable
-                accessibilityLabel={tab.label}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                key={tab.id}
-                onPress={() => onChange(tab.id)}
-                style={styles.tab}>
-                <HeatIcon name={tab.icon} size={22} tintColor={active ? Palette.coral : Palette.inkMuted} />
-                <Text maxFontSizeMultiplier={1.15} numberOfLines={1} style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
-              </Pressable>
-            );
-          })}
+          {tabs.map((tab, position) => (
+            <TabItem
+              active={tab.id === activeTab}
+              index={position}
+              key={tab.id}
+              onPress={() => onChange(tab.id)}
+              tab={tab}
+              tabWidth={tabWidth}
+              x={x}
+            />
+          ))}
         </View>
       </GlassSurface>
     </View>
   );
 }
 
+/**
+ * One tab. The orange layer fades in as the pill arrives and out as it leaves, so the color
+ * travels with the pill instead of jumping when the press lands.
+ */
+function TabItem({ active, index, onPress, tab, tabWidth, x }: { active: boolean; index: number; onPress: () => void; tab: DashboardTab; tabWidth: number; x: SharedValue<number> }) {
+  const lit = useAnimatedStyle(() => {
+    if (tabWidth === 0) return { opacity: active ? 1 : 0 };
+    const here = index * tabWidth;
+    return { opacity: interpolate(x.value, [here - tabWidth, here, here + tabWidth], [0, 1, 0], 'clamp') };
+  });
+  const dim = useAnimatedStyle(() => {
+    if (tabWidth === 0) return { opacity: active ? 0 : 1 };
+    const here = index * tabWidth;
+    return { opacity: interpolate(x.value, [here - tabWidth, here, here + tabWidth], [1, 0, 1], 'clamp') };
+  });
+  const content = (color: string, labelStyle: object) => (
+    <>
+      <HeatIcon name={tab.icon} size={22} tintColor={color} />
+      <Text maxFontSizeMultiplier={1.15} numberOfLines={1} style={[styles.tabLabel, labelStyle]}>{tab.label}</Text>
+    </>
+  );
+  return (
+    <Pressable
+      accessibilityLabel={tab.label}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.tab, pressed && !active && styles.tabPressed]}>
+      <Animated.View pointerEvents="none" style={[styles.tabLayer, dim]}>{content(TAB_MUTED, styles.tabLabelMuted)}</Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.tabLayer, styles.tabLayerLit, lit]}>{content(Palette.coral, styles.tabLabelActive)}</Animated.View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   pressed: { opacity: 0.55 },
   headerWrap: { left: 0, position: 'absolute', right: 0, top: 0, zIndex: 10 },
-  headerBackdrop: { backgroundColor: 'rgba(0,0,0,0.98)', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth },
+  headerBackdrop: { backgroundColor: '#1E2329', borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitleWrap: { alignItems: 'center', height: HEADER_ROW, justifyContent: 'center', left: 0, position: 'absolute', right: 0 },
   headerTitle: { color: Palette.ink, ...Type.headline },
   header: { alignItems: 'center', flexDirection: 'row', height: HEADER_ROW, justifyContent: 'space-between', paddingHorizontal: Spacing.four },
-  headerEnd: { justifyContent: 'flex-end' },
   headerActions: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   badge: { backgroundColor: Palette.emergency, borderColor: Palette.canvas, borderRadius: 5, borderWidth: 1.5, height: 10, position: 'absolute', right: 10, top: 9, width: 10 },
@@ -193,13 +224,17 @@ const styles = StyleSheet.create({
   largeTitle: { color: Palette.ink, ...Type.largeTitle, marginTop: Spacing.one },
   sectionHeader: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.two, marginTop: Spacing.seven },
   sectionHeaderTight: { marginTop: Spacing.five },
-  sectionTitle: { color: Palette.ink, ...Type.title3 },
+  sectionTitle: { color: Palette.ink, ...Type.title3, fontWeight: '700' },
   pillWrap: { elevation: 10, left: Spacing.four, position: 'absolute', right: Spacing.four, shadowColor: '#000', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.45, shadowRadius: 18 },
   // The translucent fill keeps labels readable over scrolled content wherever glass blur isn't available.
-  pill: { backgroundColor: 'rgba(28,28,30,0.78)', borderCurve: 'continuous', height: PILL_HEIGHT },
+  pill: { backgroundColor: 'rgba(32,32,32,0.86)', borderColor: 'rgba(191,192,203,0.08)', borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, height: PILL_HEIGHT },
   pillInner: { flex: 1, flexDirection: 'row', padding: PILL_PADDING },
-  indicator: { backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: (PILL_HEIGHT - PILL_PADDING * 2) / 2, bottom: PILL_PADDING, left: PILL_PADDING, position: 'absolute', top: PILL_PADDING },
-  tab: { alignItems: 'center', flex: 1, gap: 3, justifyContent: 'center' },
-  tabLabel: { color: Palette.inkMuted, ...Type.tab },
+  indicator: { backgroundColor: 'rgba(69,69,69,0.92)', borderCurve: 'continuous', borderRadius: (PILL_HEIGHT - PILL_PADDING * 2) / 2, bottom: PILL_PADDING, left: PILL_PADDING, position: 'absolute', top: PILL_PADDING },
+  tab: { flex: 1 },
+  tabPressed: { opacity: 0.7 },
+  tabLayer: { alignItems: 'center', bottom: 0, gap: 3, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
+  tabLayerLit: { zIndex: 1 },
+  tabLabel: { ...Type.tab },
+  tabLabelMuted: { color: TAB_MUTED },
   tabLabelActive: { color: Palette.coral },
 });

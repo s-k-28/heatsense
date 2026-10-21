@@ -9,16 +9,22 @@ import { Alert, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Switch
 
 import { LargeTitle, SectionHeader, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
+import { AlertIsland } from '@/components/alert-island';
+import { FieldCheckSheet } from '@/components/field-check-sheet';
+import { LocationCard } from '@/components/location-card';
+import { SlidingTabs } from '@/components/sliding-tabs';
 import { BarChart, LineChart } from '@/components/ui/charts';
-import { BaselineChart, DateTile, HeatDayChart, PhotoBanner, RingAvatar, Ring, SegmentBar, Spark, StatStrip, Timeline } from '@/components/ui/visuals';
+import { InsightCard } from '@/components/ui/instruments';
+import { BaselineChart, DateTile, PhotoBanner, RingAvatar, Ring, SegmentBar, Spark, StatStrip, Timeline } from '@/components/ui/visuals';
 import { WeekSwitcher } from '@/components/week-switcher';
-import { Button, Card, CardHeader, Group, IconTile, Initials, Row, TextLink, chevron, textStyles } from '@/components/ui/list';
-import { Palette, Spacing, Type } from '@/constants/theme';
-import { TODAY, ZONES } from '@/lib/practice';
+import { Card, CardHeader, Group, IconTile, Row, TextLink, chevron, textStyles } from '@/components/ui/list';
+import { Face, Palette, Spacing, Type } from '@/constants/theme';
+import { INCIDENT, TODAY, ZONES } from '@/lib/practice';
 import { ensureTeamInvite, getMyTeamInvite } from '@/services/team-invites';
 import { firebaseAuth } from '@/services/firebase';
 import { useTeamDraft, type TeamDraft } from '@/state/onboarding';
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
+import { EQUIPMENT_LABEL, buildSchedule, clockTime, practiceStart, usePracticePlans, type Block, type PracticePlan as PracticePlanType } from '@/state/practice-plans';
 
 type IconName = ComponentProps<typeof HeatIcon>['name'];
 
@@ -43,8 +49,6 @@ const roster = [
 
 // Hourly readings from 7 AM up to now (4:10 PM). There is no forecast, so the line stops at the latest reading.
 const HOURLY_WBGT = [62, 64, 67, 71, 75, 79, 82, 84, 84];
-// Hourly WBGT from 7 AM to 7 PM (sample). The curve is drawn up to the latest reading only.
-const DAY_WBGT = [62, 64, 67, 71, 75, 79, 82, 83, 84, 84, 83, 81, 78];
 const RECOVERY_BPM = [96, 112, 131, 148, 158, 156, 152, 147, 142];
 
 /** Lets a section's "Show All" link switch tabs without threading props through every screen. */
@@ -118,16 +122,18 @@ function CoachHome() {
       <LargeTitle title="Today" />
       <ReadinessHero onAction={() => setConditionsOpen(true)} />
       <TodayBar onNavigate={go} />
-      <CompactField onPress={() => go('plan')} />
+      <View style={styles.block}><FieldCard onPress={() => go('plan')} showZone={false} /></View>
 
       <InviteRow name={name} onShare={() => shareTeamCode(draft)} />
-      <ConditionsSheet onClose={() => setConditionsOpen(false)} visible={conditionsOpen} />
+      <FieldCheckSheet onClose={() => setConditionsOpen(false)} visible={conditionsOpen} />
     </>
   );
 }
 
 /** The photo card that asks the coach the one question that matters before practice. */
 function ReadinessHero({ onAction }: { onAction: () => void }) {
+  const { practiceStartedAt } = usePreferences();
+  const running = practiceStartedAt !== null;
   return (
     <View style={styles.hero}>
       <Image accessibilityIgnoresInvertColors contentFit="cover" contentPosition={{ top: '12%', left: '50%' }} source={FIELD_PHOTO} style={StyleSheet.absoluteFill} />
@@ -138,9 +144,9 @@ function ReadinessHero({ onAction }: { onAction: () => void }) {
         <Text style={styles.zoneTagText}>{ZONES[TODAY.zone].label}</Text>
       </View>
       <View style={styles.heroCopy}>
-        <Text accessibilityRole="header" style={styles.heroTitle}>Ready for practice?</Text>
-        <Pressable accessibilityHint="Opens how to check conditions before practice" accessibilityLabel="Check field conditions" accessibilityRole="button" onPress={onAction} style={({ pressed }) => [styles.heroButton, pressed && styles.pressed]}>
-          <Text style={styles.heroButtonText}>Check field conditions</Text>
+        <Text accessibilityRole="header" style={styles.heroTitle}>{running ? 'Practice is on.' : 'Ready for practice?'}</Text>
+        <Pressable accessibilityHint={running ? 'Shows the practice clock' : 'Checks the field and starts practice'} accessibilityLabel={running ? 'View practice' : 'Check field conditions'} accessibilityRole="button" onPress={onAction} style={({ pressed }) => [styles.heroButton, pressed && styles.pressed]}>
+          <Text style={styles.heroButtonText}>{running ? 'View practice clock' : 'Check field conditions'}</Text>
           <HeatIcon name={chevron} size={12} tintColor="#FFFFFF" weight="bold" />
         </Pressable>
       </View>
@@ -150,117 +156,67 @@ function ReadinessHero({ onAction }: { onAction: () => void }) {
 
 /** Three readouts, each opening its tab, with the rest of today's plan on one line beneath. */
 function TodayBar({ onNavigate }: { onNavigate: (tab: string) => void }) {
+  const { incidentAcknowledged } = usePreferences();
+  const { active: plan } = usePracticePlans();
+  const open = incidentAcknowledged ? 0 : 1;
   return (
     <Card style={styles.todayBar}>
       <View style={styles.todayRow}>
-        <TodayItem accessibilityLabel="Plan: 20 minutes work, 10 minutes rest" label="Plan" onPress={() => onNavigate('plan')} value="20 / 10 min">
-          <View style={styles.miniBar}>
-            <View style={[styles.miniWork, { flex: 20 }]} />
-            <View style={[styles.miniRest, { flex: 10 }]} />
-          </View>
+        <TodayItem accessibilityLabel={`Plan: ${plan.workMinutes} minutes work, ${plan.restMinutes} minutes rest`} label="Plan" onPress={() => onNavigate('plan')} value="Work / rest">
+          <Ring segments={[{ color: Palette.coral, value: plan.workMinutes }, { color: Palette.info, value: plan.restMinutes }]} size={TODAY_RING} stroke={6} summary={`${plan.workMinutes} minutes work, ${plan.restMinutes} minutes rest`}>
+            <Text style={[styles.todayNumber, styles.todayNumberSmall]}>{plan.workMinutes}/{plan.restMinutes}</Text>
+          </Ring>
         </TodayItem>
-        <TodayItem accessibilityLabel="Alerts: 1 needs a response" centered label="Alerts" onPress={() => onNavigate('alerts')} value="Active">
-          <Text style={[styles.todayNumber, { color: Palette.emergency }]}>1</Text>
+        <TodayItem accessibilityLabel={open ? 'Alerts: 1 needs a response, 3 handled earlier today' : 'Alerts: all clear, 4 handled today'} label="Alerts" onPress={() => onNavigate('alerts')} value={open ? 'Active' : 'All clear'}>
+          <Ring segments={[{ color: Palette.emergency, value: open }, { color: open ? 'rgba(235,235,245,0.28)' : Palette.safe, value: 4 - open }]} size={TODAY_RING} stroke={6} summary={open ? '1 open alert, 3 handled' : 'No open alerts, 4 handled'}>
+            <Text style={[styles.todayNumber, { color: open ? Palette.emergency : Palette.ink }]}>{open}</Text>
+          </Ring>
         </TodayItem>
         <TodayItem accessibilityLabel="Team: 24 athletes, 3 need follow-up" label="Team" onPress={() => onNavigate('team')} value="Athletes">
-          <Text style={styles.todayNumber}>24</Text>
+          <Ring segments={[{ color: Palette.safe, value: 21 }, { color: Palette.caution, value: 2 }, { color: Palette.warning, value: 1 }]} size={TODAY_RING} stroke={6} summary="21 within plan, 2 caution, 1 to review">
+            <Text style={styles.todayNumber}>24</Text>
+          </Ring>
         </TodayItem>
       </View>
-      <Pressable accessibilityLabel="Water every 10 minutes. Equipment off during breaks." accessibilityRole="button" onPress={() => onNavigate('plan')} style={({ pressed }) => [styles.todayPlanLine, pressed && styles.pressed]}>
-        <Text numberOfLines={1} style={styles.todayPlanText}>Water every 10 min · Equipment off during breaks</Text>
+      <Pressable accessibilityLabel={`Water every ${plan.waterEveryMinutes} minutes. Equipment ${EQUIPMENT_LABEL[plan.equipment].toLowerCase()}.`} accessibilityRole="button" onPress={() => onNavigate('plan')} style={({ pressed }) => [styles.todayPlanLine, pressed && styles.pressed]}>
+        <Text numberOfLines={1} style={styles.todayPlanText}>Water every {plan.waterEveryMinutes} min · Equipment {EQUIPMENT_LABEL[plan.equipment].toLowerCase()}</Text>
       </Pressable>
     </Card>
   );
 }
 
-function TodayItem({ accessibilityLabel, centered, children, label, onPress, value }: { accessibilityLabel: string; centered?: boolean; children: React.ReactNode; label: string; onPress: () => void; value: string }) {
+const TODAY_RING = 70;
+
+function TodayItem({ accessibilityLabel, children, label, onPress, value }: { accessibilityLabel: string; children: React.ReactNode; label: string; onPress: () => void; value: string }) {
   return (
-    <Pressable accessibilityLabel={accessibilityLabel} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.todayItem, centered && styles.todayItemCentered, pressed && styles.pressed]}>
-      {/* The block can sit in the middle of the bar, but its lines always start at the same left edge. */}
-      <View style={styles.todayInner}>
-        <View style={styles.todayVisual}>{children}</View>
-        <Text numberOfLines={1} style={styles.todayValue}>{value}</Text>
+    <Pressable accessibilityLabel={accessibilityLabel} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.todayItem, pressed && styles.pressed]}>
+      {children}
+      <View style={styles.todayLabelRow}>
         <Text style={styles.todayLabel}>{label}</Text>
+        <HeatIcon name={chevron} size={9} tintColor={Palette.inkMuted} weight="bold" />
       </View>
+      <Text numberOfLines={1} style={styles.todayValue}>{value}</Text>
     </Pressable>
   );
 }
 
-/** Today's field reading on one compact card: the figure and guidance beside a small trend. */
-function CompactField({ onPress }: { onPress: () => void }) {
-  const temp = useTemperature();
-  const { refreshedAt } = usePreferences();
-  return (
-    <Card style={styles.compactField}>
-      <CardHeader icon={icons.sun} label="Field WBGT" onPress={onPress} tone={Palette.warning} trailing="4:10 PM" />
-      <View style={styles.compactBody}>
-        <View style={styles.compactCopy}>
-          <View style={styles.compactValueRow}>
-            <Text style={styles.compactValue}>{temp.value(TODAY.wbgtF)}</Text>
-            <Text style={styles.heroUnit}>{temp.unit}</Text>
-          </View>
-          <Text style={styles.compactGuidance}>Modify work and rest intervals before athletes take the field.</Text>
-        </View>
-        <View style={styles.compactChart}>
-          <LineChart
-            height={64}
-            labels={['7 AM', 'Now']}
-            max={90}
-            min={56}
-            summary={`Hourly WBGT today, rising from ${temp.value(62)} to ${temp.value(84)} degrees by 4 PM.`}
-            tone={Palette.warning}
-            values={HOURLY_WBGT}
-          />
-        </View>
-      </View>
-      <Text style={styles.cardFootnote}>Memorial Stadium · updated {refreshedAt ? 'just now' : '2 min ago'}</Text>
-    </Card>
-  );
-}
+const BAND_PHOTO = require('@/assets/images/heatsense-band-refined.png');
 
-/** One row that replaces the old invite card: share the team code, or dismiss it. */
+/** Invite card: share the team code, or dismiss it. */
 function InviteRow({ name, onShare }: { name: string; onShare: () => void }) {
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
   return (
     <View style={styles.inviteRow}>
-      <Group>
-        <Row
-          detail={`Athletes join ${name} with a team code.`}
-          onPress={onShare}
-          showChevron={false}
-          title="Invite your athletes"
-          trailing={
-            <View style={styles.inviteActions}>
-              <TextLink label="Share" onPress={onShare} />
-              <Pressable accessibilityLabel="Dismiss invite" accessibilityRole="button" hitSlop={14} onPress={() => setDismissed(true)}>
-                <HeatIcon name={icons.close} size={12} tintColor={Palette.inkMuted} weight="bold" />
-              </Pressable>
-            </View>
-          }
-        />
-      </Group>
+      <InsightCard
+        action="Share team code"
+        body={`Athletes join ${name} with a team code. Once they pair a band, their recovery shows up here during practice.`}
+        image={BAND_PHOTO}
+        onAction={onShare}
+        onDismiss={() => setDismissed(true)}
+        title="Invite your athletes"
+      />
     </View>
-  );
-}
-
-/** What "Check field conditions" opens: how to get a reading before practice. */
-function ConditionsSheet({ onClose, visible }: { onClose: () => void; visible: boolean }) {
-  return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
-      <View style={styles.sheet}>
-        <View style={styles.sheetBar}>
-          <Text style={styles.sheetTitle}>Field conditions</Text>
-          <TextLink label="Done" onPress={onClose} />
-        </View>
-        <ScrollView contentContainerStyle={styles.sheetContent}>
-          <Text style={styles.sheetLead}>HeatSense isn’t connected to a WBGT sensor or weather feed yet, so it can’t read conditions at your field.</Text>
-          <Text style={styles.sheetHeading}>Before practice</Text>
-          <Text style={styles.sheetBody}>Take a WBGT reading on site with a handheld meter, or ask your athletic trainer for theirs.</Text>
-          <Text style={styles.sheetBody}>Then follow your school’s heat policy for that reading.</Text>
-        </ScrollView>
-      </View>
-    </Modal>
   );
 }
 
@@ -319,28 +275,42 @@ function AthleteHome() {
   );
 }
 
-/** Today's field reading: the one card every role shares. */
+/** Today's field reading: the one card every role shares. The figure, how it got there, and what it means. */
 export function FieldCard({ onPress, showZone = true }: { onPress?: () => void; showZone?: boolean }) {
   const temp = useTemperature();
   const { refreshedAt } = usePreferences();
+  const latest = HOURLY_WBGT[HOURLY_WBGT.length - 1];
+  // A change in whole degrees, in the user's unit: "+5°".
+  const wholeDelta = (fahrenheit: number) => `${fahrenheit < 0 ? '−' : '+'}${Math.abs(Math.round(temp.value(32 + fahrenheit) - temp.value(32)))}°`;
+  const threeHoursAgo = HOURLY_WBGT[HOURLY_WBGT.length - 4];
   return (
     <Card>
-      <CardHeader icon={icons.sun} label="Field WBGT" onPress={onPress} tone={Palette.warning} trailing="4:10 PM" />
-      <View style={styles.valueRow}>
-        <Text style={styles.heroValue}>{temp.value(TODAY.wbgtF)}</Text>
-        <Text style={styles.heroUnit}>{temp.unit}</Text>
+      <CardHeader icon={icons.sun} label="Field WBGT" onPress={onPress} tone={Palette.warning} trailing="Memorial Stadium" />
+      <View style={styles.fieldTop}>
+        <View style={styles.valueRow}>
+          <Text style={styles.heroValue}>{temp.value(TODAY.wbgtF)}</Text>
+          <Text style={styles.heroUnit}>{temp.unit}</Text>
+        </View>
+        <View style={styles.fieldTrend}>
+          {showZone ? <Text style={[styles.zoneLine, { color: ZONES[TODAY.zone].text }]}>{ZONES[TODAY.zone].label}</Text> : null}
+          <Text style={styles.fieldTrendText}>{wholeDelta(latest - HOURLY_WBGT[0])} since 7 AM</Text>
+        </View>
       </View>
-      {showZone ? <Text style={[styles.zoneLine, { color: ZONES[TODAY.zone].text }]}>{ZONES[TODAY.zone].label}</Text> : null}
-      <Text style={styles.cardBody}>Modify work and rest intervals before athletes take the field.</Text>
+      <Text style={styles.cardBody}>Modify work and rest before athletes take the field.</Text>
       <LineChart
-        labels={['7 AM', 'Now']}
-        max={90}
-        min={56}
-        summary={`Hourly WBGT today, rising from ${temp.value(62)} to ${temp.value(84)} degrees by 4 PM.`}
+        format={(value) => `${temp.value(value)}°`}
+        labels={['7 AM', '11 AM', 'Now']}
+        max={88}
+        min={60}
+        summary={`Hourly WBGT today, rising from ${temp.value(HOURLY_WBGT[0])} to ${temp.value(latest)} degrees by 4 PM.`}
         tone={Palette.warning}
         values={HOURLY_WBGT}
       />
-      <Text style={styles.cardFootnote}>Memorial Stadium · updated {refreshedAt ? 'just now' : '2 min ago'}</Text>
+      <View style={styles.statRow}>
+        <Stat label="Peak today" value={`${temp.value(Math.max(...HOURLY_WBGT))}°`} />
+        <Stat label="Last 3 hours" value={wholeDelta(latest - threeHoursAgo)} />
+        <Stat label="Updated" value={refreshedAt ? 'Now' : '2 min'} />
+      </View>
     </Card>
   );
 }
@@ -354,36 +324,95 @@ export function RiskHero(_props: { mode: 'coach' }) {
 
 function PlanScreen() {
   const temp = useTemperature();
+  const { active, plans } = usePracticePlans();
+  const blocks = buildSchedule(active);
+  const breaks = blocks.filter((block) => block.kind === 'rest').length;
   return (
     <>
       <LargeTitle title="Plan" />
       <View style={styles.block}><WeekSwitcher /></View>
       <Text style={[styles.contextLine, styles.contextBelow]}>Today · <Text style={{ color: ZONES[TODAY.zone].text, fontWeight: '600' }}>{ZONES[TODAY.zone].label}</Text> · {temp.value(TODAY.wbgtF)}{temp.unit} WBGT at 4:10 PM</Text>
 
-      <SectionHeader title="Heat through the day" />
-      <HeatDayChart color={ZONES[TODAY.zone].color} nowHour={16.17} startHour={7} values={DAY_WBGT} window={[16, 17.5]} />
-
-      <SectionHeader title="Today’s session" />
-      <SegmentBar
-        segments={[
-          { color: 'rgba(235,235,245,0.3)', flex: 10, label: 'Arrive', time: '4:00' },
-          { color: Palette.coral, flex: 20, label: 'Work', time: '4:10' },
-          { color: Palette.info, flex: 10, label: 'Rest', time: '4:30' },
-        ]}
-      />
+      <SectionHeader action="Edit" onActionPress={() => router.push({ pathname: '/plan-editor', params: { id: active.id } })} title="Today’s session" />
+      <Text style={styles.planName}>{active.name}</Text>
+      <SegmentBar segments={blocks.slice(0, 3).map((block) => ({ color: SCHEDULE_TONE[block.kind], flex: block.minutes, label: block.kind === 'arrive' ? 'Arrive' : block.kind === 'work' ? 'Work' : 'Rest', time: clockTime(block.start) }))} />
       <View style={styles.planStats}>
-        <StatStrip items={[{ label: 'Work / rest', value: '20 / 10' }, { label: 'Water every', value: '10 min' }, { label: 'Equipment', value: 'Off' }]} />
+        <StatStrip items={[{ label: 'Work / rest', value: `${active.workMinutes} / ${active.restMinutes}` }, { label: breaks === 1 ? 'Break' : 'Breaks', value: String(breaks) }, { label: 'Water every', value: `${active.waterEveryMinutes} min` }]} />
       </View>
 
-      <SectionHeader title="Timeline" />
-      <Timeline
-        items={[
-          { color: 'rgba(235,235,245,0.32)', detail: 'Water available before warm-up', time: '4:00', title: 'Arrival and baseline check' },
-          { color: Palette.coral, detail: 'Helmets and heavy equipment monitored', time: '4:10', title: 'Work block · 20 min' },
-          { color: Palette.info, detail: 'Shade, water, and an athlete check', time: '4:30', title: 'Recovery · 10 min' },
-        ]}
-      />
+      <SectionHeader title="How practice runs" />
+      <PracticeSchedule blocks={blocks} plan={active} />
+
+      <SectionHeader action="New plan" onActionPress={() => router.push('/plan-editor')} title="Saved plans" />
+      <Group>
+        {plans.map((plan) => {
+          const rests = buildSchedule(plan).filter((block) => block.kind === 'rest').length;
+          return (
+            <Row
+              detail={`${clockTime(plan.startMinutes, true)} · ${plan.workMinutes} / ${plan.restMinutes} · ${plan.lengthMinutes} min · ${rests} ${rests === 1 ? 'break' : 'breaks'}`}
+              key={plan.id}
+              onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })}
+              title={plan.name}
+              trailing={plan.id === active.id ? <Text style={styles.todayTag}>Today</Text> : undefined}
+            />
+          );
+        })}
+      </Group>
+      <Text style={styles.footnote}>Open a saved plan to start from its timings. Use for today puts it on the Plan tab, the practice clock and the Dynamic Island.</Text>
     </>
+  );
+}
+
+const SCHEDULE_TONE = { arrive: 'rgba(235,235,245,0.4)', rest: Palette.info, work: Palette.coral } as const;
+
+/** What a block asks of the coach, from the plan's own rules. */
+function blockDetail(block: Block, plan: PracticePlanType, last: boolean) {
+  if (block.kind === 'arrive') return 'Fill bottles and check in with every athlete.';
+  if (block.kind === 'rest') return plan.equipment === 'on' ? 'Shade and water. Eyes on every athlete.' : 'Shade, water, gear off. Eyes on every athlete.';
+  if (last) return `Lighter drills to close. Done by ${clockTime(block.start + block.minutes)}.`;
+  const gear = plan.equipment === 'off' ? 'No helmets or pads.' : 'Helmets on.';
+  return `${gear} Water every ${plan.waterEveryMinutes} min.`;
+}
+
+/** The practice as a run of blocks: start time, a bar as long as the block, what to do, how long. */
+function PracticeSchedule({ blocks, plan }: { blocks: Block[]; plan: PracticePlanType }) {
+  const { practiceStartedAt } = usePreferences();
+  const [now] = useState(() => Date.now());
+  const longest = Math.max(...blocks.map((block) => block.minutes));
+  const lastWork = blocks.map((block) => block.kind).lastIndexOf('work');
+  // While practice is running, mark the block it's in.
+  const into = practiceStartedAt === null ? null : practiceStart(plan) + (now - practiceStartedAt) / 60_000;
+  return (
+    <View style={styles.schedule}>
+      {blocks.map((item, index) => {
+        const tone = SCHEDULE_TONE[item.kind];
+        const current = into !== null && item.kind !== 'arrive' && into >= item.start && into < item.start + item.minutes;
+        const detail = blockDetail(item, plan, index === lastWork);
+        return (
+          <View
+            accessible
+            accessibilityLabel={`${clockTime(item.start, true)}, ${item.title}, ${item.minutes} minutes${current ? ', happening now' : ''}. ${detail}`}
+            key={`${item.start}-${item.title}`}
+            style={[styles.scheduleRow, index > 0 && styles.scheduleDivider, current && styles.scheduleRowNow]}>
+            <Text style={[styles.scheduleTime, current && { color: Palette.ink }]}>{clockTime(item.start)}</Text>
+            <View style={styles.scheduleTrack}>
+              <View style={[styles.scheduleBar, { backgroundColor: tone, height: 14 + (item.minutes / longest) * 30 }]} />
+            </View>
+            <View style={styles.scheduleCopy}>
+              <View style={styles.scheduleHead}>
+                <Text style={[styles.scheduleTitle, { color: item.kind === 'arrive' ? Palette.ink : tone }]}>{item.title}</Text>
+                {current ? <Text style={styles.scheduleNow}>Now</Text> : null}
+              </View>
+              <Text style={styles.scheduleDetail}>{detail}</Text>
+            </View>
+            <View style={styles.scheduleLength}>
+              <Text style={styles.scheduleMinutes}>{item.minutes}</Text>
+              <Text style={styles.scheduleUnit}>min</Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -423,12 +452,11 @@ function RosterScreen({ title, variant }: { title: string; variant: 'coach' | 't
       </Card>
 
       <View style={styles.block}>
-        <SegmentedControl
-          appearance="dark"
-          onValueChange={(value) => setFilter(value === 'Needs attention' ? 'attention' : value === 'Normal' ? 'normal' : 'all')}
-          selectedIndex={index}
-          style={styles.segmented}
-          values={['All', 'Needs attention', 'Normal']}
+        <SlidingTabs
+          label="Filter athletes"
+          onChange={(value) => setFilter(value === 1 ? 'attention' : value === 2 ? 'normal' : 'all')}
+          options={['All', 'Needs attention', 'Normal']}
+          selected={index}
         />
       </View>
       <View style={styles.block}>
@@ -441,32 +469,120 @@ function RosterScreen({ title, variant }: { title: string; variant: 'coach' | 't
   );
 }
 
+const ALERT_ICONS = {
+  check: { ios: 'checkmark.seal.fill', android: 'verified', web: 'verified' },
+  drop: { ios: 'drop.fill', android: 'water_drop', web: 'water_drop' },
+  heart: { ios: 'heart.fill', android: 'favorite', web: 'favorite' },
+  heat: { ios: 'thermometer.sun.fill', android: 'device_thermostat', web: 'device_thermostat' },
+  indoor: { ios: 'house.fill', android: 'home', web: 'home' },
+} as const;
+
+const EARLIER = [
+  { color: Palette.info, detail: 'Jordan Lee acknowledged it', icon: ALERT_ICONS.drop, status: 'Handled', time: '3:52 PM', title: 'Hydration reminder' },
+  { color: Palette.warning, detail: 'Plan switched to 20 / 10', icon: ALERT_ICONS.heat, status: 'Plan updated', time: '3:35 PM', title: 'WBGT entered the Orange zone' },
+  { color: Palette.safe, detail: 'No readings above the Yellow zone', icon: ALERT_ICONS.check, status: 'Clear', time: '2:58 PM', title: 'Pre-practice weather check' },
+] as const;
+
+const YESTERDAY = [
+  { color: Palette.emergency, detail: 'Eli Brooks · Alex Thompson responded in 1 min 50 sec', icon: ALERT_ICONS.heart, status: 'Handled', time: '5:12 PM', title: 'Recovery check' },
+  { color: Palette.emergency, detail: 'Last 20 minutes moved indoors', icon: ALERT_ICONS.indoor, status: 'Plan updated', time: '4:41 PM', title: 'WBGT entered the Red zone' },
+] as const;
+
 function AlertsScreen() {
+  const temp = useTemperature();
+  const { incidentAcknowledged } = usePreferences();
+  const open = incidentAcknowledged ? null : INCIDENT;
   return (
     <>
       <LargeTitle title="Alerts" />
-      <Card style={styles.firstBlock}>
-        <CardHeader icon={icons.warning} label="Needs a response" tone={Palette.emergency} trailing="Now" />
-        <Text style={styles.cardName}>Maya needs a recovery check</Text>
-        <Text style={styles.cardBody}>Her heart rate and skin temperature stayed up through a low-movement break.</Text>
-        <View style={styles.cardAction}>
-          <Button label="Acknowledge and locate" onPress={() => router.push({ pathname: '/detail', params: { kind: 'alert' } })} />
+      {open ? (
+        <View style={[styles.firstBlock, styles.liveAlert]}>
+          <LinearGradient colors={['rgba(255,69,58,0.28)', 'rgba(255,69,58,0)']} end={{ x: 0.5, y: 0.75 }} pointerEvents="none" start={{ x: 0.5, y: 0 }} style={StyleSheet.absoluteFill} />
+          <AlertIsland athlete={open.title.split(' needs')[0]} bpm={open.bpm} reason="Recovery check" />
+          <View style={styles.liveHead}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveEyebrow}>Needs a response · {open.minutes} min</Text>
+          </View>
+          <Text style={styles.liveTitle}>{open.athlete} isn’t recovering on this break</Text>
+          <Text style={styles.cardBody}>{open.detail} Find her, get her to shade and check how she feels.</Text>
+          <View style={styles.liveStats}>
+            <LiveStat label="Over usual" tone={Palette.emergency} unit="bpm" value="+32" />
+            <LiveStat label="Skin" tone={Palette.warning} value={temp.delta(0.8).replace(/[FC]$/, '')} />
+            <LiveStat label="Movement" tone={Palette.warning} value="Low" />
+            <LiveStat label="On break" unit="min" value={String(open.minutes)} />
+          </View>
+          <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/detail', params: { kind: 'alert' } })} style={({ pressed }) => [styles.alertPrimary, pressed && styles.pressed]}>
+            <HeatIcon name={ALERT_LOCATE} size={17} tintColor="#FFFFFF" weight="semibold" />
+            <Text style={styles.alertPrimaryText}>Acknowledge and locate</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => Alert.alert('Alex Thompson has this alert too', 'Athletic trainers get every recovery check at the same moment you do. Call them from your phone if you need them on the field now.')} style={({ pressed }) => [styles.alertSecondary, pressed && styles.pressed]}>
+            <Text style={styles.alertSecondaryText}>Is the athletic trainer on it?</Text>
+          </Pressable>
         </View>
-      </Card>
+      ) : (
+        <Card style={[styles.firstBlock, styles.allClear]}>
+          <View style={styles.allClearIcon}>
+            <HeatIcon name={icons.check} size={30} tintColor={Palette.safe} />
+          </View>
+          <View style={styles.flexOne}>
+            <Text style={styles.allClearTitle}>No open alerts</Text>
+            <Text style={styles.cardBody}>Maya’s recovery check was acknowledged. HeatSense keeps watching every paired band.</Text>
+          </View>
+        </Card>
+      )}
+
+      <View style={styles.alertSummary}>
+        <StatStrip
+          items={[
+            { label: 'Open', tone: open ? Palette.emergency : Palette.safe, value: open ? '1' : '0' },
+            { label: 'Handled today', value: open ? '3' : '4' },
+            { label: 'Avg. response', value: '1:12' },
+          ]}
+        />
+      </View>
 
       <SectionHeader title="Earlier today" />
-      <Group>
-        <Row detail="Jordan Lee acknowledged" title="Hydration reminder" value="3:52 PM" />
-        <Row detail="Practice plan updated" title="WBGT entered the Orange zone" value="3:35 PM" />
-        <Row detail="No readings above the Yellow zone" title="Pre-practice weather check" value="2:58 PM" />
-      </Group>
+      <AlertFeed items={EARLIER} />
 
       <SectionHeader title="Yesterday" />
-      <Group>
-        <Row detail="Eli Brooks · acknowledged by Alex Thompson" title="Recovery check" value="5:12 PM" />
-        <Row detail="Practice moved indoors for the last 20 minutes" title="WBGT entered the Red zone" value="4:41 PM" />
-      </Group>
+      <AlertFeed items={YESTERDAY} />
     </>
+  );
+}
+
+const ALERT_LOCATE = { ios: 'location.fill', android: 'my_location', web: 'my_location' } as const;
+
+function LiveStat({ label, tone, unit, value }: { label: string; tone?: string; unit?: string; value: string }) {
+  return (
+    <View accessible accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`} style={styles.liveStat}>
+      <View style={styles.liveStatValueRow}>
+        <Text style={[styles.liveStatValue, tone ? { color: tone } : null]}>{value}</Text>
+        {unit ? <Text style={styles.liveStatUnit}>{unit}</Text> : null}
+      </View>
+      <Text numberOfLines={1} style={styles.liveStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
+/** A day's alerts: a colored symbol for the kind of alert, what happened, when, and how it ended. */
+function AlertFeed({ items }: { items: readonly { color: string; detail: string; icon: IconName; status: string; time: string; title: string }[] }) {
+  return (
+    <Group inset={60}>
+      {items.map((item) => (
+        <Row
+          detail={item.detail}
+          key={`${item.time}-${item.title}`}
+          leading={<IconTile color={item.color} icon={item.icon} />}
+          title={item.title}
+          trailing={
+            <View style={styles.feedEnd}>
+              <Text style={styles.feedTime}>{item.time}</Text>
+              <Text style={styles.feedStatus}>{item.status}</Text>
+            </View>
+          }
+        />
+      ))}
+    </Group>
   );
 }
 
@@ -512,6 +628,7 @@ function SignalRow({ label, spark, tone, value }: { label: string; spark: number
   return (
     <Row
       leading={<Spark color={tone} values={spark} width={56} />}
+      metric
       title={label}
       value={value}
       valueTone={tone === Palette.inkMuted ? undefined : tone}
@@ -751,12 +868,15 @@ function ProfileScreen({ role }: { role: string }) {
           : <StatStrip items={[{ label: 'Athletes', value: '24' }, { label: 'Bands shared', value: '18' }, { label: 'Open alerts', tone: Palette.emergency, value: '1' }]} />}
       </View>
 
+      <SectionHeader title="Location" />
+      <LocationCard field={`Memorial Stadium · ${school}`} />
+
       <SectionHeader title="Team" />
       <Group>
         <Row title="Name" value={teamName} />
         {isAthlete ? (
           <Row
-            onPress={bandConnected ? disconnectBand : () => router.push('/dashboard?role=athlete&state=pairing')}
+            onPress={bandConnected ? disconnectBand : () => router.push('/pair-band')}
             title="HeatSense Band"
             value={bandConnected ? 'Connected' : 'Not connected'}
             valueTone={bandConnected ? Palette.safe : undefined}
@@ -829,7 +949,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.stat}>
       <Text style={styles.statValue}>{value}</Text>
-      <Text style={textStyles.footnote}>{label}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
@@ -902,80 +1022,107 @@ function Suggestion({ action, body, onAction, title }: { action: string; body: s
 const styles = StyleSheet.create({
   pressed: { opacity: 0.55 },
   categoryRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  categoryLabel: { ...Type.subhead, fontWeight: '600' },
+  categoryLabel: { ...Type.label },
   flexOne: { flex: 1 },
   planStats: { marginTop: Spacing.five },
+  planName: { color: Palette.inkMuted, ...Type.label, fontSize: 13, marginBottom: Spacing.three, marginTop: -Spacing.one },
+  todayTag: { backgroundColor: 'rgba(255,153,107,0.16)', borderRadius: 6, color: Palette.coral, overflow: 'hidden', paddingHorizontal: 7, paddingVertical: 3, ...Type.labelSmall, fontSize: 11 },
+  liveAlert: { backgroundColor: '#140E0F', borderColor: 'rgba(255,69,58,0.28)', borderCurve: 'continuous', borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', padding: Spacing.four, paddingTop: Spacing.three },
+  liveHead: { alignItems: 'center', flexDirection: 'row', gap: 6, marginTop: Spacing.four },
+  liveDot: { backgroundColor: Palette.emergency, borderRadius: 4, height: 8, width: 8 },
+  liveEyebrow: { color: Palette.emergency, ...Type.label, fontSize: 13 },
+  liveTitle: { color: Palette.ink, ...Type.title2, fontWeight: '700', marginTop: Spacing.one },
+  liveStats: { borderColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', marginTop: Spacing.four, paddingVertical: Spacing.three },
+  liveStat: { flex: 1, gap: 1 },
+  liveStatValueRow: { alignItems: 'baseline', flexDirection: 'row', gap: 2 },
+  liveStatValue: { color: Palette.ink, ...Type.figure, fontSize: 26, lineHeight: 29 },
+  liveStatUnit: { color: Palette.inkMuted, ...Type.labelSmall, fontSize: 10 },
+  liveStatLabel: { color: Palette.inkMuted, ...Type.labelSmall, fontSize: 11 },
+  alertPrimary: { alignItems: 'center', backgroundColor: Palette.emergency, borderCurve: 'continuous', borderRadius: 14, flexDirection: 'row', gap: Spacing.two, justifyContent: 'center', marginTop: Spacing.four, minHeight: 52 },
+  alertPrimaryText: { color: '#FFFFFF', ...Type.label, fontSize: 17 },
+  alertSecondary: { alignItems: 'center', justifyContent: 'center', marginTop: Spacing.one, minHeight: 44 },
+  alertSecondaryText: { color: Palette.ink, ...Type.subhead, fontWeight: '600' },
+  allClear: { alignItems: 'center', flexDirection: 'row', gap: Spacing.four },
+  allClearIcon: { alignItems: 'center', backgroundColor: 'rgba(48,209,88,0.14)', borderRadius: 26, height: 52, justifyContent: 'center', width: 52 },
+  allClearTitle: { color: Palette.ink, ...Type.title3, fontWeight: '700' },
+  alertSummary: { marginTop: Spacing.five },
+  feedEnd: { alignItems: 'flex-end', gap: 2 },
+  feedTime: { color: Palette.ink, ...Type.figure, fontSize: 17, lineHeight: 20 },
+  feedStatus: { color: Palette.inkMuted, ...Type.labelSmall, fontSize: 11 },
+  schedule: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  scheduleRow: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 72, paddingHorizontal: Spacing.four, paddingVertical: Spacing.three },
+  scheduleRowNow: { backgroundColor: 'rgba(255,153,107,0.08)' },
+  scheduleDivider: { borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth },
+  scheduleTime: { color: Palette.inkMuted, ...Type.figure, fontSize: 19, lineHeight: 22, width: 40 },
+  scheduleTrack: { alignItems: 'center', justifyContent: 'center', width: 6 },
+  scheduleBar: { borderRadius: 3, width: 4 },
+  scheduleCopy: { flex: 1, gap: 2 },
+  scheduleHead: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two },
+  scheduleTitle: { ...Type.label, fontSize: 15 },
+  scheduleNow: { backgroundColor: Palette.coral, borderRadius: 4, color: '#1A0E07', overflow: 'hidden', paddingHorizontal: 5, paddingVertical: 1, ...Type.labelSmall, fontSize: 10, lineHeight: 13 },
+  scheduleDetail: { color: Palette.inkMuted, ...Type.footnote },
+  scheduleLength: { alignItems: 'flex-end', minWidth: 30 },
+  scheduleMinutes: { color: Palette.ink, ...Type.figure, fontSize: 22, lineHeight: 24 },
+  scheduleUnit: { color: Palette.inkMuted, ...Type.labelSmall, fontSize: 10, lineHeight: 12 },
   planNote: { color: Palette.inkMuted, ...Type.footnote, marginTop: Spacing.three, textAlign: 'center' },
   readiness: { alignItems: 'center', flexDirection: 'row', gap: Spacing.five, marginTop: Spacing.three },
   readinessCopy: { flex: 1, gap: 2 },
   readinessTitle: { color: Palette.ink, ...Type.title3 },
   readinessSub: { color: Palette.inkMuted, ...Type.footnote },
   legendCol: { gap: 5, marginTop: Spacing.three },
-  ringNumber: { color: Palette.ink, fontSize: 32, fontWeight: '700', letterSpacing: 0.3, lineHeight: 36 },
-  ringOf: { color: Palette.inkMuted, ...Type.caption },
+  ringNumber: { color: Palette.ink, ...Type.figure, fontSize: 42, lineHeight: 44 },
+  ringOf: { color: Palette.inkMuted, ...Type.labelSmall },
   sosTitle: { color: Palette.ink, ...Type.title2, marginTop: Spacing.three },
   sosBody: { color: Palette.inkMuted, ...Type.subhead, marginTop: 2 },
   sosButton: { alignItems: 'center', backgroundColor: Palette.emergency, borderCurve: 'continuous', borderRadius: 16, flexDirection: 'row', gap: Spacing.two, justifyContent: 'center', marginTop: Spacing.five, minHeight: 54 },
-  sosButtonText: { color: '#FFFFFF', ...Type.headline },
+  sosButtonText: { color: '#FFFFFF', ...Type.label, fontSize: 18 },
   statusHero: { alignItems: 'center', marginTop: Spacing.five },
   statusTitle: { color: Palette.ink, ...Type.title2, marginTop: Spacing.four },
   statusBody: { color: Palette.inkMuted, ...Type.subhead, marginTop: Spacing.one, maxWidth: 300, textAlign: 'center' },
   sessionsHero: { marginTop: Spacing.five },
-  sessionsLabel: { color: Palette.inkMuted, ...Type.subhead },
+  sessionsLabel: { color: Palette.inkMuted, ...Type.label, fontSize: 13 },
   zoneDot: { borderRadius: 5, height: 10, width: 10 },
   topicGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three, marginTop: Spacing.five },
-  topic: { backgroundColor: Palette.surface, borderCurve: 'continuous', borderRadius: 22, gap: Spacing.four, minHeight: 148, padding: Spacing.four, width: '48%' },
-  topicDanger: { backgroundColor: '#241313' },
-  topicIcon: { alignItems: 'center', borderRadius: 16, height: 48, justifyContent: 'center', width: 48 },
+  topic: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, gap: Spacing.four, minHeight: 148, padding: Spacing.four, width: '48%' },
+  topicDanger: { backgroundColor: 'rgba(255,69,58,0.12)' },
+  topicIcon: { alignItems: 'center', borderRadius: 12, height: 48, justifyContent: 'center', width: 48 },
   topicTitle: { color: Palette.ink, ...Type.headline },
-  incidentHero: { borderCurve: 'continuous', borderRadius: 26, padding: Spacing.five },
+  incidentHero: { borderCurve: 'continuous', borderRadius: 16, padding: Spacing.five },
   incidentNumbers: { alignItems: 'flex-end', flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.two, marginTop: Spacing.four },
-  incidentBpm: { color: Palette.ink, fontSize: 56, fontWeight: '700', letterSpacing: 0.3, lineHeight: 60 },
-  incidentUnit: { color: Palette.inkMuted, ...Type.body, fontWeight: '500' },
+  incidentBpm: { color: Palette.ink, ...Type.figure, fontSize: 76, lineHeight: 76 },
+  incidentUnit: { color: Palette.inkMuted, ...Type.label, fontSize: 18 },
   incidentOver: { color: Palette.emergency, ...Type.footnote, fontWeight: '600', marginBottom: 6 },
   incidentTop: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three },
   incidentName: { color: Palette.ink, ...Type.title3 },
   incidentMeta: { color: Palette.inkMuted, ...Type.footnote },
-  needsPill: { backgroundColor: 'rgba(255,69,58,0.2)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5 },
-  needsPillText: { color: Palette.emergency, ...Type.footnote, fontWeight: '600' },
+  needsPill: { backgroundColor: 'rgba(255,69,58,0.2)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  needsPillText: { color: Palette.emergency, ...Type.labelSmall },
   identity: { alignItems: 'center', marginTop: Spacing.five },
   bigAvatar: { alignItems: 'center', borderRadius: 48, height: 96, justifyContent: 'center', width: 96 },
-  bigAvatarText: { color: '#2A1206', fontSize: 34, fontWeight: '700', letterSpacing: 0.5 },
+  bigAvatarText: { color: '#2A1206', fontFamily: Face.figure, fontSize: 42, letterSpacing: 0.5 },
   identityName: { color: Palette.ink, ...Type.title2, marginTop: Spacing.three },
   identityMeta: { color: Palette.inkMuted, ...Type.subhead, marginTop: 2 },
   identityStats: { marginTop: Spacing.five },
   contextBelow: { marginTop: Spacing.four },
   firstBlock: { marginTop: Spacing.three },
-  hero: { backgroundColor: Palette.surface, borderCurve: 'continuous', borderRadius: 24, justifyContent: 'flex-end', marginTop: Spacing.three, minHeight: 250, overflow: 'hidden' },
-  zoneTag: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 14, flexDirection: 'row', gap: 6, left: Spacing.four, paddingHorizontal: 10, paddingVertical: 6, position: 'absolute', top: Spacing.four },
-  zoneTagText: { color: '#FFFFFF', ...Type.footnote, fontWeight: '600' },
+  hero: { backgroundColor: Palette.surface, borderCurve: 'continuous', borderRadius: 18, justifyContent: 'flex-end', marginTop: Spacing.three, minHeight: 250, overflow: 'hidden' },
+  zoneTag: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, flexDirection: 'row', gap: 6, left: Spacing.four, paddingHorizontal: 9, paddingVertical: 6, position: 'absolute', top: Spacing.four },
+  zoneTagText: { color: '#FFFFFF', ...Type.labelSmall, fontSize: 13, lineHeight: 15 },
   heroCopy: { padding: Spacing.four },
   heroTitle: { color: '#FFFFFF', fontSize: 28, fontWeight: '600', letterSpacing: 0.3, lineHeight: 33 },
   heroButton: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.2)', borderCurve: 'continuous', borderRadius: 18, flexDirection: 'row', gap: 6, marginTop: Spacing.three, minHeight: 40, paddingHorizontal: Spacing.four },
   heroButtonText: { color: '#FFFFFF', ...Type.subhead, fontWeight: '600' },
-  todayBar: { gap: Spacing.one, marginTop: Spacing.three, padding: Spacing.two },
-  todayItem: { flex: 1, minHeight: 84, padding: Spacing.three },
-  todayItemCentered: { alignItems: 'center' },
+  todayBar: { gap: Spacing.one, marginTop: Spacing.three, paddingHorizontal: Spacing.two, paddingTop: Spacing.four, paddingBottom: Spacing.two },
+  todayItem: { alignItems: 'center', flex: 1, gap: 2, paddingBottom: Spacing.three },
   todayRow: { flexDirection: 'row' },
-  todayInner: { alignItems: 'flex-start', gap: 2 },
   todayPlanLine: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, marginHorizontal: Spacing.three, paddingBottom: Spacing.one, paddingTop: Spacing.three },
   todayPlanText: { color: Palette.inkMuted, ...Type.footnote },
-  compactField: { marginTop: Spacing.three, padding: Spacing.three },
-  compactBody: { alignItems: 'center', flexDirection: 'row', gap: Spacing.four, marginTop: Spacing.two },
-  compactCopy: { flex: 1 },
-  compactValueRow: { alignItems: 'baseline', flexDirection: 'row', gap: 4 },
-  compactValue: { color: Palette.ink, fontSize: 40, fontWeight: '600', letterSpacing: 0.3, lineHeight: 46 },
-  compactGuidance: { color: Palette.inkMuted, ...Type.footnote, marginTop: 2 },
-  compactChart: { marginTop: -Spacing.three, width: 128 },
   inviteRow: { marginTop: Spacing.three },
-  inviteActions: { alignItems: 'center', flexDirection: 'row', gap: Spacing.four },
-  todayVisual: { height: 30, justifyContent: 'center', marginBottom: Spacing.one },
-  todayNumber: { color: Palette.ink, fontSize: 28, fontWeight: '700', letterSpacing: 0.3, lineHeight: 32 },
-  todayValue: { color: Palette.ink, ...Type.subhead, fontWeight: '600' },
-  todayLabel: { color: Palette.inkMuted, ...Type.footnote },
-  miniBar: { flexDirection: 'row', gap: 3, height: 10, width: 104 },
-  miniWork: { backgroundColor: Palette.coral, borderRadius: 5 },
-  miniRest: { backgroundColor: Palette.info, borderRadius: 5 },
+  todayNumber: { color: Palette.ink, ...Type.figure, fontSize: 26, lineHeight: 28 },
+  todayNumberSmall: { fontSize: 19, lineHeight: 21 },
+  todayLabelRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: Spacing.two },
+  todayValue: { color: Palette.inkMuted, ...Type.footnote },
+  todayLabel: { color: Palette.ink, ...Type.label, fontSize: 14 },
   sheet: { backgroundColor: Palette.canvas, flex: 1 },
   sheetBar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.three, paddingHorizontal: Spacing.five, paddingTop: Spacing.five },
   sheetTitle: { color: Palette.ink, ...Type.title2 },
@@ -993,12 +1140,16 @@ const styles = StyleSheet.create({
   cardFootnote: { color: Palette.inkMuted, ...Type.footnote, marginTop: Spacing.three },
   cardAction: { marginTop: Spacing.four },
   valueRow: { alignItems: 'baseline', flexDirection: 'row', gap: 4, marginTop: Spacing.two },
-  heroValue: { color: Palette.ink, ...Type.display },
-  heroUnit: { color: Palette.inkMuted, ...Type.body, fontWeight: '500' },
-  zoneLine: { color: Palette.warning, ...Type.headline },
+  heroValue: { color: Palette.ink, ...Type.figure, fontSize: 64, lineHeight: 66 },
+  heroUnit: { color: Palette.inkMuted, ...Type.label, fontSize: 20, lineHeight: 24 },
+  zoneLine: { color: Palette.warning, ...Type.label },
+  fieldTop: { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between' },
+  fieldTrend: { alignItems: 'flex-end', gap: 2, paddingBottom: Spacing.two },
+  fieldTrendText: { color: Palette.inkMuted, ...Type.footnote },
   statRow: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', marginTop: Spacing.four, paddingTop: Spacing.three },
   stat: { flex: 1, gap: 1 },
-  statValue: { color: Palette.ink, ...Type.title3 },
+  statLabel: { color: Palette.inkMuted, ...Type.labelSmall },
+  statValue: { color: Palette.ink, ...Type.figure, fontSize: 26, lineHeight: 29 },
   signOut: { marginTop: Spacing.seven },
   track: { borderRadius: 4, flexDirection: 'row', gap: 2, height: 8, marginTop: Spacing.four, overflow: 'hidden' },
   segment: { minWidth: 6 },
@@ -1010,7 +1161,7 @@ const styles = StyleSheet.create({
   footnote: { color: Palette.inkMuted, ...Type.footnote, marginHorizontal: Spacing.four, marginTop: Spacing.three },
   statusTop: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three },
   step: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 14, height: 28, justifyContent: 'center', width: 28 },
-  stepText: { color: Palette.ink, ...Type.subhead, fontWeight: '600' },
+  stepText: { color: Palette.ink, fontFamily: Face.figure, fontSize: 16 },
   guideRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 52, paddingHorizontal: Spacing.four },
   guidePressed: { backgroundColor: 'rgba(255,255,255,0.08)' },
   guideTitle: { color: Palette.ink, ...Type.body },

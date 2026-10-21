@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { Circle, Line, Polyline } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
 
-import { Palette, Type } from '@/constants/theme';
+import { Face, Palette, Type } from '@/constants/theme';
 
 /** Bars like Health's day/hour charts: one color, the current bar at full strength. */
 export function BarChart({
@@ -45,9 +45,29 @@ export function BarChart({
   );
 }
 
-/** A plain line over faint gridlines, with the latest reading marked. Data points are drawn as given. */
+/** Smooth path through the points: each segment bends toward its neighbours without overshooting much. */
+function smooth(points: { x: number; y: number }[]) {
+  if (points.length < 2) return '';
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+    const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 };
+    const c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
+    d += ` C${c1.x},${c1.y} ${c2.x},${c2.y} ${p2.x},${p2.y}`;
+  }
+  return d;
+}
+
+/**
+ * A trend line with a soft fill beneath it, three gridlines labelled on the right, and the latest
+ * reading ringed. Data points are drawn as given; pass min and max to fix the scale.
+ */
 export function LineChart({
-  height = 96,
+  format = (value: number) => String(Math.round(value)),
+  height = 112,
   labels,
   max: fixedMax,
   min: fixedMin,
@@ -55,8 +75,10 @@ export function LineChart({
   tone,
   values,
 }: {
+  /** How the gridline values on the right are written. */
+  format?: (value: number) => string;
   height?: number;
-  labels?: [string, string];
+  labels?: string[];
   /** Fix the vertical range so small changes aren't blown up into big swings. */
   max?: number;
   min?: number;
@@ -65,46 +87,59 @@ export function LineChart({
   values: number[];
 }) {
   const [width, setWidth] = useState(0);
-  const pad = 6;
+  const id = `fill${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const gutter = 30;
+  const top = 10;
+  const bottom = 6;
   const min = fixedMin ?? Math.min(...values);
   const max = fixedMax ?? Math.max(...values);
   const span = max - min || 1;
-  const points = values.map((value, index) => {
-    const x = pad + (index / (values.length - 1)) * Math.max(0, width - pad * 2);
-    const y = pad + (1 - (value - min) / span) * (height - pad * 2);
-    return { x, y };
-  });
+  const plot = Math.max(0, width - gutter - 8);
+  const y = (value: number) => top + (1 - (value - min) / span) * (height - top - bottom);
+  const points = values.map((value, index) => ({ x: 6 + (index / (values.length - 1)) * plot, y: y(value) }));
   const last = points[points.length - 1];
+  const line = smooth(points);
+  const grid = [max, (max + min) / 2, min];
 
   return (
     <View accessible accessibilityLabel={summary} onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)} style={styles.chart}>
       <Svg height={height} width="100%">
-        {[0.25, 0.5, 0.75].map((fraction) => (
-          <Line key={fraction} stroke={Palette.border} strokeWidth={StyleSheetHairline} x1={0} x2={width} y1={height * fraction} y2={height * fraction} />
-        ))}
+        <Defs>
+          <SvgGradient id={id} x1="0" x2="0" y1="0" y2="1">
+            <Stop offset="0" stopColor={tone} stopOpacity={0.32} />
+            <Stop offset="1" stopColor={tone} stopOpacity={0} />
+          </SvgGradient>
+        </Defs>
         {width > 0 ? (
           <>
-            <Polyline fill="none" points={points.map((point) => `${point.x},${point.y}`).join(' ')} stroke={tone} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} />
-            <Circle cx={last.x} cy={last.y} fill={tone} r={4} />
+            {grid.map((value, index) => (
+              <Fragment key={index}>
+                <Line stroke="rgba(255,255,255,0.08)" strokeDasharray={index === 2 ? undefined : '2 4'} strokeWidth={1} x1={0} x2={width - gutter} y1={y(value)} y2={y(value)} />
+                <SvgText fill="rgba(235,235,245,0.5)" fontFamily={Face.label} fontSize={11} textAnchor="end" x={width} y={y(value) + 4}>{format(value)}</SvgText>
+              </Fragment>
+            ))}
+            <Path d={`${line} L${last.x},${height - bottom} L${points[0].x},${height - bottom} Z`} fill={`url(#${id})`} />
+            <Path d={line} fill="none" stroke={tone} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} />
+            <Line stroke={tone} strokeDasharray="2 3" strokeOpacity={0.5} strokeWidth={1} x1={last.x} x2={last.x} y1={last.y + 8} y2={height - bottom} />
+            <Circle cx={last.x} cy={last.y} fill={tone} opacity={0.22} r={10} />
+            <Circle cx={last.x} cy={last.y} fill={tone} r={4.5} stroke="#101214" strokeWidth={2} />
           </>
         ) : null}
       </Svg>
       {labels ? (
-        <View style={styles.axis}>
-          <Text style={styles.axisLabel}>{labels[0]}</Text>
-          <Text style={styles.axisLabel}>{labels[1]}</Text>
+        <View style={[styles.axis, { marginRight: gutter }]}>
+          {labels.map((label, index) => <Text key={index} style={styles.axisLabel}>{label}</Text>)}
         </View>
       ) : null}
     </View>
   );
 }
 
-const StyleSheetHairline = StyleSheet.hairlineWidth;
 
 const styles = StyleSheet.create({
   chart: { marginTop: 14 },
   bars: { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between' },
   bar: { borderRadius: 4 },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
-  axisLabel: { color: Palette.inkMuted, ...Type.caption },
+  axisLabel: { color: Palette.inkMuted, ...Type.labelSmall, letterSpacing: 0.6, textTransform: 'none' },
 });

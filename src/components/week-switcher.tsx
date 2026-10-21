@@ -7,6 +7,8 @@ import Animated, {
   type EasingFunctionFactory,
   cancelAnimation,
   interpolate,
+  FadeIn,
+  FadeOut,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -15,7 +17,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
-import Svg, { Defs, Ellipse, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, LinearGradient as SvgGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 import { ZONES, type Zone } from '@/lib/practice';
 import { useTemperature } from '@/state/preferences';
@@ -373,6 +375,119 @@ function MorphText({ reduced, style, text }: { reduced: boolean; style: object; 
   );
 }
 
+/* ─────────────────────────────── Heat through the day ─────────────────────────────── */
+
+// Monday's hourly WBGT, 7 AM to 7 PM. Other days reuse its shape, peaking at their own forecast,
+// with a flatter afternoon when cloud or rain keeps the sun off the field.
+const SHAPE = [62, 64, 67, 71, 75, 79, 82, 83, 84, 84, 83, 81, 78];
+const START_HOUR = 7;
+const NOW_HOUR = 16 + 10 / 60; // 4:10 PM, the latest reading today
+const PRACTICE: [number, number] = [16, 17.5];
+const CURVE_H = 104;
+const CURVE_LO = 55;
+const CURVE_HI = 93;
+const CURVE_TOP = 10;
+const CURVE_BOTTOM = 4;
+const PRACTICE_ROW = 20;
+
+function dayCurve(day: Day) {
+  const flatten = day.sky === 'clear' ? 1 : 0.7;
+  return SHAPE.map((value) => day.wbgtF - (SHAPE[8] - value) * flatten);
+}
+
+function smoothPath(points: { x: number; y: number }[]) {
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = points[Math.max(0, i - 1)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(points.length - 1, i + 2)];
+    d += ` C${p1.x + (p2.x - p0.x) / 6},${p1.y + (p2.y - p0.y) / 6} ${p2.x - (p3.x - p1.x) / 6},${p2.y - (p3.y - p1.y) / 6} ${p2.x},${p2.y}`;
+  }
+  return d;
+}
+
+/** One day's curve, drawn whole. Today's line is solid up to the latest reading and dotted after it. */
+function CurveLayer({ dayIndex, width }: { dayIndex: number; width: number }) {
+  const values = dayCurve(DAYS[dayIndex]);
+  const last = values.length - 1;
+  const px = (hour: number) => 4 + ((hour - START_HOUR) / last) * (width - 8);
+  const py = (value: number) => CURVE_TOP + (1 - (value - CURVE_LO) / (CURVE_HI - CURVE_LO)) * (CURVE_H - CURVE_TOP - CURVE_BOTTOM);
+  const valueAt = (hour: number) => {
+    const at = Math.min(last, Math.max(0, hour - START_HOUR));
+    const i = Math.min(last - 1, Math.floor(at));
+    return values[i] + (values[i + 1] - values[i]) * (at - i);
+  };
+  const isToday = dayIndex === 0;
+  const end = isToday ? NOW_HOUR : START_HOUR + last;
+  const upTo = (stop: number) => [
+    ...values.map((value, i) => ({ x: px(START_HOUR + i), y: py(value) })).filter((point) => point.x < px(stop)),
+    { x: px(stop), y: py(valueAt(stop)) },
+  ];
+  const seen = upTo(end);
+  const line = smoothPath(seen);
+  const whole = smoothPath(upTo(START_HOUR + last));
+  return (
+    <Svg height={CURVE_H} style={StyleSheet.absoluteFill} width={width}>
+      <Defs>
+        <SvgGradient id={`wx-curve-fill-${dayIndex}`} x1="0" x2="0" y1="0" y2="1">
+          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.3} />
+          <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+        </SvgGradient>
+      </Defs>
+      <Path d={`${line} L${px(end)},${CURVE_H} L${px(START_HOUR)},${CURVE_H} Z`} fill={`url(#wx-curve-fill-${dayIndex})`} />
+      {isToday ? <Path d={whole} fill="none" stroke="rgba(255,255,255,0.5)" strokeDasharray="2 5" strokeLinecap="round" strokeWidth={2} /> : null}
+      <Path d={line} fill="none" stroke="#FFFFFF" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} />
+      {isToday ? <Circle cx={px(NOW_HOUR)} cy={py(valueAt(NOW_HOUR))} fill={ZONES[DAYS[0].zone].color} r={5.5} stroke="#FFFFFF" strokeWidth={2.5} /> : null}
+    </Svg>
+  );
+}
+
+/**
+ * The selected day's heat as one curve over the practice window. Switching days fades the old curve
+ * out as the new one fades in. Other days are forecasts, drawn whole.
+ */
+function DayCurve({ index, reduced }: { index: number; reduced: boolean }) {
+  const temp = useTemperature();
+  const [width, setWidth] = useState(0);
+  const curve = dayCurve(DAYS[index]);
+  const last = SHAPE.length - 1;
+  const px = (hour: number) => 4 + ((hour - START_HOUR) / last) * (width - 8);
+  const label = (hour: number) => `${hour % 12 === 0 ? 12 : hour % 12} ${hour < 12 ? 'AM' : 'PM'}`;
+  return (
+    <View
+      accessibilityLabel={`Heat through the day on ${DAYS[index].name}: from ${temp.value(curve[0])} at 7 AM to a peak of ${temp.value(Math.max(...curve))}. Practice runs from 4 to 5:30 PM.`}
+      accessible
+      style={styles.curve}>
+      <Text style={styles.curveTitle}>Heat through the day</Text>
+      <View onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)} style={{ height: CURVE_H + PRACTICE_ROW }}>
+        {width > 0 ? (
+          <>
+            {/* The time axis, with practice marked on it as a brighter stretch and its hours. */}
+            <Svg height={CURVE_H + PRACTICE_ROW} style={styles.curveAxisLayer} width={width}>
+              <Rect fill="rgba(255,255,255,0.18)" height={2} rx={1} width={width - 8} x={4} y={CURVE_H - 1} />
+              <Rect fill="#FFFFFF" height={4} rx={2} width={px(PRACTICE[1]) - px(PRACTICE[0])} x={px(PRACTICE[0])} y={CURVE_H - 2} />
+              <SvgText fill="#FFFFFF" fontSize={11} fontWeight="600" textAnchor="middle" x={(px(PRACTICE[0]) + px(PRACTICE[1])) / 2} y={CURVE_H + 15}>Practice 4–5:30</SvgText>
+            </Svg>
+            <Animated.View
+              entering={reduced ? undefined : FadeIn.duration(M.digitDur).easing(smoothOut)}
+              exiting={reduced ? undefined : FadeOut.duration(M.skyFade / 2)}
+              key={index}
+              style={StyleSheet.absoluteFill}>
+              <CurveLayer dayIndex={index} width={width} />
+            </Animated.View>
+          </>
+        ) : null}
+      </View>
+      <View style={styles.curveAxis}>
+        <Text style={styles.hlText}>{label(START_HOUR)}</Text>
+        <Text style={styles.hlText}>{label(START_HOUR + last / 2)}</Text>
+        <Text style={styles.hlText}>{label(START_HOUR + last)}</Text>
+      </View>
+    </View>
+  );
+}
+
 /* ─────────────────────────────── Day tabs ─────────────────────────────── */
 
 const TAB_GAP = 3;
@@ -457,6 +572,7 @@ export function WeekSwitcher() {
           <Digits reduced={reduced} size={12} value={String(temp.value(day.lowF))} />
           <Text style={styles.hlText}>°</Text>
         </View>
+        <DayCurve index={index} reduced={reduced} />
       </View>
       <DayTabs index={index} onSelect={setIndex} reduced={reduced} />
     </View>
@@ -480,6 +596,10 @@ const styles = StyleSheet.create({
   cond: { color: '#FFFFFF', fontSize: 13, lineHeight: 20, marginTop: 4 },
   hl: { alignItems: 'center', flexDirection: 'row' },
   hlText: { color: MUTED, fontSize: 12, lineHeight: 16 },
+  curve: { marginTop: 18 },
+  curveTitle: { color: MUTED, fontSize: 12, fontWeight: '500', lineHeight: 16, marginBottom: 2 },
+  curveAxis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
+  curveAxisLayer: { left: 0, position: 'absolute', top: 0 },
   big: { alignItems: 'center', height: 64, justifyContent: 'center', width: 64 },
   iconLayer: { alignItems: 'center', height: 64, justifyContent: 'center', position: 'absolute', width: 64 },
   iconIdle: { alignItems: 'center', justifyContent: 'center' },

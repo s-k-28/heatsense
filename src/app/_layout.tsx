@@ -102,7 +102,8 @@ export default function RootLayout() {
           <Stack.Protected guard={canOpenAccountRoutes}>
             <Stack.Screen name="role" />
             <Stack.Screen name="ready" />
-            <Stack.Screen name="dashboard" />
+            {/* The dashboard is home base once set up: no swipe back into onboarding, which also frees left-edge drags for the content. */}
+            <Stack.Screen name="dashboard" options={{ gestureEnabled: false }} />
             <Stack.Screen name="detail" />
             <Stack.Screen name="setup/coach" />
             <Stack.Screen name="setup/athlete" />

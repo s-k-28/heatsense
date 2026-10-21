@@ -3,10 +3,10 @@ import { useSyncExternalStore } from 'react';
 
 // Dashboard preferences. The two switches persist on the device; the unread count is session-only
 // until notifications come from a server.
-type Preferences = { compactRoster: boolean; celsius: boolean; bandConnected: boolean; practiceLiveActivity: boolean; unreadNotifications: number; refreshedAt: number | null; incidentAcknowledged: boolean };
+type Preferences = { compactRoster: boolean; celsius: boolean; bandConnected: boolean; practiceLiveActivity: boolean; unreadNotifications: number; refreshedAt: number | null; incidentAcknowledged: boolean; practiceStartedAt: number | null };
 
 const STORAGE_KEY = 'heatsense.preferences.v1';
-let state: Preferences = { compactRoster: false, celsius: false, bandConnected: true, practiceLiveActivity: true, unreadNotifications: 3, refreshedAt: null, incidentAcknowledged: false };
+let state: Preferences = { compactRoster: false, celsius: false, bandConnected: true, practiceLiveActivity: true, unreadNotifications: 3, refreshedAt: null, incidentAcknowledged: false, practiceStartedAt: null };
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -31,6 +31,20 @@ export function setPreference(key: 'compactRoster' | 'celsius' | 'bandConnected'
 /** The coach has acknowledged the open incident, so the Dynamic Island goes back to normal. */
 export function acknowledgeIncident() {
   state = { ...state, incidentAcknowledged: true };
+  emit();
+}
+
+/**
+ * The coach started practice after checking the field. The clock starts now, and the session begins
+ * clean: the sample incident belongs to the practice that was already running.
+ */
+export function startPractice() {
+  state = { ...state, incidentAcknowledged: true, practiceStartedAt: Date.now() };
+  emit();
+}
+
+export function endPractice() {
+  state = { ...state, practiceStartedAt: null };
   emit();
 }
 

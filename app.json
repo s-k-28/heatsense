@@ -40,7 +40,14 @@
       ],
       "expo-image",
       "expo-web-browser",
-      "expo-widgets"
+      "expo-widgets",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "HeatSense uses your location to show the city and field where your team practices."
+        }
+      ],
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View } from 'react-native';
@@ -96,46 +96,9 @@ function EmptyTeam() {
   );
 }
 
+/** Pairing lives on its own full-screen device picker; the old link still lands there. */
 function Pairing() {
-  const later = useDelayed();
-  const [paired, setPaired] = useState(false);
-  const [pairing, setPairing] = useState(false);
-
-  const pair = () => {
-    if (pairing) return;
-    setPairing(true);
-    later(() => { setPairing(false); setPaired(true); setPreference('bandConnected', true); }, 1600);
-  };
-
-  return (
-    <>
-      <LargeTitle title={paired ? 'Band paired' : 'Pair your band'} />
-      <Text style={styles.contextLine}>
-        {paired ? 'Personal trends will show up after your next session.' : 'Keep the band close to this phone. The team’s WBGT plan works without it.'}
-      </Text>
-
-      {!paired ? (
-        <View style={styles.searching}>
-          <ActivityIndicator color={Palette.inkMuted} />
-          <Text style={styles.muted}>{pairing ? 'Pairing…' : 'Searching nearby…'}</Text>
-        </View>
-      ) : null}
-
-      <Group inset={56} style={paired ? styles.afterIntro : undefined}>
-        <Row
-          detail={paired ? 'Connected' : 'Nearby · ready to pair'}
-          leading={<HeatIcon name={paired ? icons.check : icons.band} size={24} tintColor={paired ? Palette.safe : Palette.ink} />}
-          title="HeatSense Band 02A7"
-        />
-      </Group>
-      <View style={styles.action}>
-        {paired
-          ? <Button label="Done" onPress={() => router.replace('/dashboard?role=athlete')} />
-          : <Button label={pairing ? 'Pairing…' : 'Pair this band'} onPress={pair} />}
-      </View>
-      <Text style={styles.footnote}>Pairing adds recovery, skin, sweat and movement trends. The band isn’t a medical device, and you choose what to share.</Text>
-    </>
-  );
+  return <Redirect href="/pair-band" />;
 }
 
 function NoBand() {
@@ -147,7 +110,7 @@ function NoBand() {
       <Group>
         <Row detail="Pair a band to add recovery, skin, sweat and movement trends." title="Band not connected" value="Off" />
       </Group>
-      <View style={styles.action}><Button label="Pair a band" onPress={() => router.replace('/dashboard?role=athlete&state=pairing')} /></View>
+      <View style={styles.action}><Button label="Pair a band" onPress={() => router.push('/pair-band')} /></View>
     </>
   );
 }
