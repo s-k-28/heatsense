@@ -27,15 +27,27 @@ export const Palette = {
   emergency: '#FF453A',
   info: '#0A84FF',
   white: '#FFFFFF',
+  // Dashboard cards sit on a slate gradient, so they're a light veil over it rather than a flat gray.
+  card: 'rgba(255,255,255,0.07)',
+  cardEdge: 'rgba(255,255,255,0.07)',
   zoneOrangeDeep: '#7A3A16',
   zoneYellowDeep: '#7A5C0E',
   zoneRedDeep: '#6E1C14',
   zoneBlackDeep: '#000000',
 } as const;
 
-// Apple's text styles (SF Pro, the iOS system font). No fontFamily on purpose: leaving it
-// unset gives the system font and lets text follow the user's Dynamic Type setting.
+// Two families, each with one job. Barlow Condensed (bundled) sets figures and the short uppercase
+// labels above them, like an instrument panel. SF Pro sets anything read as a sentence, so titles,
+// rows and explanations keep the system font and Dynamic Type.
+export const Face = {
+  figure: 'BarlowCondensed_700Bold',
+  label: 'BarlowCondensed_600SemiBold',
+} as const;
+
 export const Type = {
+  label: { fontFamily: Face.label, fontSize: 15, lineHeight: 18, letterSpacing: 1.3, textTransform: 'uppercase' },
+  labelSmall: { fontFamily: Face.label, fontSize: 12, lineHeight: 15, letterSpacing: 1.1, textTransform: 'uppercase' },
+  figure: { fontFamily: Face.figure, fontSize: 30, lineHeight: 33, letterSpacing: 0.2 },
   largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: '700', letterSpacing: 0.37 },
   title2: { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: 0.35 },
   title3: { fontSize: 20, lineHeight: 25, fontWeight: '600', letterSpacing: 0.38 },

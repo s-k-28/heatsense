@@ -71,7 +71,10 @@ export function readinessFor(reading: FieldReading | null, plan: PracticePlan | 
  * An incident that needs the coach right now (sample data; null means all clear). The Dynamic Island
  * switches to a warning while one is open, and goes back once the coach acknowledges it.
  */
-export const INCIDENT: { detail: string; title: string } | null = {
+export const INCIDENT: { athlete: string; bpm: number; detail: string; minutes: number; title: string } | null = {
+  athlete: 'Maya Chen',
+  bpm: 142,
+  minutes: 6,
   title: 'Maya Chen needs a recovery check',
   detail: 'Heart rate and skin temperature stayed up through a low-movement break.',
 };

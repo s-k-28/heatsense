@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
-import Svg, { Ellipse, G, Path } from 'react-native-svg';
+import Svg, { Ellipse, Path } from 'react-native-svg';
 
 import { Entry } from '@/constants/entry-theme';
 
@@ -14,7 +14,8 @@ export const FIELDLINE_PARTS = {
   band: 'M130 35 C134 112 160 133 207 137 C254 142 279 176 282 231 C263 196 229 192 192 187 C156 182 124 179 108 157Z',
   body: 'M107 27 Q147 4 151 37 C150 81 132 118 120 157 L94 237 Q90 252 72 252 H42 Q27 252 33 232 L74 100 Q82 74 79 59 Q78 38 107 27Z',
   fold: 'M80 116 C89 77 43 91 54 57 C61 36 96 22 128 14 C142 10 151 18 151 37 C144 11 134 21 119 35 C88 63 87 90 80 116Z',
-  brow: 'M102 65 L129 56',
+  /** A small smile under the eyes, tilted with the head. */
+  mouth: 'M106 97 Q117 104 127 91',
 } as const;
 /** The field lines behind him in FieldlineScene (viewBox 0 0 400 220, stretched). */
 export const FIELD_LINES = {
@@ -45,11 +46,10 @@ export function FieldlineCharacter({ height = 220, reaction = null }: FieldlineP
           <Path d={FIELDLINE_PARTS.band} fill={Entry.blue} />
           <Path d={FIELDLINE_PARTS.body} fill={FIELDLINE_FILL} stroke={FIELDLINE_LINE} strokeWidth={1.5} />
           <Path d={FIELDLINE_PARTS.fold} fill={Entry.peach} />
-          <G transform={reaction === 'athlete' ? 'translate(3 0)' : 'translate(0 0)'}>
-            <Path d={reaction === 'coach' ? 'M102 69 L129 59' : FIELDLINE_PARTS.brow} stroke={Entry.ink} strokeWidth={4.5} strokeLinecap="round" />
-            <Ellipse cx="106" cy="84" rx="5" ry="8" fill={Entry.ink} />
-            <Ellipse cx="126" cy="78" rx="5" ry="8" fill={Entry.ink} />
-          </G>
+          {/* The face is fixed to the body: it only moves when he does. */}
+          <Ellipse cx="106" cy="80" rx="5" ry="8" fill={Entry.ink} />
+          <Ellipse cx="126" cy="74" rx="5" ry="8" fill={Entry.ink} />
+          <Path d={FIELDLINE_PARTS.mouth} stroke={Entry.ink} strokeWidth={4} strokeLinecap="round" fill="none" />
         </Svg>
       </Animated.View>
     </View>

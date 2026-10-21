@@ -10,7 +10,6 @@ import Animated, {
   useSharedValue,
   withDelay,
   withRepeat,
-  withSequence,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -25,7 +24,7 @@ import { introSeenNow, loadIntroSeen, markIntroSeen } from '@/state/first-launch
 // Welcome, with a one-time brand intro. A single clock (0 → T.end ms) drives every element, so the
 // sequence reads as one piece and Get started can finish it instantly. Phases overlap on purpose:
 //   logo     the two real halves of the H meet in the center, hold, then fly on an arc to the header
-//   mascot   Fieldline builds from his own shapes, then tilts toward you, blinks, and his band flows
+//   mascot   Fieldline builds from his own shapes, then tilts toward you, and his band flows
 //   copy     each headline line rises out of its own mask, then the subtitle
 //   close    Heat / Plan / Protect, Get started, footer
 // Afterward he idles on loops of different lengths, so the motion never looks mechanical.
@@ -171,7 +170,8 @@ function AnimatedFieldline({ alive, clock, height }: { alive: boolean; clock: Sh
   const shadow = useReveal(clock, [T.backLeg[0], T.body[1]]);
   const backLeg = useReveal(clock, T.backLeg, { y: 24, spring: true });
   const body = useReveal(clock, T.body, { y: 34, rotate: -5, spring: true });
-  const face = useReveal(clock, T.face, { y: -4 });
+  // The face fades in where it sits and then stays put on the body, moving only with him.
+  const face = useReveal(clock, T.face);
 
   // Idle loops, each on its own period so they drift in and out of phase.
   const float = useLoop(alive, 5200, idleDelay);
@@ -201,7 +201,7 @@ function AnimatedFieldline({ alive, clock, height }: { alive: boolean; clock: Sh
     return { transform: [{ translateX: 5 * flow }, { scaleX: 1 + 0.04 * flow + 0.02 * breathe.value }, { scaleY: 1 + 0.03 * breathe.value }] };
   });
 
-  // Signature: he leans toward you and comes back, with a blink at the top of the lean.
+  // Signature: he leans toward you and comes back.
   const whole = useAnimatedStyle(() => {
     const lean = bump(easeInOut(progress(clock.value, T.signature)));
     const enter = easeOut(progress(clock.value, [T.backLeg[0], T.body[1]]));
@@ -213,27 +213,6 @@ function AnimatedFieldline({ alive, clock, height }: { alive: boolean; clock: Sh
       ],
     };
   });
-
-  // Blinks: one during the lean, then irregular blinks and an occasional wink of the right eye.
-  const leftLid = useSharedValue(1);
-  const rightLid = useSharedValue(1);
-  useEffect(() => {
-    if (!alive) return;
-    const close = withTiming(0.08, { duration: 80 });
-    const open = withTiming(1, { duration: 140 });
-    const hold = (ms: number) => withDelay(ms, withTiming(1, { duration: 0 }));
-    const wait = (ms: number) => withDelay(ms, withTiming(1, { duration: 220 }));
-    // Both eyes share one schedule; the right eye winks where the left eye only waits.
-    leftLid.set(withDelay(T.end + 1600, withRepeat(withSequence(close, open, hold(3400), close, open, hold(2100), close, open, hold(5200), wait(0), hold(2900)), -1)));
-    rightLid.set(withDelay(T.end + 1600, withRepeat(withSequence(close, open, hold(3400), close, open, hold(2100), close, open, hold(5200), withSequence(withTiming(0.08, { duration: 90 }), withTiming(1, { duration: 130 })), hold(2900)), -1)));
-    return () => { cancelAnimation(leftLid); cancelAnimation(rightLid); };
-  }, [alive, leftLid, rightLid]);
-  const signatureBlink = (t: number) => {
-    'worklet';
-    return 1 - 0.92 * bump(progress(t, [T.signature[0] + 260, T.signature[0] + 480]));
-  };
-  const leftEye = useAnimatedStyle(() => ({ transform: [{ scaleY: Math.min(leftLid.value, signatureBlink(clock.value)) }] }));
-  const rightEye = useAnimatedStyle(() => ({ transform: [{ scaleY: Math.min(rightLid.value, signatureBlink(clock.value)) }] }));
 
   return (
     <View accessibilityLabel="Fieldline, the H-shaped HeatSense companion" accessibilityRole="image" accessible style={{ height, width }}>
@@ -251,14 +230,10 @@ function AnimatedFieldline({ alive, clock, height }: { alive: boolean; clock: Sh
         </Animated.View>
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, face]}>
           <Svg aria-hidden height={height} style={StyleSheet.absoluteFill} viewBox={FIELDLINE_VIEWBOX} width={width}>
-            <Path d={FIELDLINE_PARTS.brow} stroke={Entry.ink} strokeLinecap="round" strokeWidth={4.5} />
+            <Ellipse cx="106" cy="80" fill={Entry.ink} rx="5" ry="8" />
+            <Ellipse cx="126" cy="74" fill={Entry.ink} rx="5" ry="8" />
+            <Path d={FIELDLINE_PARTS.mouth} fill="none" stroke={Entry.ink} strokeLinecap="round" strokeWidth={4} />
           </Svg>
-          <Animated.View style={[StyleSheet.absoluteFill, styles.leftEyeOrigin, leftEye]}>
-            <Svg aria-hidden height={height} viewBox={FIELDLINE_VIEWBOX} width={width}><Ellipse cx="106" cy="84" fill={Entry.ink} rx="5" ry="8" /></Svg>
-          </Animated.View>
-          <Animated.View style={[StyleSheet.absoluteFill, styles.rightEyeOrigin, rightEye]}>
-            <Svg aria-hidden height={height} viewBox={FIELDLINE_VIEWBOX} width={width}><Ellipse cx="126" cy="78" fill={Entry.ink} rx="5" ry="8" /></Svg>
-          </Animated.View>
         </Animated.View>
       </Animated.View>
     </View>
@@ -495,8 +470,6 @@ const styles = StyleSheet.create({
   bandMask: { bottom: 0, left: 0, overflow: 'hidden', position: 'absolute', top: 0 },
   bandOrigin: { transformOrigin: '34% 50%' },
   foldOrigin: { transformOrigin: '30% 40%' },
-  leftEyeOrigin: { transformOrigin: '33.1% 31.1%' },
-  rightEyeOrigin: { transformOrigin: '39.4% 28.9%' },
   headline: { color: Entry.ink, fontFamily: Entry.display, fontSize: 56, letterSpacing: -0.2, lineHeight: 60 },
   headlineCompact: { fontSize: 46, lineHeight: 50 },
   subtitle: { color: Entry.muted, fontFamily: Entry.body, fontSize: 16, letterSpacing: -0.1, lineHeight: 24, marginTop: 12, maxWidth: 330 },

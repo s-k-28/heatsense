@@ -13,7 +13,7 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-/** Colored category name with its symbol, the way Health labels a card. Tappable when it leads somewhere. */
+/** Uppercase card label with its symbol. White unless the card reports a state. Tappable when it leads somewhere. */
 export function CardHeader({
   icon,
   label,
@@ -28,7 +28,7 @@ export function CardHeader({
   tone?: string;
   trailing?: string;
 }) {
-  const color = tone ?? Palette.inkMuted;
+  const color = tone ?? Palette.ink;
   const content = (
     <View style={styles.cardHeader}>
       <View style={styles.categoryRow}>
@@ -37,7 +37,7 @@ export function CardHeader({
       </View>
       <View style={styles.categoryRow}>
         {trailing ? <Text style={styles.cardMeta}>{trailing}</Text> : null}
-        {onPress ? <HeatIcon name={chevron} size={13} tintColor={Palette.inkFaint} weight="semibold" /> : null}
+        {onPress ? <HeatIcon name={chevron} size={11} tintColor={Palette.inkMuted} weight="bold" /> : null}
       </View>
     </View>
   );
@@ -71,6 +71,7 @@ export function Row({
   detail,
   strong,
   leading,
+  metric,
   onPress,
   showChevron,
   title,
@@ -85,6 +86,8 @@ export function Row({
   strong?: boolean;
   detail?: string;
   leading?: ReactNode;
+  /** A reading rather than a setting: uppercase label, value set in figures. */
+  metric?: boolean;
   onPress?: () => void;
   showChevron?: boolean;
   title: string;
@@ -96,10 +99,10 @@ export function Row({
     <View style={[styles.row, pressed && styles.rowPressed]}>
       {leading}
       <View style={[styles.rowCopy, centered && styles.rowCopyCentered]}>
-        <Text style={[styles.rowTitle, strong && styles.rowTitleStrong, destructive && styles.rowTitleDestructive]}>{title}</Text>
+        <Text style={[styles.rowTitle, metric && styles.rowTitleMetric, strong && styles.rowTitleStrong, destructive && styles.rowTitleDestructive]}>{title}</Text>
         {detail ? <Text style={styles.rowDetail}>{detail}</Text> : null}
       </View>
-      {value ? <Text style={[styles.rowValue, valueTone ? { color: valueTone } : null]}>{value}</Text> : null}
+      {value ? <Text style={[styles.rowValue, metric && styles.rowValueMetric, valueTone ? { color: valueTone } : null]}>{value}</Text> : null}
       {trailing}
       {showChevron ?? Boolean(onPress) ? <HeatIcon name={chevron} size={13} tintColor={Palette.inkFaint} weight="semibold" /> : null}
     </View>
@@ -164,12 +167,12 @@ export const textStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.55 },
-  card: { backgroundColor: Palette.surface, borderCurve: 'continuous', borderRadius: Radius.large, padding: Spacing.four },
+  card: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, padding: Spacing.four },
   cardHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 24 },
   categoryRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  categoryLabel: { ...Type.subhead, fontWeight: '600' },
-  cardMeta: { color: Palette.inkMuted, ...Type.subhead },
-  group: { backgroundColor: Palette.surface, borderCurve: 'continuous', borderRadius: Radius.large, overflow: 'hidden' },
+  categoryLabel: { ...Type.label },
+  cardMeta: { color: Palette.inkMuted, ...Type.footnote },
+  group: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   separator: { backgroundColor: Palette.border, height: StyleSheet.hairlineWidth },
   row: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 52, paddingHorizontal: Spacing.four, paddingVertical: 10 },
   rowPressed: { backgroundColor: 'rgba(255,255,255,0.08)' },
@@ -178,6 +181,8 @@ const styles = StyleSheet.create({
   rowTitleStrong: { fontWeight: '600' },
   rowTitleDestructive: { color: Palette.emergency },
   rowTitle: { color: Palette.ink, ...Type.body },
+  rowTitleMetric: { ...Type.label },
+  rowValueMetric: { ...Type.figure, fontSize: 24, lineHeight: 28 },
   rowDetail: { color: Palette.inkMuted, ...Type.subhead },
   rowValue: { color: Palette.inkMuted, ...Type.body, flexShrink: 0 },
   iconTile: { alignItems: 'center', borderCurve: 'continuous', borderRadius: 7, height: 29, justifyContent: 'center', width: 29 },
@@ -186,7 +191,7 @@ const styles = StyleSheet.create({
   button: { alignItems: 'center', borderCurve: 'continuous', borderRadius: 14, justifyContent: 'center', minHeight: 50, paddingHorizontal: Spacing.five },
   buttonTint: { backgroundColor: Palette.coral },
   buttonGray: { backgroundColor: Palette.fill },
-  buttonLabel: { ...Type.headline },
+  buttonLabel: { ...Type.label, fontSize: 16, lineHeight: 20 },
   buttonLabelTint: { color: '#1A0E07' },
   buttonLabelGray: { color: Palette.ink },
   link: { color: Palette.coral, ...Type.body },
