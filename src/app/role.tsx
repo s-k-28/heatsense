@@ -7,6 +7,7 @@ import { setOnboardingRole, useOnboardingRole, type OnboardingRole } from '@/sta
 const ROLES = [
   { value: 'coach', label: 'Coach', detail: 'Run practices and look after the team' },
   { value: 'athlete', label: 'Athlete', detail: 'Join your team and wear the band' },
+  { value: 'trainer', label: 'Athletic trainer', detail: 'Follow readings and look after athletes' },
 ] as const satisfies readonly { value: OnboardingRole; label: string; detail: string }[];
 
 export default function RoleScreen() {

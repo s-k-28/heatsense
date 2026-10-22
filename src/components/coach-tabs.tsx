@@ -13,7 +13,7 @@ import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, 
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
 import { buildSchedule, clockTime, usePracticePlans } from '@/state/practice-plans';
 import { useAuthSession } from '@/state/auth-session';
-import { useCoachData, useRoster } from '@/state/team-session';
+import { useCoachData, useRoster, useTrainers, type SessionRole } from '@/state/team-session';
 
 // Team, Plan and Profile, decluttered after WHOOP: one heading per section, small caps groups,
 // full-width rows and metric tiles. Every number comes from the team's real data or the UIL chart.
@@ -30,13 +30,14 @@ function useMyTeam() {
 
 /* ─────────────────────────────── Team ─────────────────────────────── */
 
-export function TeamTab({ readOnly = false }: { readOnly?: boolean }) {
-  const data = useCoachData();
+export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boolean; role?: SessionRole }) {
+  const data = useCoachData(role);
   const mine = useMyTeam();
   const roster = useRoster(data?.teamId ?? null);
   const [busy, setBusy] = useState<string | null>(null);
   const waiting = roster?.filter((m) => m.status === 'pending') ?? [];
-  const active = roster?.filter((m) => m.status === 'active') ?? [];
+  const staff = roster?.filter((m) => m.status === 'active' && m.role === 'trainer') ?? [];
+  const active = roster?.filter((m) => m.status === 'active' && m.role === 'athlete') ?? [];
 
   const respond = async (uid: string, approve: boolean) => {
     if (!data?.teamId) return;
@@ -53,6 +54,7 @@ export function TeamTab({ readOnly = false }: { readOnly?: boolean }) {
       <Text style={styles.teamName}>{mine?.team.teamName ?? 'Your team'}</Text>
       <Text style={styles.teamMeta}>{mine ? [mine.team.school, mine.team.sport, mine.team.level].filter(Boolean).join(' · ') : 'Create a team in setup to invite athletes.'}</Text>
 
+      {readOnly ? null : <>
       <CapsLabel>Getting started</CapsLabel>
       <Rows>
         <ListRow
@@ -62,6 +64,7 @@ export function TeamTab({ readOnly = false }: { readOnly?: boolean }) {
           value={code ? code.replace(/(\d{3})(\d{3})/, '$1 $2') : '------'}
         />
       </Rows>
+      </>}
 
       {waiting.length && !readOnly ? (
         <>
@@ -69,7 +72,7 @@ export function TeamTab({ readOnly = false }: { readOnly?: boolean }) {
           <Rows>
             {waiting.map((m) => (
               <ListRow
-                detail={m.email ?? undefined}
+                detail={`${m.role === 'trainer' ? 'Athletic trainer' : 'Athlete'}${m.email ? ` · ${m.email}` : ''}`}
                 key={m.userId}
                 label={m.displayName ?? 'Athlete'}
                 trailing={
@@ -84,7 +87,16 @@ export function TeamTab({ readOnly = false }: { readOnly?: boolean }) {
         </>
       ) : null}
 
-      <SectionTitle title={`Roster${active.length ? ` · ${active.length}` : ''}`} />
+      {staff.length ? (
+        <>
+          <SectionTitle title="Staff" />
+          <Rows>
+            {staff.map((m) => <ListRow detail="Athletic trainer" key={m.userId} label={m.displayName ?? 'Trainer'} />)}
+          </Rows>
+        </>
+      ) : null}
+
+      <SectionTitle title={`Athletes${active.length ? ` · ${active.length}` : ''}`} />
       {active.length ? (
         <Rows>
           {active.map((m) => (
@@ -170,6 +182,8 @@ export function ZoneRules({ latest, uilClass }: { latest: FieldReading | null; u
 
 export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Athlete' }) {
   const { user } = useAuthSession();
+  const member = useCoachData(role === 'Athlete' ? 'athlete' : role === 'Athletic trainer' ? 'trainer' : 'coach');
+  const trainers = useTrainers(role === 'Athlete' ? member?.teamId ?? null : null);
   const mine = useMyTeam();
   const { bandConnected, celsius, practiceLiveActivity } = usePreferences();
   const name = user?.displayName?.trim() || 'Your profile';
@@ -194,6 +208,7 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
       <CapsLabel>Account</CapsLabel>
       <Rows>
         <ListRow label="Team" value={mine?.team.teamName ?? '--'} />
+        {role === 'Athlete' ? <ListRow label="Athletic trainer" value={trainers.length ? trainers.map((t) => t.displayName ?? 'Trainer').join(', ') : 'None yet'} /> : null}
         {role === 'Athlete' ? (
           <ListRow label="HeatSense Band" onPress={() => router.push('/pair-band')} value={bandConnected ? 'Connected' : 'Not paired'} valueTone={bandConnected ? Palette.safe : Palette.inkMuted} />
         ) : null}

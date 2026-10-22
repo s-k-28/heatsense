@@ -4,7 +4,7 @@ import { SAMPLE_READING } from '@/lib/practice';
 import { watchActiveSession, watchReadings, type FieldReading, type PracticeSession } from '@/services/practice-sessions';
 import { firebaseAuth, firestore } from '@/services/firebase';
 import { getMyTeamInvite, watchMyMembership } from '@/services/team-invites';
-import { watchRoster, type RosterMember } from '@/services/team-roster';
+import { watchRoster, watchTrainers, type RosterMember } from '@/services/team-roster';
 
 // The team's open practice session, live: the coach's own team, or the team an athlete belongs to.
 // Every Home and the Practice sheet read this, so they always agree on the latest reading.
@@ -17,7 +17,7 @@ export type TeamSession =
 
 let cachedTeamId: string | null | undefined;
 
-export type SessionRole = 'coach' | 'athlete';
+export type SessionRole = 'coach' | 'athlete' | 'trainer';
 
 export function useTeamSession(role: SessionRole = 'coach'): TeamSession {
   const [teamId, setTeamId] = useState<string | null | undefined>(role === 'coach' ? cachedTeamId : undefined);
@@ -25,9 +25,9 @@ export function useTeamSession(role: SessionRole = 'coach'): TeamSession {
   const [readings, setReadings] = useState<FieldReading[]>([]);
   const [failed, setFailed] = useState(false);
 
-  // Coaches find their team through their invite; athletes through an approved membership.
+  // Coaches find their team through their invite; athletes and trainers through an approved membership.
   useEffect(() => {
-    if (role !== 'athlete') return;
+    if (role === 'coach') return;
     const uid = firebaseAuth?.currentUser?.uid;
     if (!uid) return;
     return watchMyMembership(uid, (membership) => setTeamId(membership?.status === 'active' ? membership.teamId : null), () => setTeamId(null));
@@ -52,8 +52,8 @@ export function useTeamSession(role: SessionRole = 'coach'): TeamSession {
     return watchReadings(session, setReadings, () => setFailed(true));
   }, [session]);
 
-  // No signed-in athlete means no membership to wait for.
-  if (teamId === undefined && role === 'athlete' && !firebaseAuth?.currentUser) return { status: 'no-team' };
+  // No signed-in member means no membership to wait for.
+  if (teamId === undefined && role !== 'coach' && !firebaseAuth?.currentUser) return { status: 'no-team' };
   if (teamId === undefined) return { status: 'loading' };
   if (!teamId) return { status: 'no-team' };
   if (failed) return { status: 'error' };
@@ -102,4 +102,14 @@ export function useNow(ms = 15_000) {
     return () => clearInterval(tick);
   }, [ms]);
   return now;
+}
+
+/** For athletes: the team's approved athletic trainers. Empty without a team or any trainer. */
+export function useTrainers(teamId: string | null) {
+  const [trainers, setTrainers] = useState<{ userId: string; displayName: string | null }[]>([]);
+  useEffect(() => {
+    if (!teamId) return;
+    return watchTrainers(teamId, setTrainers, () => setTrainers([]));
+  }, [teamId]);
+  return teamId ? trainers : [];
 }

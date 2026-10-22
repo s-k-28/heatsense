@@ -25,7 +25,7 @@ import Svg, { Path } from 'react-native-svg';
 import { RosterMark } from '@/components/onboarding-art';
 import { StepLink, StepScreen } from '@/components/step-kit';
 import { Entry } from '@/constants/entry-theme';
-import { INVITE_CODE_LENGTH, lookupInvite, NETWORK_ERROR, requestToJoinTeam, watchMyMembership, type InviteLookup } from '@/services/team-invites';
+import { INVITE_CODE_LENGTH, lookupInvite, NETWORK_ERROR, requestToJoinTeam, type MemberRole, watchMyMembership, type InviteLookup } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
 
 // Athlete onboarding, step 1: join a team with the coach's invitation code.
@@ -45,7 +45,8 @@ const T = {
 
 const easeOut = Easing.out(Easing.cubic);
 // Next: athlete onboarding page 1, "Make it yours." (whether or not they joined a team).
-const NEXT_STEP = '/athlete/profile';
+// Athletes go on to their profile; trainers have no profile steps and land on What to expect.
+const NEXT_STEP: Record<MemberRole, string> = { athlete: '/athlete/profile', trainer: '/ready?role=Athletic%20trainer' };
 
 type Check =
   | { state: 'idle' }
@@ -89,10 +90,15 @@ function lookupMessage(lookup: InviteLookup) {
 }
 
 export default function AthleteJoinTeamScreen() {
-  return <Content />;
+  return <JoinTeamScreen role="athlete" />;
 }
 
-function Content() {
+/** Join a team with the coach's code, as an athlete or an athletic trainer. */
+export function JoinTeamScreen({ role }: { role: MemberRole }) {
+  return <Content role={role} />;
+}
+
+function Content({ role }: { role: MemberRole }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const inputRef = useRef<TextInput>(null);
@@ -173,7 +179,7 @@ function Content() {
     setJoining(true);
     setJoinError(null);
     try {
-      const request = await requestToJoinTeam(code);
+      const request = await requestToJoinTeam(code, role);
       setAthleteTeam({ status: request.status, teamId: request.teamId });
       setPending(request.status);
     } catch (reason) {
@@ -185,7 +191,7 @@ function Content() {
 
   const skip = () => {
     setAthleteTeam({ status: 'unassigned', teamId: null });
-    router.push(NEXT_STEP as never);
+    router.push(NEXT_STEP[role] as never);
   };
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/role'));
@@ -195,7 +201,7 @@ function Content() {
     <StepScreen
       icon={<RosterMark size={96} />}
       next={pending
-        ? { enabled: true, label: 'Continue', onPress: () => router.push(NEXT_STEP as never) }
+        ? { enabled: true, label: 'Continue', onPress: () => router.push(NEXT_STEP[role] as never) }
         : { enabled: valid !== null && !joining, label: 'Join team', loading: joining, onPress: () => void join() }}
       onBack={back}
       progress={0.3}

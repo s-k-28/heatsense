@@ -75,7 +75,7 @@ function CoachContent({ tab }: { tab: string }) {
 
 function TrainerContent({ tab }: { tab: string }) {
   if (tab === 'monitor') return <><LargeTitle title="Monitor" /><TrainerMonitor /></>;
-  if (tab === 'athletes') return <><LargeTitle title="Athletes" /><TeamTab readOnly /></>;
+  if (tab === 'athletes') return <><LargeTitle title="Athletes" /><TeamTab readOnly role="trainer" /></>;
   if (tab === 'protocols') return <><LargeTitle title="Protocols" /><ProtocolsTab /></>;
   if (tab === 'profile') return <><LargeTitle title="Profile" /><ProfileTab role="Athletic trainer" /></>;
   return <><LargeTitle title="Today" /><TrainerHome /></>;

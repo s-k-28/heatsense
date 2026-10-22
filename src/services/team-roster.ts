@@ -9,6 +9,7 @@ import { firestore } from '@/services/firebase';
 
 export type RosterMember = {
   userId: string;
+  role: 'athlete' | 'trainer';
   status: 'pending' | 'active';
   displayName: string | null;
   email: string | null;
@@ -20,7 +21,7 @@ export type AthleteCard = { fullName: string; grade: string | null; sport: strin
 
 export function watchRoster(teamId: string, onChange: (members: RosterMember[]) => void, onError: () => void): () => void {
   if (!firestore) return () => {};
-  const members = query(collection(firestore, 'teamMembers'), where('teamId', '==', teamId), where('role', '==', 'athlete'));
+  const members = query(collection(firestore, 'teamMembers'), where('teamId', '==', teamId), where('role', 'in', ['athlete', 'trainer']));
   return onSnapshot(members, (snapshot) => {
     const list: RosterMember[] = [];
     snapshot.docs.forEach((entry) => {
@@ -28,6 +29,7 @@ export function watchRoster(teamId: string, onChange: (members: RosterMember[]) 
       if (data.status !== 'pending' && data.status !== 'active') return; // declined requests stay hidden
       list.push({
         userId: data.userId as string,
+        role: data.role,
         status: data.status,
         displayName: data.displayName ?? null,
         email: data.email ?? null,
@@ -37,6 +39,13 @@ export function watchRoster(teamId: string, onChange: (members: RosterMember[]) 
     });
     onChange(list);
   }, onError);
+}
+
+/** For athletes: the team's approved athletic trainers, live. The rules allow nothing more. */
+export function watchTrainers(teamId: string, onChange: (trainers: { userId: string; displayName: string | null }[]) => void, onError: () => void): () => void {
+  if (!firestore) return () => {};
+  const trainers = query(collection(firestore, 'teamMembers'), where('teamId', '==', teamId), where('role', '==', 'trainer'), where('status', '==', 'active'));
+  return onSnapshot(trainers, (snapshot) => onChange(snapshot.docs.map((entry) => ({ userId: entry.data().userId as string, displayName: entry.data().displayName ?? null }))), onError);
 }
 
 /** An approved athlete's profile basics, or null if they haven't finished their profile yet. */

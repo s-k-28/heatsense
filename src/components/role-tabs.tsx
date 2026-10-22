@@ -10,7 +10,7 @@ import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
 import { SOURCE_LABEL } from '@/services/practice-sessions';
 import { usePreferences, useTemperature } from '@/state/preferences';
-import { useCoachData } from '@/state/team-session';
+import { useCoachData, useTrainers } from '@/state/team-session';
 
 // Athlete and athletic-trainer tabs on the same WHOOP-style kit as the coach's. Athletes see their
 // team's real field reading (Firestore lets approved members read it). Band signals don't exist yet,
@@ -35,7 +35,22 @@ export function AthleteHome() {
           <ZoneRules latest={latest} uilClass={data?.session?.uilClass ?? 3} />
         </>
       ) : null}
+      <YourTrainer teamId={data?.teamId ?? null} />
       <SpeakUp />
+    </>
+  );
+}
+
+/** The athlete's link to their athletic trainer: who's looking after them at practice. */
+function YourTrainer({ teamId }: { teamId: string | null }) {
+  const trainers = useTrainers(teamId);
+  if (!trainers.length) return null;
+  return (
+    <>
+      <SectionTitle title="Your athletic trainer" />
+      <Rows>
+        {trainers.map((t) => <ListRow detail="Find them first if you feel unwell" key={t.userId} label={t.displayName ?? 'Athletic trainer'} />)}
+      </Rows>
     </>
   );
 }
@@ -112,7 +127,7 @@ export function LearnTab() {
 /* ─────────────────────────────── Athletic trainer ─────────────────────────────── */
 
 export function TrainerHome() {
-  return <CoachToday readOnly />;
+  return <CoachToday readOnly role="trainer" />;
 }
 
 export function TrainerMonitor() {
