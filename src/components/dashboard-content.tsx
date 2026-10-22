@@ -7,7 +7,7 @@ import { HeatIcon } from '@/components/heat-icon';
 import { AlertsTab } from '@/components/alerts-tab';
 import { PlanTab, ProfileTab, TeamTab } from '@/components/coach-tabs';
 import { CoachToday } from '@/components/coach-today';
-import { AthleteHome, AthleteSessions, AthleteStatus, LearnTab, ProtocolsTab, TrainerHome, TrainerMonitor } from '@/components/role-tabs';
+import { AthleteBand, AthleteHome, AthleteSessions, LearnTab, ProtocolsTab, TrainerHome, TrainerMonitor } from '@/components/role-tabs';
 import { LineChart } from '@/components/ui/charts';
 import { Card, CardHeader } from '@/components/ui/list';
 import { Palette, Spacing, Type } from '@/constants/theme';
@@ -82,7 +82,7 @@ function TrainerContent({ tab }: { tab: string }) {
 }
 
 function AthleteContent({ tab }: { tab: string }) {
-  if (tab === 'status') return <><LargeTitle title="Status" /><AthleteStatus /></>;
+  if (tab === 'band') return <><LargeTitle title="Band" /><AthleteBand /></>;
   if (tab === 'sessions') return <><LargeTitle title="Sessions" /><AthleteSessions /></>;
   if (tab === 'learn') return <><LargeTitle title="Learn" /><LearnTab /></>;
   if (tab === 'profile') return <><LargeTitle title="Profile" /><ProfileTab role="Athlete" /></>;

@@ -10,6 +10,8 @@ import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
 import { SOURCE_LABEL } from '@/services/practice-sessions';
 import { usePreferences, useTemperature } from '@/state/preferences';
+import { SimulatedTag, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
+import { useDemoTeam } from '@/state/demo-team';
 import { useCoachData, useTrainers } from '@/state/team-session';
 
 // Athlete and athletic-trainer tabs on the same WHOOP-style kit as the coach's. Athletes see their
@@ -64,8 +66,22 @@ function SpeakUp() {
   );
 }
 
-export function AthleteStatus() {
+/** The athlete's own band: their vitals in depth. The app centres on them, not the team. */
+export function AthleteBand() {
   const { bandConnected } = usePreferences();
+  const data = useCoachData('athlete');
+  const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
+  const me = demo.members[0];
+  if (demo.enabled && me) {
+    return (
+      <>
+        <VitalsDetail member={{ ...me, athlete: { ...me.athlete, name: 'You', position: 'Your band' } }} />
+        <Rows>
+          <ListRow label="HeatSense Band" onPress={() => router.push('/pair-band')} value={bandConnected ? 'Connected' : 'Pair'} valueTone={bandConnected ? Palette.safe : Palette.coral} />
+        </Rows>
+      </>
+    );
+  }
   return (
     <>
       <View style={styles.bandHero}>
@@ -131,6 +147,16 @@ export function TrainerHome() {
 }
 
 export function TrainerMonitor() {
+  const data = useCoachData('trainer');
+  const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
+  if (demo.enabled) {
+    return (
+      <>
+        <SimulatedTag />
+        <TeamVitalsRows members={demo.members} role="trainer" />
+      </>
+    );
+  }
   return (
     <View style={styles.bandHero}>
       <Image accessibilityIgnoresInvertColors contentFit="contain" source={BAND} style={styles.band} />

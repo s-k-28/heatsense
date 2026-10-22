@@ -1,12 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
+import { firestore } from '@/services/firebase';
+
 // Dashboard preferences. The two switches persist on the device; the unread count is session-only
 // until notifications come from a server.
-type Preferences = { compactRoster: boolean; celsius: boolean; bandConnected: boolean; practiceLiveActivity: boolean; unreadNotifications: number; refreshedAt: number | null; incidentAcknowledged: boolean; practiceStartedAt: number | null };
+type Preferences = { demoTeam: boolean; compactRoster: boolean; celsius: boolean; bandConnected: boolean; practiceLiveActivity: boolean; unreadNotifications: number; refreshedAt: number | null; incidentAcknowledged: boolean; practiceStartedAt: number | null };
 
 const STORAGE_KEY = 'heatsense.preferences.v1';
-let state: Preferences = { compactRoster: false, celsius: false, bandConnected: false, practiceLiveActivity: true, unreadNotifications: 0, refreshedAt: null, incidentAcknowledged: false, practiceStartedAt: null };
+// The simulated demo team starts on in builds without Firebase (reviews, the simulator) and off otherwise.
+let state: Preferences = { demoTeam: firestore === null, compactRoster: false, celsius: false, bandConnected: false, practiceLiveActivity: true, unreadNotifications: 0, refreshedAt: null, incidentAcknowledged: false, practiceStartedAt: null };
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -17,15 +20,15 @@ AsyncStorage.getItem(STORAGE_KEY)
   .then((raw) => {
     if (!raw) return;
     const saved = JSON.parse(raw) as Partial<Preferences>;
-    state = { ...state, compactRoster: Boolean(saved.compactRoster), celsius: Boolean(saved.celsius), bandConnected: saved.bandConnected ?? false, practiceLiveActivity: saved.practiceLiveActivity ?? true };
+    state = { ...state, demoTeam: saved.demoTeam ?? state.demoTeam, compactRoster: Boolean(saved.compactRoster), celsius: Boolean(saved.celsius), bandConnected: saved.bandConnected ?? false, practiceLiveActivity: saved.practiceLiveActivity ?? true };
     emit();
   })
   .catch(() => {});
 
-export function setPreference(key: 'compactRoster' | 'celsius' | 'bandConnected' | 'practiceLiveActivity', value: boolean) {
+export function setPreference(key: 'demoTeam' | 'compactRoster' | 'celsius' | 'bandConnected' | 'practiceLiveActivity', value: boolean) {
   state = { ...state, [key]: value };
   emit();
-  AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ compactRoster: state.compactRoster, celsius: state.celsius, bandConnected: state.bandConnected, practiceLiveActivity: state.practiceLiveActivity })).catch(() => {});
+  AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ demoTeam: state.demoTeam, compactRoster: state.compactRoster, celsius: state.celsius, bandConnected: state.bandConnected, practiceLiveActivity: state.practiceLiveActivity })).catch(() => {});
 }
 
 /** The coach has acknowledged the open incident, so the Dynamic Island goes back to normal. */
