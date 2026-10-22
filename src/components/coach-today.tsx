@@ -1,16 +1,15 @@
 import { Image } from 'expo-image';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FieldCheckSheet } from '@/components/field-check-sheet';
 import { HeatOrb } from '@/components/heat-orb';
 import { Ring } from '@/components/ui/visuals';
 import { Palette } from '@/constants/theme';
-import { SAMPLE_READING, ZONES, type Zone } from '@/lib/practice';
-import { recheckStatus, SOURCE_LABEL, type FieldReading, type PracticeSession } from '@/services/practice-sessions';
-import { firestore } from '@/services/firebase';
+import { ZONES, type Zone } from '@/lib/practice';
+import { recheckStatus, SOURCE_LABEL } from '@/services/practice-sessions';
 import { useTemperature } from '@/state/preferences';
-import { useTeamSession } from '@/state/team-session';
+import { useCoachData, useNow } from '@/state/team-session';
 
 // Coach Home, after WHOOP's Home: one living orb with the latest field reading, three rings for
 // the practice loop (recheck, readings, acknowledged), then "Get started" cards and today's record.
@@ -20,40 +19,8 @@ import { useTeamSession } from '@/state/team-session';
 const BAND = require('@/assets/images/heatsense-band-refined.png');
 const NEUTRAL = '#6B7A82';
 
-type View_ = {
-  sample: boolean;
-  session: PracticeSession | null;
-  readings: FieldReading[];
-};
-
-function useHomeData(): View_ | null {
-  const team = useTeamSession();
-  // Fixed when Home mounts, so the sample doesn't drift on every render.
-  const [base] = useState(() => Date.now());
-  if (team.status === 'ready') return { sample: false, session: team.session, readings: team.readings };
-  if (!firestore && (team.status === 'no-team' || team.status === 'error')) {
-    const measuredAt = new Date(base - 12 * 60_000);
-    return {
-      sample: true,
-      session: { id: 'sample', teamId: 'sample', venue: SAMPLE_READING.location, uilClass: 3, recheckMinutes: 30, startedAt: new Date(base - 40 * 60_000), endedAt: null },
-      readings: [{ id: 'sample', wbgtF: SAMPLE_READING.wbgtF, enteredValue: SAMPLE_READING.wbgtF, enteredUnit: 'F', source: 'handheld', measuredAt, zone: SAMPLE_READING.zone, recordedBy: 'sample', acknowledgedAt: null }],
-    };
-  }
-  if (team.status === 'no-team') return { sample: false, session: null, readings: [] };
-  return null;
-}
-
-function useNow(ms = 15_000) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const tick = setInterval(() => setNow(Date.now()), ms);
-    return () => clearInterval(tick);
-  }, [ms]);
-  return now;
-}
-
 export function CoachToday({ onInvite }: { onInvite: () => void }) {
-  const data = useHomeData();
+  const data = useCoachData();
   const temp = useTemperature();
   const now = useNow();
   const [sheet, setSheet] = useState(false);

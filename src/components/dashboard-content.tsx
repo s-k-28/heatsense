@@ -1,28 +1,24 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { signOut } from 'firebase/auth';
 import type { ComponentProps } from 'react';
 import { createContext, useContext, useState } from 'react';
-import { Alert, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { LargeTitle, SectionHeader, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
-import { AlertIsland } from '@/components/alert-island';
+import { AlertsTab } from '@/components/alerts-tab';
+import { PlanTab, ProfileTab, TeamTab } from '@/components/coach-tabs';
 import { CoachToday } from '@/components/coach-today';
-import { LocationCard } from '@/components/location-card';
 import { SlidingTabs } from '@/components/sliding-tabs';
 import { BarChart, LineChart } from '@/components/ui/charts';
-import { BaselineChart, DateTile, PhotoBanner, RingAvatar, Ring, SegmentBar, Spark, StatStrip, Timeline } from '@/components/ui/visuals';
-import { WeekSwitcher } from '@/components/week-switcher';
-import { Card, CardHeader, Group, IconTile, Row, TextLink, textStyles } from '@/components/ui/list';
-import { Face, Palette, Spacing, Type } from '@/constants/theme';
-import { INCIDENT, TODAY, ZONES } from '@/lib/practice';
+import { BaselineChart, DateTile, PhotoBanner, RingAvatar, Ring, Spark, StatStrip, Timeline } from '@/components/ui/visuals';
+import { Card, CardHeader, Group, Row, TextLink, textStyles } from '@/components/ui/list';
+import { Palette, Spacing, Type } from '@/constants/theme';
+import { TODAY, ZONES } from '@/lib/practice';
 import { ensureTeamInvite, getMyTeamInvite } from '@/services/team-invites';
-import { firebaseAuth } from '@/services/firebase';
 import { useTeamDraft, type TeamDraft } from '@/state/onboarding';
-import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
-import { buildSchedule, clockTime, practiceStart, usePracticePlans, type Block, type PracticePlan as PracticePlanType } from '@/state/practice-plans';
+import { usePreferences, useTemperature } from '@/state/preferences';
 
 type IconName = ComponentProps<typeof HeatIcon>['name'];
 
@@ -83,10 +79,11 @@ export function DashboardContent({ onNavigate, role, tab }: { onNavigate?: (tab:
 }
 
 function CoachContent({ tab }: { tab: string }) {
-  if (tab === 'plan') return <PlanScreen />;
-  if (tab === 'team') return <RosterScreen title="Team" variant="coach" />;
-  if (tab === 'alerts') return <AlertsScreen />;
-  if (tab === 'profile') return <ProfileScreen role="Coach" />;
+  const go = useContext(NavContext);
+  if (tab === 'plan') return <><LargeTitle title="Plan" /><PlanTab /></>;
+  if (tab === 'team') return <><LargeTitle title="Team" /><TeamTab /></>;
+  if (tab === 'alerts') return <><LargeTitle title="Alerts" /><AlertsTab onNavigate={go} /></>;
+  if (tab === 'profile') return <><LargeTitle title="Profile" /><ProfileTab role="Coach" /></>;
   return <CoachHome />;
 }
 
@@ -94,7 +91,7 @@ function TrainerContent({ tab }: { tab: string }) {
   if (tab === 'monitor') return <MonitorScreen />;
   if (tab === 'athletes') return <RosterScreen title="Athletes" variant="trainer" />;
   if (tab === 'protocols') return <ProtocolsScreen />;
-  if (tab === 'profile') return <ProfileScreen role="Athletic trainer" />;
+  if (tab === 'profile') return <><LargeTitle title="Profile" /><ProfileTab role="Athletic trainer" /></>;
   return <TrainerHome />;
 }
 
@@ -102,7 +99,7 @@ function AthleteContent({ tab }: { tab: string }) {
   if (tab === 'status') return <StatusScreen />;
   if (tab === 'sessions') return <SessionsScreen />;
   if (tab === 'learn') return <LearnScreen />;
-  if (tab === 'profile') return <ProfileScreen role="Athlete" />;
+  if (tab === 'profile') return <><LargeTitle title="Profile" /><ProfileTab role="Athlete" /></>;
   return <AthleteHome />;
 }
 
@@ -222,100 +219,6 @@ export function RiskHero(_props: { mode: 'coach' }) {
 
 /* ─────────────────────────────── Other screens ─────────────────────────────── */
 
-function PlanScreen() {
-  const temp = useTemperature();
-  const { active, plans } = usePracticePlans();
-  const blocks = buildSchedule(active);
-  const breaks = blocks.filter((block) => block.kind === 'rest').length;
-  return (
-    <>
-      <LargeTitle title="Plan" />
-      <View style={styles.block}><WeekSwitcher /></View>
-      <Text style={[styles.contextLine, styles.contextBelow]}>Today · <Text style={{ color: ZONES[TODAY.zone].text, fontWeight: '600' }}>{ZONES[TODAY.zone].label}</Text> · {temp.value(TODAY.wbgtF)}{temp.unit} WBGT at 4:10 PM</Text>
-
-      <SectionHeader action="Edit" onActionPress={() => router.push({ pathname: '/plan-editor', params: { id: active.id } })} title="Today’s session" />
-      <Text style={styles.planName}>{active.name}</Text>
-      <SegmentBar segments={blocks.slice(0, 3).map((block) => ({ color: SCHEDULE_TONE[block.kind], flex: block.minutes, label: block.kind === 'arrive' ? 'Arrive' : block.kind === 'work' ? 'Work' : 'Rest', time: clockTime(block.start) }))} />
-      <View style={styles.planStats}>
-        <StatStrip items={[{ label: 'Work / rest', value: `${active.workMinutes} / ${active.restMinutes}` }, { label: breaks === 1 ? 'Break' : 'Breaks', value: String(breaks) }, { label: 'Water every', value: `${active.waterEveryMinutes} min` }]} />
-      </View>
-
-      <SectionHeader title="How practice runs" />
-      <PracticeSchedule blocks={blocks} plan={active} />
-
-      <SectionHeader action="New plan" onActionPress={() => router.push('/plan-editor')} title="Saved plans" />
-      <Group>
-        {plans.map((plan) => {
-          const rests = buildSchedule(plan).filter((block) => block.kind === 'rest').length;
-          return (
-            <Row
-              detail={`${clockTime(plan.startMinutes, true)} · ${plan.workMinutes} / ${plan.restMinutes} · ${plan.lengthMinutes} min · ${rests} ${rests === 1 ? 'break' : 'breaks'}`}
-              key={plan.id}
-              onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })}
-              title={plan.name}
-              trailing={plan.id === active.id ? <Text style={styles.todayTag}>Today</Text> : undefined}
-            />
-          );
-        })}
-      </Group>
-      <Text style={styles.footnote}>Open a saved plan to start from its timings. Use for today puts it on the Plan tab, the practice clock and the Dynamic Island.</Text>
-    </>
-  );
-}
-
-const SCHEDULE_TONE = { arrive: 'rgba(235,235,245,0.4)', rest: Palette.info, work: Palette.coral } as const;
-
-/** What a block asks of the coach, from the plan's own rules. */
-function blockDetail(block: Block, plan: PracticePlanType, last: boolean) {
-  if (block.kind === 'arrive') return 'Fill bottles and check in with every athlete.';
-  if (block.kind === 'rest') return plan.equipment === 'on' ? 'Shade and water. Eyes on every athlete.' : 'Shade, water, gear off. Eyes on every athlete.';
-  if (last) return `Lighter drills to close. Done by ${clockTime(block.start + block.minutes)}.`;
-  const gear = plan.equipment === 'off' ? 'No helmets or pads.' : 'Helmets on.';
-  return `${gear} Water every ${plan.waterEveryMinutes} min.`;
-}
-
-/** The practice as a run of blocks: start time, a bar as long as the block, what to do, how long. */
-function PracticeSchedule({ blocks, plan }: { blocks: Block[]; plan: PracticePlanType }) {
-  const { practiceStartedAt } = usePreferences();
-  const [now] = useState(() => Date.now());
-  const longest = Math.max(...blocks.map((block) => block.minutes));
-  const lastWork = blocks.map((block) => block.kind).lastIndexOf('work');
-  // While practice is running, mark the block it's in.
-  const into = practiceStartedAt === null ? null : practiceStart(plan) + (now - practiceStartedAt) / 60_000;
-  return (
-    <View style={styles.schedule}>
-      {blocks.map((item, index) => {
-        const tone = SCHEDULE_TONE[item.kind];
-        const current = into !== null && item.kind !== 'arrive' && into >= item.start && into < item.start + item.minutes;
-        const detail = blockDetail(item, plan, index === lastWork);
-        return (
-          <View
-            accessible
-            accessibilityLabel={`${clockTime(item.start, true)}, ${item.title}, ${item.minutes} minutes${current ? ', happening now' : ''}. ${detail}`}
-            key={`${item.start}-${item.title}`}
-            style={[styles.scheduleRow, index > 0 && styles.scheduleDivider, current && styles.scheduleRowNow]}>
-            <Text style={[styles.scheduleTime, current && { color: Palette.ink }]}>{clockTime(item.start)}</Text>
-            <View style={styles.scheduleTrack}>
-              <View style={[styles.scheduleBar, { backgroundColor: tone, height: 14 + (item.minutes / longest) * 30 }]} />
-            </View>
-            <View style={styles.scheduleCopy}>
-              <View style={styles.scheduleHead}>
-                <Text style={[styles.scheduleTitle, { color: item.kind === 'arrive' ? Palette.ink : tone }]}>{item.title}</Text>
-                {current ? <Text style={styles.scheduleNow}>Now</Text> : null}
-              </View>
-              <Text style={styles.scheduleDetail}>{detail}</Text>
-            </View>
-            <View style={styles.scheduleLength}>
-              <Text style={styles.scheduleMinutes}>{item.minutes}</Text>
-              <Text style={styles.scheduleUnit}>min</Text>
-            </View>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 const TEAM_PHOTO = require('@/assets/images/home/plan-hero.webp');
 
 function RosterScreen({ title, variant }: { title: string; variant: 'coach' | 'trainer' }) {
@@ -369,122 +272,7 @@ function RosterScreen({ title, variant }: { title: string; variant: 'coach' | 't
   );
 }
 
-const ALERT_ICONS = {
-  check: { ios: 'checkmark.seal.fill', android: 'verified', web: 'verified' },
-  drop: { ios: 'drop.fill', android: 'water_drop', web: 'water_drop' },
-  heart: { ios: 'heart.fill', android: 'favorite', web: 'favorite' },
-  heat: { ios: 'thermometer.sun.fill', android: 'device_thermostat', web: 'device_thermostat' },
-  indoor: { ios: 'house.fill', android: 'home', web: 'home' },
-} as const;
 
-const EARLIER = [
-  { color: Palette.info, detail: 'Jordan Lee acknowledged it', icon: ALERT_ICONS.drop, status: 'Handled', time: '3:52 PM', title: 'Hydration reminder' },
-  { color: Palette.warning, detail: 'Plan switched to 20 / 10', icon: ALERT_ICONS.heat, status: 'Plan updated', time: '3:35 PM', title: 'WBGT entered the Orange zone' },
-  { color: Palette.safe, detail: 'No readings above the Yellow zone', icon: ALERT_ICONS.check, status: 'Clear', time: '2:58 PM', title: 'Pre-practice weather check' },
-] as const;
-
-const YESTERDAY = [
-  { color: Palette.emergency, detail: 'Eli Brooks · Alex Thompson responded in 1 min 50 sec', icon: ALERT_ICONS.heart, status: 'Handled', time: '5:12 PM', title: 'Recovery check' },
-  { color: Palette.emergency, detail: 'Last 20 minutes moved indoors', icon: ALERT_ICONS.indoor, status: 'Plan updated', time: '4:41 PM', title: 'WBGT entered the Red zone' },
-] as const;
-
-function AlertsScreen() {
-  const temp = useTemperature();
-  const { incidentAcknowledged } = usePreferences();
-  const open = incidentAcknowledged ? null : INCIDENT;
-  return (
-    <>
-      <LargeTitle title="Alerts" />
-      {open ? (
-        <View style={[styles.firstBlock, styles.liveAlert]}>
-          <LinearGradient colors={['rgba(255,69,58,0.28)', 'rgba(255,69,58,0)']} end={{ x: 0.5, y: 0.75 }} pointerEvents="none" start={{ x: 0.5, y: 0 }} style={StyleSheet.absoluteFill} />
-          <AlertIsland athlete={open.title.split(' needs')[0]} bpm={open.bpm} reason="Recovery check" />
-          <View style={styles.liveHead}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveEyebrow}>Needs a response · {open.minutes} min</Text>
-          </View>
-          <Text style={styles.liveTitle}>{open.athlete} isn’t recovering on this break</Text>
-          <Text style={styles.cardBody}>{open.detail} Find her, get her to shade and check how she feels.</Text>
-          <View style={styles.liveStats}>
-            <LiveStat label="Over usual" tone={Palette.emergency} unit="bpm" value="+32" />
-            <LiveStat label="Skin" tone={Palette.warning} value={temp.delta(0.8).replace(/[FC]$/, '')} />
-            <LiveStat label="Movement" tone={Palette.warning} value="Low" />
-            <LiveStat label="On break" unit="min" value={String(open.minutes)} />
-          </View>
-          <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/detail', params: { kind: 'alert' } })} style={({ pressed }) => [styles.alertPrimary, pressed && styles.pressed]}>
-            <HeatIcon name={ALERT_LOCATE} size={17} tintColor="#FFFFFF" weight="semibold" />
-            <Text style={styles.alertPrimaryText}>Acknowledge and locate</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" onPress={() => Alert.alert('Alex Thompson has this alert too', 'Athletic trainers get every recovery check at the same moment you do. Call them from your phone if you need them on the field now.')} style={({ pressed }) => [styles.alertSecondary, pressed && styles.pressed]}>
-            <Text style={styles.alertSecondaryText}>Is the athletic trainer on it?</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <Card style={[styles.firstBlock, styles.allClear]}>
-          <View style={styles.allClearIcon}>
-            <HeatIcon name={icons.check} size={30} tintColor={Palette.safe} />
-          </View>
-          <View style={styles.flexOne}>
-            <Text style={styles.allClearTitle}>No open alerts</Text>
-            <Text style={styles.cardBody}>Maya’s recovery check was acknowledged. HeatSense keeps watching every paired band.</Text>
-          </View>
-        </Card>
-      )}
-
-      <View style={styles.alertSummary}>
-        <StatStrip
-          items={[
-            { label: 'Open', tone: open ? Palette.emergency : Palette.safe, value: open ? '1' : '0' },
-            { label: 'Handled today', value: open ? '3' : '4' },
-            { label: 'Avg. response', value: '1:12' },
-          ]}
-        />
-      </View>
-
-      <SectionHeader title="Earlier today" />
-      <AlertFeed items={EARLIER} />
-
-      <SectionHeader title="Yesterday" />
-      <AlertFeed items={YESTERDAY} />
-    </>
-  );
-}
-
-const ALERT_LOCATE = { ios: 'location.fill', android: 'my_location', web: 'my_location' } as const;
-
-function LiveStat({ label, tone, unit, value }: { label: string; tone?: string; unit?: string; value: string }) {
-  return (
-    <View accessible accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ''}`} style={styles.liveStat}>
-      <View style={styles.liveStatValueRow}>
-        <Text style={[styles.liveStatValue, tone ? { color: tone } : null]}>{value}</Text>
-        {unit ? <Text style={styles.liveStatUnit}>{unit}</Text> : null}
-      </View>
-      <Text numberOfLines={1} style={styles.liveStatLabel}>{label}</Text>
-    </View>
-  );
-}
-
-/** A day's alerts: a colored symbol for the kind of alert, what happened, when, and how it ended. */
-function AlertFeed({ items }: { items: readonly { color: string; detail: string; icon: IconName; status: string; time: string; title: string }[] }) {
-  return (
-    <Group inset={60}>
-      {items.map((item) => (
-        <Row
-          detail={item.detail}
-          key={`${item.time}-${item.title}`}
-          leading={<IconTile color={item.color} icon={item.icon} />}
-          title={item.title}
-          trailing={
-            <View style={styles.feedEnd}>
-              <Text style={styles.feedTime}>{item.time}</Text>
-              <Text style={styles.feedStatus}>{item.status}</Text>
-            </View>
-          }
-        />
-      ))}
-    </Group>
-  );
-}
 
 function MonitorScreen() {
   const temp = useTemperature();
@@ -724,99 +512,6 @@ function LearnScreen() {
   );
 }
 
-function ProfileScreen({ role }: { role: string }) {
-  const isAthlete = role === 'Athlete';
-  const isCoach = role === 'Coach';
-  const name = isAthlete ? 'Maya Chen' : isCoach ? 'Coach Rivera' : 'Alex Thompson';
-  const { school, name: teamName } = useTeam();
-  const { bandConnected, celsius, compactRoster, practiceLiveActivity } = usePreferences();
-  const initials = name.split(/\s+/).map((part) => part[0]).join('');
-
-  const confirmSignOut = () =>
-    Alert.alert('Sign out of HeatSense?', undefined, [
-      { style: 'cancel', text: 'Cancel' },
-      {
-        onPress: () => {
-          if (firebaseAuth) signOut(firebaseAuth).catch(() => {});
-          router.replace('/welcome');
-        },
-        style: 'destructive',
-        text: 'Sign out',
-      },
-    ]);
-
-  const disconnectBand = () =>
-    Alert.alert('Disconnect HeatSense Band?', 'Your personal recovery, skin, sweat and movement trends stop until you pair again. The team’s field plan isn’t affected.', [
-      { style: 'cancel', text: 'Cancel' },
-      { onPress: () => setPreference('bandConnected', false), style: 'destructive', text: 'Disconnect' },
-    ]);
-
-  return (
-    <>
-      <LargeTitle title="Profile" />
-      <View style={styles.identity}>
-        <LinearGradient colors={['#FFB38A', '#FF8F5C']} end={{ x: 1, y: 1 }} start={{ x: 0, y: 0 }} style={styles.bigAvatar}>
-          <Text style={styles.bigAvatarText}>{initials}</Text>
-        </LinearGradient>
-        <Text style={styles.identityName}>{name}</Text>
-        <Text style={styles.identityMeta}>{role} · {school}</Text>
-      </View>
-
-      <View style={styles.identityStats}>
-        {isAthlete
-          ? <StatStrip items={[{ label: 'Sessions', value: '12' }, { label: 'This week', value: '3' }, { label: 'Alerts', value: '0' }]} />
-          : <StatStrip items={[{ label: 'Athletes', value: '24' }, { label: 'Bands shared', value: '18' }, { label: 'Open alerts', tone: Palette.emergency, value: '1' }]} />}
-      </View>
-
-      <SectionHeader title="Location" />
-      <LocationCard field={`Memorial Stadium · ${school}`} />
-
-      <SectionHeader title="Team" />
-      <Group>
-        <Row title="Name" value={teamName} />
-        {isAthlete ? (
-          <Row
-            onPress={bandConnected ? disconnectBand : () => router.push('/pair-band')}
-            title="HeatSense Band"
-            value={bandConnected ? 'Connected' : 'Not connected'}
-            valueTone={bandConnected ? Palette.safe : undefined}
-          />
-        ) : (
-          <Row title="Athlete bands" value="18 of 24 shared" />
-        )}
-      </Group>
-
-      <SectionHeader title="Display" />
-      <Group>
-        <Row title="Show temperatures in °C" trailing={<Toggle label="Show temperatures in Celsius" onChange={(value) => setPreference('celsius', value)} value={celsius} />} />
-        <Row title="Compact roster" trailing={<Toggle label="Compact roster" onChange={(value) => setPreference('compactRoster', value)} value={compactRoster} />} />
-        <Row title="Practice on Dynamic Island" trailing={<Toggle label="Show practice on the Dynamic Island and Lock Screen" onChange={(value) => setPreference('practiceLiveActivity', value)} value={practiceLiveActivity} />} />
-      </Group>
-      <Text style={styles.footnote}>Compact roster hides the detail line under each athlete’s name. The Dynamic Island shows the field zone, and holding it shows time left in practice.</Text>
-
-      <SectionHeader title="About" />
-      <Group>
-        <Row
-          onPress={() => Alert.alert('Data permissions', isAthlete
-            ? 'Only your coach and athletic trainer see your band’s signals, and only for sessions you share.'
-            : 'You see signals only from athletes who paired a band and chose to share a session. Everyone else sees the field plan.')}
-          title="Data permissions"
-        />
-        <Row
-          onPress={() => Alert.alert('Safety and limitations', 'HeatSense supports, but doesn’t replace, your district’s emergency action plan or an athletic trainer’s judgment. It doesn’t diagnose heat illness.')}
-          title="Safety and limitations"
-        />
-      </Group>
-
-      <View style={styles.signOut}>
-        <Group>
-          <Row centered destructive onPress={confirmSignOut} showChevron={false} title="Sign out" />
-        </Group>
-      </View>
-    </>
-  );
-}
-
 /* ─────────────────────────────── Building blocks ─────────────────────────────── */
 
 function PersonRow({ detail, name, status, tone }: { detail: string; name: string; status: string; tone: string }) {
@@ -862,21 +557,6 @@ function Legend({ label, tone, value }: { label: string; tone: string; value: st
     </View>
   );
 }
-
-
-function Toggle({ label, onChange, value }: { label: string; onChange: (value: boolean) => void; value: boolean }) {
-  return (
-    <Switch
-      accessibilityLabel={label}
-      ios_backgroundColor={Palette.fill}
-      onValueChange={onChange}
-      thumbColor="#FFFFFF"
-      trackColor={{ false: Palette.fill, true: Palette.safe }}
-      value={value}
-    />
-  );
-}
-
 
 
 const styles = StyleSheet.create({

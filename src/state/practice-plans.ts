@@ -32,7 +32,7 @@ const STANDARD: PracticePlan = {
   equipment: 'breaks',
   id: 'orange-standard',
   lengthMinutes: 72,
-  name: 'Orange zone standard',
+  name: 'Standard practice',
   restMinutes: 10,
   startMinutes: 16 * 60,
   waterEveryMinutes: 10,
