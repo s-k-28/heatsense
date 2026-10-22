@@ -31,7 +31,7 @@ import { introPlayedThisSession, markIntroPlayed } from '@/state/intro-session';
 //   band      as the H leaves the center, the band emerges from the dark below its place, a little
 //             small and turned away, rises and settles, its shadow forming beneath it
 //   field     the peach curves draw themselves in behind the band, primary curve first, then hold
-//   copy      each headline line rises through its own mask, then the subtitle
+//   copy      each headline line rises through its own mask
 //   close     Get started settles in, then the footer
 // Afterward the band floats (components/wristband): the one continuous motion on the screen.
 // The intro plays once per app session (state/intro-session), never under reduced motion; in a dev
@@ -48,7 +48,6 @@ const T = {
   curves: { start: 1900, stagger: 110, duration: 850 },
   lineOne: [3000, 3650],
   lineTwo: [3180, 3880],
-  subtitle: [3700, 4300],
   button: [4000, 4700],
   footer: [4300, 5000],
   end: 5000,
@@ -235,7 +234,6 @@ function Welcome({ fresh }: { fresh: boolean }) {
 
   // The header logo takes over exactly where the flying mark lands (or fades in if measuring failed).
   const headerLogo = useAnimatedStyle(() => ({ opacity: flight ? (clock.value >= T.flight[1] ? 1 : 0) : easeOut(progress(clock.value, [T.flight[1] - 300, T.flight[1]])) }));
-  const subtitle = useReveal(clock, T.subtitle, { y: 14 });
   const button = useReveal(clock, T.button, { y: 22, scale: 0.96 });
   const footer = useReveal(clock, T.footer);
   // The band emerges from the dark: 35 px low, at 90% and turned 3° away, then settles. It turns
@@ -283,7 +281,6 @@ function Welcome({ fresh }: { fresh: boolean }) {
             <MaskedLine clock={clock} compact={compact} window={T.lineOne}>Read the heat.</MaskedLine>
             <MaskedLine accent clock={clock} compact={compact} window={T.lineTwo}>Ready the team.</MaskedLine>
           </View>
-          <Animated.Text style={[styles.subtitle, subtitle]}>{'Know the field conditions.\nBuild your practice plan.'}</Animated.Text>
 
           <Animated.View style={[styles.cta, compact && styles.ctaCompact, button]}>
             <GetStarted onPress={getStarted} />
@@ -309,7 +306,6 @@ const styles = StyleSheet.create({
   headline: { color: Entry.ink, fontFamily: Entry.heading, fontSize: 43, letterSpacing: -1.6, lineHeight: 50 },
   headlineCompact: { fontSize: 36, letterSpacing: -1.3, lineHeight: 42 },
   accent: { color: Entry.peach },
-  subtitle: { color: Entry.muted, fontFamily: Entry.body, fontSize: 16, letterSpacing: -0.1, lineHeight: 24, marginTop: 16, maxWidth: 330 },
   cta: { marginTop: 40 },
   ctaCompact: { marginTop: 28 },
   pill: { borderRadius: 999 },
