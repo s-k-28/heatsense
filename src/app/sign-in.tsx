@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { GoogleLogo } from '@/components/brand-logos';
-import { EntryButton, EntryHeader, EntryScreen, entryStyles } from '@/components/entry-ui';
+import { EntryButton, EntryHeader, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { Entry } from '@/constants/entry-theme';
 import { signInWithGoogle } from '@/services/google-auth';
 import { useAuthSession } from '@/state/auth-session';
@@ -37,10 +37,10 @@ export default function SignInScreen() {
   };
 
   return (
-    <EntryScreen background="auth" backdrop={<Photo />}>{(compact) => <>
+    <EntryScreen background="auth" backgroundDrawIn={350} backdrop={<Photo />}>{(compact) => <>
       <EntryHeader onBack={() => router.canGoBack() ? router.back() : router.replace('/welcome')} />
       <View style={[styles.hero, compact && styles.heroCompact]} />
-      <Text accessibilityRole="header" style={[entryStyles.headline, compact && entryStyles.headlineCompact]}>Your team{'\n'}starts here.</Text>
+      <EntryHeading accent="starts here." compact={compact} delay={200} lead="Your team" size="hero" />
       <Text style={entryStyles.description}>Sign in to set up your team or join with a coach’s invite.</Text>
       <View style={styles.actions}>
         <EntryButton label="Continue with Google" loading={pending || Boolean(signedInUid)} onPress={signIn} icon={<GoogleLogo size={21} />} neutral />

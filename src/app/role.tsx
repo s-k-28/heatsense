@@ -2,45 +2,53 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
-import { EntryButton, EntryHeader, EntryScreen, entryStyles } from '@/components/entry-ui';
-import { FieldlineScene } from '@/components/fieldline-character';
+import { EntryButton, EntryHeader, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { OnboardingSelectionSurface } from '@/components/onboarding-controls';
-import { setOnboardingRole, useOnboardingRole } from '@/state/onboarding';
+import { setOnboardingRole, useOnboardingRole, type OnboardingRole } from '@/state/onboarding';
 
+// Role selection, as an editorial page: the headline up top, open space where the curves
+// sweep through, then the three roles as large word-only panels and the peach pill.
 const roles = [
   { id: 'coach', title: 'Coach', description: 'Plan practices. Manage your team.' },
   { id: 'athlete', title: 'Athlete', description: 'Join your team. Stay prepared.' },
   { id: 'trainer', title: 'Athletic trainer', description: 'Follow readings. Look after athletes.' },
-] as const;
+] as const satisfies readonly { id: OnboardingRole; title: string; description: string }[];
+
+const CONTINUE: Record<OnboardingRole, string> = { coach: 'Continue as coach', athlete: 'Continue as athlete', trainer: 'Continue as trainer' };
 
 export default function RoleScreen() {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const selected = useOnboardingRole();
-  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(480));
+  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(520));
   const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(420));
   return (
-    <EntryScreen background="role">{(compact) => <>
-      <EntryHeader onBack={() => router.canGoBack() ? router.back() : router.replace('/sign-in')} />
-      <Animated.View entering={fade(100)} style={styles.illustration}><FieldlineScene compact small={compact} reaction={selected === 'trainer' ? null : selected} /></Animated.View>
-      <Animated.Text entering={rise(200)} accessibilityRole="header" style={[entryStyles.headline, compact && entryStyles.headlineCompact]}>Made for you.</Animated.Text>
-      <Animated.Text entering={rise(300)} style={entryStyles.description}>Choose how you’ll use HeatSense.</Animated.Text>
-      <View accessibilityRole="radiogroup" accessibilityLabel="Your role" style={styles.roles}>
+    <EntryScreen background="role" backgroundDrawIn={250}>{(compact) => <>
+      <Animated.View entering={fade(0)}>
+        <EntryHeader onBack={() => router.canGoBack() ? router.back() : router.replace('/sign-in')} />
+      </Animated.View>
+      <EntryHeading accent="you." compact={compact} delay={150} lead="Made for" size="hero" style={{ marginTop: compact ? 28 : 44 }} />
+      <Animated.Text entering={fade(500)} style={entryStyles.description}>Choose how you’ll use HeatSense.</Animated.Text>
+      <View style={styles.open} />
+      <View accessibilityRole="radiogroup" accessibilityLabel="Your role" style={[styles.roles, compact && styles.rolesCompact]}>
         {roles.map((role, index) => (
-          <Animated.View key={role.id} entering={rise(420 + index * 100)}>
-            <OnboardingSelectionSurface title={role.title} description={role.description} selected={selected === role.id} onPress={() => setOnboardingRole(role.id)} />
+          <Animated.View key={role.id} entering={rise(560 + index * 90)}>
+            <OnboardingSelectionSurface large minHeight={compact ? 80 : 92} title={role.title} description={role.description} selected={selected === role.id} onPress={() => setOnboardingRole(role.id)} />
           </Animated.View>
         ))}
       </View>
-      <Animated.View entering={rise(640)} style={styles.actions}>
-        <EntryButton label={selected ? `Continue as ${selected}` : 'Choose a role to continue'} disabled={!selected} onPress={() => { if (selected) router.push(`/setup/${selected}`); }} />
+      <Animated.View entering={rise(860)} style={[styles.actions, compact && styles.actionsCompact]}>
+        <EntryButton label={selected ? CONTINUE[selected] : 'Choose a role to continue'} disabled={!selected} onPress={() => { if (selected) router.push(`/setup/${selected}`); }} />
       </Animated.View>
     </>}</EntryScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  illustration: { flexGrow: 1, justifyContent: 'center', marginVertical: 14 },
-  roles: { gap: 12, marginTop: 26 },
-  actions: { marginTop: 28 },
+  // The open band between the headline and the choices, where the curves run.
+  open: { flexGrow: 1, minHeight: 28 },
+  roles: { gap: 12 },
+  rolesCompact: { gap: 10 },
+  actions: { marginTop: 26 },
+  actionsCompact: { marginTop: 20 },
 });

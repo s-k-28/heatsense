@@ -27,18 +27,17 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AthleteHeader, AthletePillButton as JoinButton } from '@/components/athlete-onboarding';
-import { entryStyles } from '@/components/entry-ui';
+import { EntryHeading, entryStyles } from '@/components/entry-ui';
 import { OnboardingBackground } from '@/components/onboarding-background';
-import { FieldlineScene } from '@/components/fieldline-character';
 import { Entry } from '@/constants/entry-theme';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { INVITE_CODE_LENGTH, lookupInvite, NETWORK_ERROR, requestToJoinTeam, type MemberRole, watchMyMembership, type InviteLookup } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
 
 // Athlete onboarding, step 1: join a team with the coach's invitation code.
-// Entry design language (welcome / sign-in / role): a medium Fieldline scene, the
-// refined headline, neutral code boxes with a peach active edge, and the peach
-// primary action. The curves behind stay above and below the code, never behind it.
+// A focused, centered page: the two-tone headline, the six code boxes in the middle of
+// the screen (peach edge on the active box, all six warm to peach once the team is
+// found), then the peach pill. The curves frame it from above and below, never behind it.
 const SCREEN = Entry.canvas;
 const MUTED = Entry.muted;
 const ERROR = Entry.error;
@@ -67,15 +66,22 @@ function useMs() {
   return useCallback((value: number) => (reducedMotion ? 0 : value), [reducedMotion]);
 }
 
-function CodeBox({ digit, active, error, width, height }: { digit: string; active: boolean; error: boolean; width: number; height: number }) {
+function CodeBox({ digit, active, error, found, width, height }: { digit: string; active: boolean; error: boolean; found: boolean; width: number; height: number }) {
   const ms = useMs();
   const focus = useSharedValue(active ? 1 : 0);
+  const success = useSharedValue(found ? 1 : 0);
   useEffect(() => { focus.set(withTiming(active ? 1 : 0, { duration: ms(180), easing: easeOut })); }, [active, focus, ms]);
+  useEffect(() => { success.set(withTiming(found ? 1 : 0, { duration: ms(360), easing: easeOut })); }, [found, ms, success]);
   const idle = error ? T.outlineError : digit ? T.outline : T.outlineIdle;
-  const frame = useAnimatedStyle(() => ({ borderColor: interpolateColor(focus.value, [0, 1], [idle, T.outlineStrong]) }));
+  // The active box lifts 2 px; a found code warms every box to a peach edge and tint.
+  const frame = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(Math.max(focus.value, success.value), [0, 1], [idle, T.outlineStrong]),
+    backgroundColor: interpolateColor(success.value, [0, 1], [T.surface, Entry.peachTint]),
+    transform: [{ translateY: -2 * focus.value }],
+  }));
   return (
     <Animated.View style={[styles.box, { width, height }, frame]}>
-      <Text style={[styles.digit]}>{digit}</Text>
+      {digit ? <Animated.Text key={digit} entering={ms(1) ? FadeIn.duration(160) : undefined} style={styles.digit}>{digit}</Animated.Text> : null}
     </Animated.View>
   );
 }
@@ -202,7 +208,7 @@ function Content({ role }: { role: MemberRole }) {
   return (
     <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined} onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
       <StatusBar style="light" />
-      <OnboardingBackground variant="code" />
+      <OnboardingBackground drawIn={250} variant="code" />
       <ScrollView
         bounces={false}
         keyboardShouldPersistTaps="handled"
@@ -212,21 +218,16 @@ function Content({ role }: { role: MemberRole }) {
           <AthleteHeader onBack={back} step={1} />
         </Animated.View>
 
-        {/* Medium scene: smaller than welcome's hero, so the code stays the focus. */}
-        <Animated.View entering={fade(300)} style={{ marginTop: compact ? 4 : 12 }}>
-          <FieldlineScene small reaction={valid || pending ? 'athlete' : null} />
-        </Animated.View>
-        <Animated.Text entering={rise(350)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, { marginTop: compact ? 8 : 14 }]}>
-          {'Your team\nawaits.'}
-        </Animated.Text>
-        <Animated.Text entering={rise(550)} style={entryStyles.description}>Enter the six-digit code from your coach.</Animated.Text>
+        <View style={styles.above} />
+        <EntryHeading accent="awaits." align="center" compact={compact} delay={300} lead="Your team" />
+        <Animated.Text entering={fade(600)} style={[entryStyles.description, styles.centered]}>Enter the six-digit code from your coach.</Animated.Text>
 
         {/* One real input drives every box: typing, pasting, deleting and the numeric keyboard all come from it. */}
         <View style={[styles.codeWrap, { marginTop: compact ? 24 : 30 }]}>
           <View style={[styles.codeRow, { gap }]}>
             {Array.from({ length: INVITE_CODE_LENGTH }, (_, index) => (
               <Animated.View key={index} entering={rise(750 + index * 60)}>
-                <CodeBox digit={code[index] ?? ''} active={index === activeIndex} error={codeError !== null} width={boxWidth} height={boxHeight} />
+                <CodeBox digit={code[index] ?? ''} active={index === activeIndex} error={codeError !== null} found={valid !== null || pending !== null} width={boxWidth} height={boxHeight} />
               </Animated.View>
             ))}
           </View>
@@ -315,6 +316,9 @@ function Content({ role }: { role: MemberRole }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 26 },
+  // Equal open space above the headline and below the status centers the code on the page.
+  above: { flexGrow: 1, minHeight: 20 },
+  centered: { alignSelf: 'center', textAlign: 'center' },
   codeWrap: { alignSelf: 'center' },
   codeRow: { flexDirection: 'row', justifyContent: 'center' },
   box: { borderRadius: 18, borderWidth: 1.5, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center' },

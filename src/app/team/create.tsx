@@ -5,7 +5,7 @@ import { Keyboard, Linking, ScrollView, StyleSheet, TextInput, View, type Layout
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EntryButton, EntryHeader, EntryLink, entryStyles } from '@/components/entry-ui';
+import { EntryButton, EntryHeader, EntryHeading, EntryLink, entryStyles } from '@/components/entry-ui';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { OnboardingBackground } from '@/components/onboarding-background';
 import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
@@ -105,7 +105,7 @@ function Content() {
           <EntryHeader onBack={back} progress={{ step: 2, total: ONBOARDING_STEPS.coach }} />
         </Animated.View>
 
-        <Animated.Text entering={rise(300)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.noShrink, { marginTop: compact ? 26 : 36 }]}>{'Create your\nteam.'}</Animated.Text>
+        <EntryHeading accent="team." compact={compact} delay={200} lead="Build your" style={{ marginTop: compact ? 26 : 36 }} />
         <Animated.Text entering={rise(400)} style={[entryStyles.description, styles.noShrink]}>A few details to get started.</Animated.Text>
 
         <View style={{ gap: compact ? 16 : 20, marginTop: compact ? 24 : 30 }}>

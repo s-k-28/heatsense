@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
-import { StepScreen, caps } from '@/components/step-kit';
+import { BrandAssemble } from '@/components/brand-assemble';
+import { EntryButton, EntryHeader, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { Entry } from '@/constants/entry-theme';
 
 // End of setup: what happens next, in three steps, instead of a preview full of sample numbers.
-// After WHOOP's "What to expect next" calibration screen.
+// A branded finish: the H assembles, the two-tone headline rises, the steps follow in turn.
 
 type ReadyRole = 'Coach' | 'Athletic trainer' | 'Athlete';
 
@@ -37,78 +38,56 @@ const SETUP: Record<ReadyRole, { dashboardRole: 'coach' | 'trainer' | 'athlete';
   },
 };
 
-const SIZE = 220;
-const R = 92;
-
-/** Three arcs around a center mark, numbered like WHOOP's calibration ring. */
-function StepRing() {
-  const c = SIZE / 2;
-  const point = (deg: number) => [c + R * Math.cos((deg * Math.PI) / 180), c + R * Math.sin((deg * Math.PI) / 180)];
-  const arc = (from: number, to: number) => {
-    const [x1, y1] = point(from);
-    const [x2, y2] = point(to);
-    return `M${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2}`;
-  };
-  const segments = [[-80, 25], [35, 140], [150, 260]] as const;
-  return (
-    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.ring}>
-      <Svg height={SIZE} width={SIZE}>
-        {segments.map(([from, to], i) => (
-          <Path d={arc(from, to)} fill="none" key={i} stroke={i === 0 ? Entry.peach : Entry.lineStrong} strokeLinecap="round" strokeWidth={14} />
-        ))}
-        {segments.map(([, to], i) => {
-          const [x, y] = point(to);
-          return <Circle cx={x} cy={y} fill={Entry.canvas} key={`n${i}`} r={14} stroke={i === 0 ? Entry.peach : Entry.lineStrong} strokeWidth={2} />;
-        })}
-      </Svg>
-      {segments.map(([, to], i) => {
-        const [x, y] = point(to);
-        return <Text key={`t${i}`} style={[styles.ringNumber, { left: x - 14, top: y - 10, color: i === 0 ? Entry.peach : Entry.muted }]}>{i + 1}</Text>;
-      })}
-      <View style={styles.ringCenter}>
-        <Text style={styles.ringBig}>3</Text>
-        <Text style={[caps, { color: Entry.muted }]}>steps</Text>
-      </View>
-    </View>
-  );
-}
+// The headline for each role, in the welcome's white-then-peach pattern.
+const HEADING: Record<ReadyRole, { lead: string; accent: string }> = {
+  Coach: { lead: 'Your team.', accent: 'Your start.' },
+  'Athletic trainer': { lead: 'Your athletes.', accent: 'Your watch.' },
+  Athlete: { lead: 'Your team.', accent: 'Your start.' },
+};
 
 export default function ReadyScreen() {
   const router = useRouter();
+  const reducedMotion = useReducedMotion();
   const { role } = useLocalSearchParams<{ role?: string }>();
-  const setup = SETUP[(role && role in SETUP ? role : 'Coach') as ReadyRole];
+  const key = (role && role in SETUP ? role : 'Coach') as ReadyRole;
+  const setup = SETUP[key];
+  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(560));
+  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(420));
   return (
-    <StepScreen
-      next={{ enabled: true, label: 'Finish', onPress: () => router.replace(`/dashboard?role=${setup.dashboardRole}` as never) }}
-      onBack={() => (router.canGoBack() ? router.back() : router.replace('/role'))}
-      progress={1}
-      title="What to expect next"
-      top="tight">
-      <StepRing />
-      <View style={styles.list}>
+    <EntryScreen background="ready" backgroundDrawIn={450}>{(compact) => <>
+      <Animated.View entering={fade(0)}>
+        <EntryHeader brand={false} onBack={() => (router.canGoBack() ? router.back() : router.replace('/role'))} />
+      </Animated.View>
+      {/* The branded finish: the H assembles above the headline, then the three next steps follow. */}
+      <BrandAssemble delay={200} size={compact ? 44 : 52} style={{ marginTop: compact ? 26 : 40 }} />
+      <EntryHeading accent={HEADING[key].accent} compact={compact} delay={650} lead={HEADING[key].lead} size="hero" style={styles.heading} />
+      <Animated.Text entering={fade(1000)} style={entryStyles.description}>Three things to do first.</Animated.Text>
+      <View style={[styles.list, { marginTop: compact ? 22 : 30 }]}>
         {setup.steps.map((step, i) => (
-          <View accessible key={step.title} style={styles.item}>
-            <Text style={[styles.index, i === 0 && { color: Entry.peach }]}>{i + 1}</Text>
+          <Animated.View accessible entering={rise(1100 + i * 110)} key={step.title} style={styles.item}>
+            <Text style={styles.index}>{i + 1}</Text>
             <View style={styles.copy}>
               <Text style={styles.itemTitle}>{step.title}</Text>
               <Text style={styles.itemDetail}>{step.detail}</Text>
             </View>
-          </View>
+          </Animated.View>
         ))}
       </View>
-    </StepScreen>
+      <View style={styles.open} />
+      <Animated.View entering={rise(1500)}>
+        <EntryButton label="Finish setup" onPress={() => router.replace(`/dashboard?role=${setup.dashboardRole}` as never)} />
+      </Animated.View>
+    </>}</EntryScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  ring: { alignSelf: 'center', height: SIZE, width: SIZE },
-  ringNumber: { fontWeight: '600', fontSize: 13, position: 'absolute', textAlign: 'center', width: 28 },
-  ringCenter: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
-  ringBig: { color: Entry.ink, fontWeight: '700', fontSize: 56, lineHeight: 58 },
-  list: { gap: 18 },
-  item: { flexDirection: 'row', gap: 14 },
-  index: { color: Entry.muted, fontWeight: '600', fontSize: 15, width: 18 },
+  heading: { marginTop: 22 },
+  list: { gap: 20 },
+  item: { flexDirection: 'row', gap: 16 },
+  index: { color: Entry.peach, fontFamily: Entry.heading, fontSize: 17, lineHeight: 22, width: 16 },
   copy: { flex: 1, gap: 3 },
-  itemTitle: { color: Entry.ink, fontWeight: '600', fontSize: 16 },
-  itemDetail: { color: Entry.muted, fontWeight: '400', fontSize: 14, lineHeight: 20 },
+  itemTitle: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16.5, lineHeight: 22, letterSpacing: -0.2 },
+  itemDetail: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
+  open: { flexGrow: 1, minHeight: 28 },
 });

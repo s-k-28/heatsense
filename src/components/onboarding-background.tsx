@@ -1,4 +1,4 @@
-import { useEffect, useId, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, type ReactNode } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withTiming, type SharedValue } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
@@ -13,7 +13,7 @@ import { Entry } from '@/constants/entry-theme';
 // Each curve fades out toward one or both ends, so lines enter from the edge instead
 // of stopping abruptly. Decorative only: hidden from screen readers, never touchable.
 
-export type OnboardingBackgroundVariant = 'welcome' | 'auth' | 'role' | 'team' | 'code' | 'form' | 'complete';
+export type OnboardingBackgroundVariant = 'welcome' | 'auth' | 'role' | 'team' | 'code' | 'form' | 'complete' | 'ready';
 
 type Fade = 'both' | 'left' | 'right';
 type Curve = { d: string; width: number; opacity: number; fade: Fade };
@@ -37,12 +37,12 @@ const CURVES: Record<OnboardingBackgroundVariant, Curve[]> = {
     c('M-20 470 C90 430 200 470 290 430 C340 408 380 396 410 392', 1.2, 0.5),
     c('M-20 496 C100 466 210 500 300 462 C350 442 385 430 410 428', 1, 0.2),
   ],
-  // Behind the central illustration, leaving the choices below in open space.
+  // Asymmetric and restrained: one sweep rising to the right through the open band between the
+  // headline and the role panels (which are opaque, so lines pass behind them), one faint echo.
   role: [
-    c('M-20 150 C80 170 160 140 240 120 C310 102 360 80 410 70', 1, 0.2),
-    c('M-20 232 C70 192 150 252 230 207 C300 167 350 122 410 112', 1.4, 0.68, 'left'),
-    c('M-20 262 C90 237 170 282 250 242 C320 207 360 192 410 187', 1, 0.28, 'left'),
-    c('M220 860 C280 806 340 792 410 772', 1, 0.2, 'right'),
+    c('M40 392 C150 386 250 352 410 262', 1.4, 0.7, 'left'),
+    c('M-20 430 C110 428 240 400 410 318', 1, 0.3, 'left'),
+    c('M-20 470 C90 462 160 470 240 448', 1, 0.14, 'right'),
   ],
   // Restrained: the top-right corner beside the header, and a quiet line at the foot.
   team: [
@@ -62,13 +62,20 @@ const CURVES: Record<OnboardingBackgroundVariant, Curve[]> = {
     c('M318 -10 C330 40 362 74 410 84', 1.2, 0.4, 'left'),
     c('M352 -10 C362 22 384 40 410 46', 1, 0.2, 'left'),
   ],
-  // A little more expressive: the welcome composition, mirrored.
+  // The branded finish: a sweep from the top-right corner, and a more expressive pair low
+  // on the page in the open space above the actions, both clear of the centered copy.
   complete: [
-    c('M410 210 C330 235 270 245 200 230 C130 215 70 172 -20 152', 1, 0.22),
-    c('M410 330 C320 330 260 300 190 250 C130 205 70 150 -20 125', 1.5, 0.76, 'right'),
-    c('M410 355 C310 350 240 322 175 272 C115 226 60 182 -20 162', 1, 0.32, 'right'),
-    c('M410 440 C330 405 270 385 190 400 C110 418 60 445 -20 440', 1.3, 0.52, 'left'),
-    c('M-20 832 C90 800 200 842 300 816 C350 803 390 792 410 788', 1.1, 0.34),
+    c('M250 -10 C280 60 330 110 410 132', 1.3, 0.55, 'left'),
+    c('M300 -10 C318 40 350 74 410 88', 1, 0.24, 'left'),
+    c('M-20 694 C90 642 200 692 300 652 C350 632 390 620 410 614', 1.4, 0.62),
+    c('M-20 724 C110 684 220 728 320 690 C360 674 392 664 410 660', 1, 0.26),
+    c('M-20 612 C60 598 120 602 170 590', 1, 0.14, 'right'),
+  ],
+  // What to expect next: a long list, so the lines keep to the top-right corner and the very foot.
+  ready: [
+    c('M250 -10 C280 60 330 110 410 132', 1.3, 0.55, 'left'),
+    c('M300 -10 C318 40 350 74 410 88', 1, 0.24, 'left'),
+    c('M-20 842 C110 800 250 832 410 788', 1.2, 0.4),
   ],
 };
 
@@ -92,6 +99,8 @@ type Props = {
   /** Wait before the curves reveal. */
   delay?: number;
   draw?: CurveDraw;
+  /** Draw the curves in on their own, starting this many ms after the screen opens, then hold still. */
+  drawIn?: number;
 };
 
 function progress(t: number, start: number, duration: number) {
@@ -103,8 +112,20 @@ function easeInOut(p: number) {
   return p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2;
 }
 
-export function OnboardingBackground({ variant, delay = 0, height, draw }: Props) {
+export function OnboardingBackground({ variant, delay = 0, height, draw: outside, drawIn }: Props) {
   const reducedMotion = useReducedMotion();
+  // A screen that asks for drawIn gets its own short clock instead of the welcome intro's.
+  const own = useSharedValue(0);
+  const draw = useMemo<CurveDraw | undefined>(
+    () => outside ?? (drawIn === undefined ? undefined : { clock: own, start: drawIn, duration: 1000, stagger: 140 }),
+    [drawIn, outside, own],
+  );
+  useEffect(() => {
+    if (drawIn === undefined || reducedMotion) return;
+    const end = drawIn + 1000 + 140 * CURVES[variant].length;
+    own.set(withTiming(end, { duration: end, easing: Easing.linear }));
+    return () => cancelAnimation(own);
+  }, [drawIn, own, reducedMotion, variant]);
   // SVG ids must be unique per instance (several screens stay mounted in the stack on web).
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
   const reveal = useSharedValue(reducedMotion || draw ? 1 : 0);
