@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react';
 type Preferences = { compactRoster: boolean; celsius: boolean; bandConnected: boolean; practiceLiveActivity: boolean; unreadNotifications: number; refreshedAt: number | null; incidentAcknowledged: boolean; practiceStartedAt: number | null };
 
 const STORAGE_KEY = 'heatsense.preferences.v1';
-let state: Preferences = { compactRoster: false, celsius: false, bandConnected: true, practiceLiveActivity: true, unreadNotifications: 3, refreshedAt: null, incidentAcknowledged: false, practiceStartedAt: null };
+let state: Preferences = { compactRoster: false, celsius: false, bandConnected: false, practiceLiveActivity: true, unreadNotifications: 0, refreshedAt: null, incidentAcknowledged: false, practiceStartedAt: null };
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -17,7 +17,7 @@ AsyncStorage.getItem(STORAGE_KEY)
   .then((raw) => {
     if (!raw) return;
     const saved = JSON.parse(raw) as Partial<Preferences>;
-    state = { ...state, compactRoster: Boolean(saved.compactRoster), celsius: Boolean(saved.celsius), bandConnected: saved.bandConnected ?? true, practiceLiveActivity: saved.practiceLiveActivity ?? true };
+    state = { ...state, compactRoster: Boolean(saved.compactRoster), celsius: Boolean(saved.celsius), bandConnected: saved.bandConnected ?? false, practiceLiveActivity: saved.practiceLiveActivity ?? true };
     emit();
   })
   .catch(() => {});

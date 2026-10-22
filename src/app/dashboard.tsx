@@ -59,9 +59,9 @@ const roleTabs: Record<DashboardRole, DashboardTab[]> = {
 };
 
 const roleIdentity = {
-  coach: { eyebrow: 'Coach workspace', name: 'Coach Rivera' },
-  trainer: { eyebrow: 'Athletic trainer workspace', name: 'Alex Thompson' },
-  athlete: { eyebrow: 'Athlete workspace', name: 'Maya Chen' },
+  coach: { eyebrow: 'Coach' },
+  trainer: { eyebrow: 'Trainer' },
+  athlete: { eyebrow: 'Athlete' },
 } as const;
 
 function normalizeRole(value?: string): DashboardRole {
@@ -93,8 +93,8 @@ export default function DashboardScreen() {
     : requestedTab;
 
   const identity = roleIdentity[role];
-  // A signed-in coach sees their own initials; everyone else keeps the sample identity.
-  const accountName = role === 'coach' ? user?.displayName?.trim() || user?.email || identity.name : identity.name;
+  // The signed-in person's own name; never a sample person's.
+  const accountName = user?.displayName?.trim() || user?.email || identity.eyebrow;
   const reviewState = ['weather-stale', 'empty-team', 'pairing', 'no-band', 'alert-acknowledged'].includes(params.state ?? '')
     ? params.state as DashboardReviewState
     : null;
