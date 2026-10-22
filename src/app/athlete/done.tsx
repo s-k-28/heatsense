@@ -2,8 +2,10 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { CapsButton, StepScreen } from '@/components/step-kit';
-import { WelcomeWristband } from '@/components/welcome-wristband';
+import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
+
+import { BrandAssemble } from '@/components/brand-assemble';
+import { EntryButton, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { Entry } from '@/constants/entry-theme';
 import { watchMyMembership, type Membership } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
@@ -17,13 +19,16 @@ const DASHBOARD = '/dashboard?role=athlete';
 type State = { kind: 'loading' } | { kind: 'member'; teamName: string | null } | { kind: 'pending'; teamName: string | null } | { kind: 'none' };
 
 const COPY = {
-  member: (team: string | null) => ({ title: 'You’re all set.' }),
-  pending: (team: string | null) => ({ title: 'Request sent.' }),
-  none: () => ({ title: 'You’re all set.' }),
+  member: { lead: 'You’re on', accent: 'the team.', detail: (team: string | null) => (team ? `Welcome to ${team}.` : 'Your coach approved your request.') },
+  pending: { lead: 'Request', accent: 'sent.', detail: (team: string | null) => (team ? `${team} will approve your request soon.` : 'Your coach will approve your request soon.') },
+  none: { lead: 'You’re', accent: 'all set.', detail: () => 'Join a team anytime with a code from your coach.' },
 };
 
 export default function AthleteDoneScreen() {
   const router = useRouter();
+  const reducedMotion = useReducedMotion();
+  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(600));
+  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(500));
   const uid = getCurrentUserId();
   const [state, setState] = useState<State>(uid ? { kind: 'loading' } : { kind: 'none' });
 
@@ -53,32 +58,38 @@ export default function AthleteDoneScreen() {
     return () => clearTimeout(timer);
   }, [state.kind]);
 
-  const copy = state.kind === 'member' ? COPY.member(state.teamName) : state.kind === 'pending' ? COPY.pending(state.teamName) : state.kind === 'none' ? COPY.none() : null;
-
-  if (!copy) {
+  if (state.kind === 'loading') {
     return (
-      <StepScreen title="Setting up your account…">
-        <ActivityIndicator accessibilityLabel="Checking your team status" color={Entry.muted} style={styles.loading} />
-      </StepScreen>
+      <EntryScreen background="complete">{() => (
+        <View style={styles.loading}>
+          <ActivityIndicator accessibilityLabel="Checking your team status" color={Entry.muted} />
+        </View>
+      )}</EntryScreen>
     );
   }
 
+  const copy = COPY[state.kind];
+  const teamName = state.kind === 'none' ? null : state.teamName;
   return (
-    <StepScreen
-      footer={
-        <View style={styles.actions}>
-          <CapsButton label={state.kind === 'member' ? 'Go to dashboard' : 'Continue'} onPress={() => router.replace(DASHBOARD as never)} />
-          {state.kind === 'none' ? <CapsButton label="Join a team" onPress={() => router.push('/setup/athlete')} outline /> : null}
-        </View>
-      }
-      icon={<View style={styles.band}><WelcomeWristband width={210} /></View>}
-      title={copy.title}
-    />
+    <EntryScreen background="complete" backgroundDrawIn={500}>{(compact) => <>
+      <View style={styles.open} />
+      {/* The branded finish: the H assembles, then the headline rises beneath it. */}
+      <BrandAssemble delay={150} size={compact ? 64 : 80} style={styles.mark} />
+      <EntryHeading accent={copy.accent} align="center" compact={compact} delay={700} lead={copy.lead} size="hero" />
+      <Animated.Text entering={fade(1100)} style={[entryStyles.description, styles.centered]}>{copy.detail(teamName)}</Animated.Text>
+      <View style={styles.open} />
+      <Animated.View entering={rise(1250)} style={styles.actions}>
+        <EntryButton label={state.kind === 'member' ? 'Go to dashboard' : 'Continue'} onPress={() => router.replace(DASHBOARD as never)} />
+        {state.kind === 'none' ? <EntryButton label="Join a team" onPress={() => router.push('/setup/athlete')} secondary /> : null}
+      </Animated.View>
+    </>}</EntryScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  band: { alignSelf: 'center' },
-  loading: { marginTop: 32 },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  open: { flexGrow: 1, minHeight: 24 },
+  mark: { alignSelf: 'center', marginBottom: 28 },
+  centered: { alignSelf: 'center', textAlign: 'center' },
   actions: { gap: 12 },
 });

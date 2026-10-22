@@ -16,7 +16,7 @@ import {
   SingleChoice,
   useAthleteEntrance,
 } from '@/components/athlete-onboarding';
-import { entryStyles } from '@/components/entry-ui';
+import { EntryHeading, entryStyles } from '@/components/entry-ui';
 import { OnboardingBackground } from '@/components/onboarding-background';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { Entry } from '@/constants/entry-theme';
@@ -204,7 +204,7 @@ function Content() {
           <AthleteHeader onBack={back} step={3} />
         </Animated.View>
 
-        <Animated.Text entering={rise(350)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, { marginTop: compact ? 26 : 36 }]}>{'Know your\nbody.'}</Animated.Text>
+        <EntryHeading accent="body." compact={compact} delay={300} lead="Know your" style={{ marginTop: compact ? 26 : 36 }} />
         <Animated.View entering={fade(550)}>
           <Text style={entryStyles.description}>Every question here is optional.</Text>
           <Text style={[styles.privacy]}>You can update your answers anytime.</Text>

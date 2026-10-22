@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -17,11 +17,13 @@ type EntryScreenProps = {
   backgroundDelay?: number;
   /** Draw the curves in on an outside clock (the welcome intro). */
   backgroundDraw?: CurveDraw;
+  /** Draw the curves in on the screen's own clock, starting after this many ms. */
+  backgroundDrawIn?: number;
   /** Drawn behind everything, under the curves (e.g. the sign-in photograph). */
   backdrop?: ReactNode;
 };
 
-export function EntryScreen({ children, background, backgroundDelay, backgroundDraw, backdrop }: EntryScreenProps) {
+export function EntryScreen({ children, background, backgroundDelay, backgroundDraw, backgroundDrawIn, backdrop }: EntryScreenProps) {
   const insets = useSafeAreaInsets();
   const [height, setHeight] = useState(0);
   return (
@@ -29,7 +31,7 @@ export function EntryScreen({ children, background, backgroundDelay, backgroundD
       <View onLayout={(event: LayoutChangeEvent) => setHeight(event.nativeEvent.layout.height)} style={entryStyles.screen}>
         <StatusBar style="light" />
         {backdrop}
-        {background ? <OnboardingBackground variant={background} delay={backgroundDelay} draw={backgroundDraw} /> : null}
+        {background ? <OnboardingBackground variant={background} delay={backgroundDelay} draw={backgroundDraw} drawIn={backgroundDrawIn} /> : null}
         <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={[entryStyles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
           {children(height > 0 && height < 760)}
         </ScrollView>
@@ -38,17 +40,67 @@ export function EntryScreen({ children, background, backgroundDelay, backgroundD
   );
 }
 
-/** Brand header. With `onBack` the brand is centered between Back and a spacer. `progress` adds the step track below it. */
-export function EntryHeader({ onBack, progress }: { onBack?: () => void; progress?: { step: number; total: number } }) {
+const headingEase = Easing.out(Easing.cubic);
+
+function HeadingLine({ text, progress, style }: { text: string; progress: SharedValue<number>; style: StyleProp<object> }) {
+  const rise = useAnimatedStyle(() => ({ opacity: Math.min(1, progress.value * 2.2), transform: [{ translateY: 20 * (1 - progress.value) }] }));
+  return (
+    <View style={entryStyles.headingMask}>
+      <Animated.Text style={[style, rise]}>{text}</Animated.Text>
+    </View>
+  );
+}
+
+/**
+ * The welcome headline language: an off-white line, then a peach line, each rising about
+ * 20 px through its own mask (the second 180 ms after the first). `hero` is the large size
+ * for open screens, `form` the smaller one above fields.
+ */
+export function EntryHeading({ lead, accent, size = 'form', compact = false, delay = 0, align = 'left', style }: {
+  lead: string;
+  accent: string;
+  size?: 'hero' | 'form';
+  compact?: boolean;
+  delay?: number;
+  align?: 'left' | 'center';
+  style?: StyleProp<ViewStyle>;
+}) {
+  const reducedMotion = useReducedMotion();
+  const one = useSharedValue(reducedMotion ? 1 : 0);
+  const two = useSharedValue(reducedMotion ? 1 : 0);
+  useEffect(() => {
+    if (reducedMotion) return;
+    one.set(withDelay(delay, withTiming(1, { duration: 650, easing: headingEase })));
+    two.set(withDelay(delay + 180, withTiming(1, { duration: 700, easing: headingEase })));
+  }, [delay, one, reducedMotion, two]);
+  const type = size === 'hero'
+    ? [entryStyles.headline, compact && entryStyles.headlineCompact]
+    : [entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact];
+  const centered = align === 'center' && entryStyles.centered;
+  return (
+    <View accessible accessibilityLabel={`${lead} ${accent}`.replace(/\n/g, ' ')} accessibilityRole="header" style={[entryStyles.noShrink, style]}>
+      <HeadingLine progress={one} style={[type, centered]} text={lead} />
+      <HeadingLine progress={two} style={[type, centered, entryStyles.accent]} text={accent} />
+    </View>
+  );
+}
+
+/**
+ * Brand header. With `onBack` the brand is centered between Back and a spacer. `progress` adds the step track below it.
+ * `brand={false}` leaves only Back, for a screen whose own mark is the brand (the finish).
+ */
+export function EntryHeader({ onBack, progress, brand = true }: { onBack?: () => void; progress?: { step: number; total: number }; brand?: boolean }) {
   return (
     <View>
       <View style={entryStyles.header}>
         {onBack ? <EntryBackButton onPress={onBack} /> : null}
-        <View accessible accessibilityLabel="HeatSense" style={entryStyles.brand}>
-          <HeatSenseLogo height={26} />
-          <Text style={entryStyles.wordmark}>HeatSense</Text>
-        </View>
-        {onBack ? <View style={entryStyles.spacer} /> : null}
+        {brand ? (
+          <View accessible accessibilityLabel="HeatSense" style={entryStyles.brand}>
+            <HeatSenseLogo height={26} />
+            <Text style={entryStyles.wordmark}>HeatSense</Text>
+          </View>
+        ) : null}
+        {onBack && brand ? <View style={entryStyles.spacer} /> : null}
       </View>
       {progress ? <OnboardingProgress step={progress.step} total={progress.total} /> : null}
     </View>
@@ -149,6 +201,11 @@ export const entryStyles = StyleSheet.create({
   note: { color: Entry.muted, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 18, textAlign: 'center' },
   focus: Platform.OS === 'web' ? { outlineColor: Entry.peach, outlineWidth: 2, outlineOffset: 4, outlineStyle: 'solid' } : { borderColor: Entry.peach, borderWidth: 2 },
   pressed: { opacity: 0.8 },
-  pressedButton: { opacity: 0.92, transform: [{ scale: 0.985 }] },
+  // Exactly the welcome Get started press.
+  pressedButton: { opacity: 0.92, transform: [{ scale: 0.98 }] },
+  headingMask: { overflow: 'hidden' },
+  accent: { color: Entry.peach },
+  centered: { textAlign: 'center' },
+  noShrink: { flexShrink: 0 },
   link: { color: Entry.muted, fontFamily: Entry.medium, fontSize: 14, lineHeight: 20 },
 });

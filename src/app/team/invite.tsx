@@ -17,7 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EntryButton, EntryHeader, entryStyles } from '@/components/entry-ui';
+import { EntryButton, EntryHeader, EntryHeading, entryStyles } from '@/components/entry-ui';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { OnboardingBackground } from '@/components/onboarding-background';
 import { Entry, ONBOARDING_STEPS } from '@/constants/entry-theme';
@@ -107,9 +107,7 @@ function Content({ draft }: { draft: TeamDraft | null }) {
           <EntryHeader onBack={back} progress={{ step: 3, total: ONBOARDING_STEPS.coach }} />
         </Animated.View>
 
-        <Animated.Text entering={rise(200)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.noShrink, { marginTop: compact ? 26 : 36 }]}>
-          {'Bring your\nteam together.'}
-        </Animated.Text>
+        <EntryHeading accent="together." compact={compact} delay={200} lead="Bring your team" style={{ marginTop: compact ? 26 : 36 }} />
         <Animated.Text entering={rise(350)} style={[entryStyles.description, styles.noShrink]}>Share this code so your athletes can join.</Animated.Text>
 
         <View style={[styles.codePanel, { marginTop: compact ? 20 : 28 }]}>

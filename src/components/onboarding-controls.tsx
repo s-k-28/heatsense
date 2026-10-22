@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, interpolateColor, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
@@ -42,10 +42,12 @@ type SelectionSurfaceProps = {
   selected: boolean;
   onPress: () => void;
   minHeight?: number;
+  /** Larger title for a screen whose main act is this choice (role selection). */
+  large?: boolean;
 };
 
 /** A large rounded choice: title and one line of description. Selecting it warms the edge and fill to peach. */
-export function OnboardingSelectionSurface({ title, description, selected, onPress, minHeight = 88 }: SelectionSurfaceProps) {
+export function OnboardingSelectionSurface({ title, description, selected, onPress, minHeight = 88, large = false }: SelectionSurfaceProps) {
   const ms = useMs();
   const [focused, setFocused] = useState(false);
   const progress = useSharedValue(selected ? 1 : 0);
@@ -56,7 +58,9 @@ export function OnboardingSelectionSurface({ title, description, selected, onPre
     borderColor: interpolateColor(progress.value, [0, 1], [interpolateColor(hover.value, [0, 1], [Entry.line, Entry.lineStrong]), Entry.peach]),
     backgroundColor: interpolateColor(progress.value, [0, 1], [Entry.surface, Entry.peachTint]),
   }));
-  const titleStyle = useAnimatedStyle(() => ({ color: interpolateColor(progress.value, [0, 1], [Entry.ink, Entry.peach]) }));
+  // The selected title warms to peach and eases a few px right, so the choice reads without a check mark.
+  const titleStyle = useAnimatedStyle(() => ({ color: interpolateColor(progress.value, [0, 1], [Entry.ink, Entry.peach]), transform: [{ translateX: 4 * progress.value }] }));
+  const descriptionStyle = useAnimatedStyle(() => ({ transform: [{ translateX: 4 * progress.value }] }));
 
   return (
     <Pressable
@@ -71,8 +75,8 @@ export function OnboardingSelectionSurface({ title, description, selected, onPre
       onHoverOut={() => { hover.set(withTiming(0, { duration: ms(200), easing: ease })); }}
       style={({ pressed }) => [{ borderRadius: 26 }, focused && FOCUS_RING, pressed && { transform: [{ scale: 0.99 }] }]}>
       <Animated.View style={[styles.surface, { minHeight }, frame]}>
-        <Animated.Text style={[styles.title, titleStyle]}>{title}</Animated.Text>
-        <Text style={styles.description}>{description}</Text>
+        <Animated.Text style={[styles.title, large && styles.titleLarge, titleStyle]}>{title}</Animated.Text>
+        <Animated.Text style={[styles.description, descriptionStyle]}>{description}</Animated.Text>
       </Animated.View>
     </Pressable>
   );
@@ -81,6 +85,7 @@ export function OnboardingSelectionSurface({ title, description, selected, onPre
 const styles = StyleSheet.create({
   surface: { borderWidth: 1, borderRadius: 26, paddingHorizontal: 22, paddingVertical: 18, justifyContent: 'center', gap: 5 },
   title: { fontFamily: Entry.heading, fontSize: 20, letterSpacing: -0.5 },
+  titleLarge: { fontSize: 23, letterSpacing: -0.7 },
   description: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   indicator: { width: 22, height: 22 },
   indicatorRing: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 11, borderWidth: 1, borderColor: Entry.muted },
