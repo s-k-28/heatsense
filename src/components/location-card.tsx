@@ -1,10 +1,10 @@
-import { AppleMaps } from 'expo-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HeatIcon } from '@/components/heat-icon';
+import { TeamMap } from '@/components/team-map';
 import { Palette, Radius, Spacing, Type } from '@/constants/theme';
 
 const pin = { ios: 'location.fill', android: 'my_location', web: 'my_location' } as const;
@@ -19,9 +19,9 @@ const SAMPLE: Place = { city: 'Frisco', latitude: 33.1507, longitude: -96.8236, 
  * location services to set it from the phone. The map is a picture here, so it doesn't take touches.
  */
 export function LocationCard({ field }: { field: string }) {
-  const map = useRef<AppleMaps.MapView>(null);
   const [place, setPlace] = useState<Place>(SAMPLE);
   const [busy, setBusy] = useState(false);
+  const coordinates = useMemo(() => ({ latitude: place.latitude, longitude: place.longitude }), [place.latitude, place.longitude]);
 
   const locate = async () => {
     setBusy(true);
@@ -38,7 +38,6 @@ export function LocationCard({ field }: { field: string }) {
       const { latitude, longitude } = position.coords;
       const [address] = await Location.reverseGeocodeAsync({ latitude, longitude });
       setPlace({ city: address?.city ?? address?.subregion ?? 'Current location', latitude, longitude, live: true, region: address?.region ?? '' });
-      map.current?.setCameraPosition({ coordinates: { latitude, longitude }, zoom: 11.5 });
     } catch {
       Alert.alert('Couldn’t find your location', 'Check that location services are on, then try again.');
     } finally {
@@ -49,17 +48,7 @@ export function LocationCard({ field }: { field: string }) {
   return (
     <View style={styles.card}>
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none" style={styles.map}>
-        {Platform.OS === 'ios' ? (
-          <AppleMaps.View
-            cameraPosition={{ coordinates: { latitude: place.latitude, longitude: place.longitude }, zoom: 11.5 }}
-            colorScheme={AppleMaps.MapColorScheme.DARK}
-            markers={[{ coordinates: { latitude: place.latitude, longitude: place.longitude }, id: 'field', systemImage: 'sportscourt.fill', tintColor: Palette.coral }]}
-            properties={{ pointsOfInterest: { including: [] }, selectionEnabled: false }}
-            ref={map}
-            style={StyleSheet.absoluteFill}
-            uiSettings={{ compassEnabled: false, myLocationButtonEnabled: false, scaleBarEnabled: false, togglePitchEnabled: false }}
-          />
-        ) : null}
+        <TeamMap coordinates={coordinates} />
         <LinearGradient colors={['rgba(16,18,20,0)', 'rgba(16,18,20,0.9)']} locations={[0.72, 1]} style={StyleSheet.absoluteFill} />
       </View>
       <View accessible accessibilityLabel={`Team location: ${place.city}${place.region ? `, ${place.region}` : ''}. ${field}.`} style={styles.copy}>
