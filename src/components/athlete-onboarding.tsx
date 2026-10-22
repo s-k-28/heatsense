@@ -5,18 +5,16 @@ import Svg, { Path } from 'react-native-svg';
 
 import { EntryButton, EntryHeader, EntryLink } from '@/components/entry-ui';
 import { SelectionIndicator } from '@/components/onboarding-controls';
-import { Entry } from '@/constants/entry-theme';
+import { Entry, ONBOARDING_STEPS } from '@/constants/entry-theme';
 
 // Shared pieces of athlete onboarding, in the entry design language (welcome /
-// sign-in / role): field charcoal, Barlow Condensed headlines, Inter body, peach for
-// the primary action and selected answers, light blue for focus and small accents.
+// sign-in / role): field charcoal, Inter headings and body, peach for the primary
+// action, selected answers, and focus; light blue only for small accents.
 export const ATHLETE_SCREEN = Entry.canvas;
-export const ATHLETE_MUTED = Entry.muted;
 export const ATHLETE_ERROR = Entry.error;
-export const athleteFont = Entry.body;
 export const athleteEase = Easing.out(Easing.cubic);
 
-const FOCUS_RING = { outlineColor: Entry.blue, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
+const FOCUS_RING = { outlineColor: Entry.peach, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
 const isKeyboardFocus = (event: { target?: unknown }) => Platform.OS !== 'web' || Boolean((event.target as Element | null)?.matches?.(':focus-visible'));
 
 /**
@@ -45,9 +43,9 @@ export function useAthleteEntrance() {
   }, [reducedMotion]);
 }
 
-/** Back, the HeatSense brand, and an optional discreet step count ("01 / 03"). */
-export function AthleteHeader({ onBack, step }: { onBack?: () => void; step?: string }) {
-  return <EntryHeader onBack={onBack} step={step} />;
+/** Back, the HeatSense brand, and the progress track for this step of the athlete flow. */
+export function AthleteHeader({ onBack, step }: { onBack?: () => void; step?: number }) {
+  return <EntryHeader onBack={onBack} progress={step ? { step, total: ONBOARDING_STEPS.athlete } : undefined} />;
 }
 
 /** The entry peach primary button. */
@@ -132,14 +130,14 @@ export function AthleteTextLink({ label, onPress, disabled }: { label: string; o
 }
 
 const choiceStyles = StyleSheet.create({
-  section: { color: Entry.ink, fontWeight: '600', fontSize: 14, letterSpacing: -0.1 },
+  section: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 14, letterSpacing: -0.1 },
   group: { gap: 10 },
-  question: { color: Entry.ink, fontWeight: '400', fontSize: 15.5, lineHeight: 22, marginBottom: 2 },
-  row: { minHeight: 54, borderRadius: 16, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.surface, flexDirection: 'row', alignItems: 'center', gap: 14, paddingLeft: 18, paddingRight: 16, paddingVertical: 13 },
+  question: { color: Entry.ink, fontFamily: Entry.body, fontSize: 15.5, lineHeight: 22, marginBottom: 2 },
+  row: { minHeight: 54, borderRadius: 18, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.surface, flexDirection: 'row', alignItems: 'center', gap: 14, paddingLeft: 18, paddingRight: 16, paddingVertical: 13 },
   rowHover: { borderColor: Entry.lineStrong },
-  rowOn: { borderColor: Entry.peach, backgroundColor: Entry.selected },
-  rowText: { flex: 1, color: Entry.muted, fontWeight: '400', fontSize: 15.5, lineHeight: 21 },
-  rowTextOn: { color: Entry.ink, fontWeight: '500' },
+  rowOn: { borderColor: Entry.peach, backgroundColor: Entry.peachTint },
+  rowText: { flex: 1, color: Entry.muted, fontFamily: Entry.body, fontSize: 15.5, lineHeight: 21 },
+  rowTextOn: { color: Entry.ink, fontFamily: Entry.medium },
   box: { width: 22, height: 22, borderRadius: 7, borderWidth: 1, borderColor: Entry.muted, alignItems: 'center', justifyContent: 'center' },
   boxOn: { backgroundColor: Entry.peach, borderColor: Entry.peach },
 });

@@ -17,11 +17,6 @@ export const FIELDLINE_PARTS = {
   /** A small smile under the eyes, tilted with the head. */
   mouth: 'M106 97 Q117 104 127 91',
 } as const;
-/** The field lines behind him in FieldlineScene (viewBox 0 0 400 220, stretched). */
-export const FIELD_LINES = {
-  grid: 'M-30 182 L167 70 L435 144 M-30 215 L167 103 L435 177 M43 140 L312 215 M122 96 L393 170',
-  accent: 'M-10 196 L167 88 L414 158',
-} as const;
 export const FIELDLINE_FILL = '#29343B';
 export const FIELDLINE_LINE = '#42525C';
 
@@ -59,12 +54,6 @@ export function FieldlineCharacter({ height = 220, reaction = null }: FieldlineP
 export function FieldlineScene({ compact = false, small = false, reaction = null }: { compact?: boolean; small?: boolean; reaction?: FieldlineProps['reaction'] }) {
   return (
     <View style={{ height: small ? 142 : compact ? 200 : 274, alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-      <View pointerEvents="none" accessible={false} aria-hidden style={{ position: 'absolute', left: -24, right: -24, bottom: 0, height: '80%' }}>
-        <Svg width="100%" height="100%" viewBox="0 0 400 220" preserveAspectRatio="none">
-          <Path d={FIELD_LINES.grid} stroke={Entry.line} strokeWidth={1} fill="none" />
-          <Path d={FIELD_LINES.accent} stroke={Entry.blue} strokeOpacity={0.5} strokeWidth={1.6} fill="none" />
-        </Svg>
-      </View>
       <FieldlineCharacter height={small ? 132 : compact ? 182 : 246} reaction={reaction} />
     </View>
   );

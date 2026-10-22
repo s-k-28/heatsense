@@ -1,33 +1,16 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, interpolateColor, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { EntryButton } from '@/components/entry-ui';
 import { Entry } from '@/constants/entry-theme';
 
 // Shared onboarding controls in the entry design language (welcome / sign-in / role):
-// raised charcoal surfaces with a quiet outline, a peach edge and check for the
-// selected choice, and the peach primary button. No glass, no glowing borders.
-
-/** Kept for screens that still reference it; this is the entry body face. */
-export const onboardingFont = Entry.body;
-
-export const OnboardingTokens = {
-  surface: Entry.surface,
-  surfaceRaised: Entry.selected,
-  outline: Entry.line,
-  outlineStrong: Entry.peach,
-  outlineDisabled: Entry.line,
-  text: Entry.ink,
-  textMuted: Entry.muted,
-  iconBlue: Entry.blue,
-  iconGreen: Entry.blue,
-  iconTeal: Entry.blue,
-} as const;
+// charcoal surfaces with a quiet outline, and a peach edge plus a faint peach tint for
+// the selected choice. Choices are told apart by their words, not by icons.
 
 const ease = Easing.out(Easing.cubic);
-const FOCUS_RING = { outlineColor: Entry.blue, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
+const FOCUS_RING = { outlineColor: Entry.peach, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
 
 function useMs() {
   const reducedMotion = useReducedMotion();
@@ -37,7 +20,7 @@ function useMs() {
 // Keyboard focus only: on web a tap also focuses, but shouldn't leave a ring (:focus-visible).
 const isKeyboardFocus = (event: { target?: unknown }) => Platform.OS !== 'web' || Boolean((event.target as Element | null)?.matches?.(':focus-visible'));
 
-/** Round selection mark: outlined when off, peach with a dark check when on. */
+/** Round selection mark for answer lists: outlined when off, peach with a dark check when on. */
 export function SelectionIndicator({ selected }: { selected: boolean }) {
   const ms = useMs();
   const progress = useSharedValue(selected ? 1 : 0);
@@ -53,35 +36,27 @@ export function SelectionIndicator({ selected }: { selected: boolean }) {
   );
 }
 
-type SelectionButtonProps = {
-  icon: ReactNode;
+type SelectionSurfaceProps = {
   title: string;
   description: string;
   selected: boolean;
   onPress: () => void;
-  /** 'row': icon · text · indicator. 'stacked': icon and indicator on top, text below. */
-  layout?: 'row' | 'stacked';
-  height: number;
+  minHeight?: number;
 };
 
-export function OnboardingSelectionButton({ icon, title, description, selected, onPress, layout = 'row', height }: SelectionButtonProps) {
+/** A large rounded choice: title and one line of description. Selecting it warms the edge and fill to peach. */
+export function OnboardingSelectionSurface({ title, description, selected, onPress, minHeight = 88 }: SelectionSurfaceProps) {
   const ms = useMs();
   const [focused, setFocused] = useState(false);
   const progress = useSharedValue(selected ? 1 : 0);
   const hover = useSharedValue(0);
-  useEffect(() => { progress.set(withTiming(selected ? 1 : 0, { duration: ms(220), easing: ease })); }, [ms, progress, selected]);
+  useEffect(() => { progress.set(withTiming(selected ? 1 : 0, { duration: ms(240), easing: ease })); }, [ms, progress, selected]);
 
   const frame = useAnimatedStyle(() => ({
     borderColor: interpolateColor(progress.value, [0, 1], [interpolateColor(hover.value, [0, 1], [Entry.line, Entry.lineStrong]), Entry.peach]),
-    backgroundColor: interpolateColor(progress.value, [0, 1], [Entry.surface, Entry.selected]),
+    backgroundColor: interpolateColor(progress.value, [0, 1], [Entry.surface, Entry.peachTint]),
   }));
-
-  const copy = (
-    <View style={layout === 'row' ? styles.rowCopy : styles.stackCopy}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
-    </View>
-  );
+  const titleStyle = useAnimatedStyle(() => ({ color: interpolateColor(progress.value, [0, 1], [Entry.ink, Entry.peach]) }));
 
   return (
     <Pressable
@@ -94,40 +69,19 @@ export function OnboardingSelectionButton({ icon, title, description, selected, 
       onBlur={() => setFocused(false)}
       onHoverIn={() => { hover.set(withTiming(1, { duration: ms(200), easing: ease })); }}
       onHoverOut={() => { hover.set(withTiming(0, { duration: ms(200), easing: ease })); }}
-      style={({ pressed }) => [{ borderRadius: 20 }, focused && FOCUS_RING, pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] }]}>
-      <Animated.View style={[styles.frame, { minHeight: height }, frame]}>
-        {layout === 'row' ? (
-          <View style={styles.row}>
-            <View style={styles.iconSlot}>{icon}</View>
-            {copy}
-            <SelectionIndicator selected={selected} />
-          </View>
-        ) : (
-          <View style={styles.stack}>
-            <View style={styles.stackTop}>{icon}<SelectionIndicator selected={selected} /></View>
-            {copy}
-          </View>
-        )}
+      style={({ pressed }) => [{ borderRadius: 26 }, focused && FOCUS_RING, pressed && { transform: [{ scale: 0.99 }] }]}>
+      <Animated.View style={[styles.surface, { minHeight }, frame]}>
+        <Animated.Text style={[styles.title, titleStyle]}>{title}</Animated.Text>
+        <Text style={styles.description}>{description}</Text>
       </Animated.View>
     </Pressable>
   );
 }
 
-/** The entry peach primary button, labelled "Continue" by default. */
-export function OnboardingContinueButton({ enabled, onPress, label = 'Continue' }: { enabled: boolean; onPress: () => void; label?: string }) {
-  return <EntryButton label={label} disabled={!enabled} onPress={onPress} />;
-}
-
 const styles = StyleSheet.create({
-  frame: { borderWidth: 1, borderRadius: 20 },
-  row: { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 18, gap: 14 },
-  iconSlot: { width: 28, alignItems: 'center' },
-  rowCopy: { flex: 1, gap: 5 },
-  stack: { flex: 1, padding: 20, gap: 18, justifyContent: 'space-between' },
-  stackTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  stackCopy: { gap: 5 },
-  title: { color: Entry.ink, fontWeight: '600', fontSize: 18, letterSpacing: -0.2 },
-  description: { color: Entry.muted, fontWeight: '400', fontSize: 13, lineHeight: 19 },
+  surface: { borderWidth: 1, borderRadius: 26, paddingHorizontal: 22, paddingVertical: 18, justifyContent: 'center', gap: 5 },
+  title: { fontFamily: Entry.heading, fontSize: 20, letterSpacing: -0.5 },
+  description: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   indicator: { width: 22, height: 22 },
   indicatorRing: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 11, borderWidth: 1, borderColor: Entry.muted },
   indicatorFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 11, backgroundColor: Entry.peach, alignItems: 'center', justifyContent: 'center' },

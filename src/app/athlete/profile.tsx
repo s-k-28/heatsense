@@ -1,11 +1,22 @@
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ATHLETE_ERROR } from '@/components/athlete-onboarding';
-import { JerseyMark } from '@/components/onboarding-art';
-import { ChoiceRows, StepField, StepScreen, Wheel } from '@/components/step-kit';
+import {
+  AthleteHeader,
+  AthletePillButton,
+  ATHLETE_ERROR,
+  ATHLETE_SCREEN,
+  useAthleteEntrance,
+} from '@/components/athlete-onboarding';
+import { entryStyles } from '@/components/entry-ui';
+import { OnboardingBackground } from '@/components/onboarding-background';
+import { MobileViewport } from '@/components/mobile-viewport';
 import { Entry } from '@/constants/entry-theme';
+import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
 import { SPORTS } from '@/constants/sports';
 import { ageBandFor, getAthleteProfile, GRADES, saveAthleteBasics, type AthleteProfile, type Grade } from '@/services/athlete-profile';
 import { firebaseAuth } from '@/services/firebase';
@@ -17,13 +28,17 @@ import { getAthleteDraft, getCurrentUserId, setAthleteDraft, type AthleteDraft }
 //
 // Next: page 2, "Know your body."
 const NEXT_STEP = '/athlete/body';
-const STEPS = ['name', 'birthday', 'grade', 'sport', 'jersey'] as const;
 
 const clean = (value: string) => value.replace(/\s+/g, ' ').trim();
 
 type Team = { teamId: string; status: Membership['status']; preview: TeamPreview | null };
 
 // ── Date of birth: typed as MM / DD / YYYY, digits only ──────────────────────
+function formatBirthDate(digits: string) {
+  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
+  return parts.join(' / ');
+}
+
 function parseBirthDate(value: string): { date: Date | null; error: string | null } {
   const digits = value.replace(/\D/g, '');
   if (!digits) return { date: null, error: 'Enter your date of birth.' };
@@ -43,22 +58,27 @@ function parseBirthDate(value: string): { date: Date | null; error: string | nul
 }
 
 export default function AthleteProfileScreen() {
-  return <Content />;
+  return <MobileViewport><View style={[styles.fill, { backgroundColor: ATHLETE_SCREEN }]}><Content /></View></MobileViewport>;
 }
 
 function Content() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { rise, fade } = useAthleteEntrance();
   const uid = getCurrentUserId();
   const saved = getAthleteDraft();
   const edited = useRef(saved !== null);
 
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const [draft, setDraft] = useState<AthleteDraft>(saved ?? { fullName: firebaseAuth?.currentUser?.displayName ?? '', birthDate: '', grade: null, sport: null, jersey: '' });
   const [profile, setProfile] = useState<AthleteProfile | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
-  const [, setTouched] = useState<Record<string, boolean>>({});
+  const [openSelect, setOpenSelect] = useState<'grade' | 'sport' | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [step, setStep] = useState<(typeof STEPS)[number]>('name');
+
+  const compact = size.height > 0 && size.height < 760;
 
   const update = (next: Partial<AthleteDraft>) => {
     edited.current = true;
@@ -123,9 +143,15 @@ function Content() {
     sport: sport ? null : 'Choose your sport.',
   };
   const valid = !Object.values(errors).some(Boolean);
+  const shown = (field: keyof typeof errors) => (touched[field] ? errors[field] : null);
   const touch = (field: keyof typeof errors) => setTouched((current) => ({ ...current, [field]: true }));
 
-
+  const onBirthDateChange = (text: string) => {
+    let digits = text.replace(/\D/g, '').slice(0, 8);
+    // Backspacing over a " / " removes the digit before it.
+    if (text.length < draft.birthDate.length && digits === draft.birthDate.replace(/\D/g, '')) digits = digits.slice(0, -1);
+    update({ birthDate: formatBirthDate(digits) });
+  };
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/setup/athlete'));
 
@@ -156,90 +182,113 @@ function Content() {
     }
   };
 
-  // One question per screen. The save happens once, on the last step, exactly as before.
-  const index = STEPS.indexOf(step);
-  const stepValid = {
-    name: !errors.fullName,
-    birthday: !errors.birthDate,
-    grade: !errors.grade,
-    sport: !errors.sport,
-    jersey: valid,
-  }[step];
-  const goBack = () => (index > 0 ? setStep(STEPS[index - 1]) : back());
-  const goNext = () => {
-    if (!stepValid) return;
-    if (step === 'jersey') return void submit();
-    setStep(STEPS[index + 1]);
-  };
-  const common = {
-    next: { enabled: stepValid && !saving, label: step === 'jersey' ? 'Save' : 'Next', loading: saving, onPress: goNext },
-    onBack: goBack,
-    progress: 0.36 + index * 0.06,
-  };
-  const failure = saveError ? <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text> : null;
+  const fieldDelay = (index: number) => 700 + index * 80;
 
-  switch (step) {
-    case 'name':
-      return (
-        <StepScreen {...common} icon={<JerseyMark size={96} />} title="What’s your name?">
-          <StepField autoCapitalize="words" autoComplete="name" autoCorrect={false} autoFocus label="Full name" maxLength={80} onBlur={() => touch('fullName')} onChangeText={(fullName) => update({ fullName })} onSubmitEditing={goNext} placeholder="Your full name" returnKeyType="next" textContentType="name" value={draft.fullName} />
-        </StepScreen>
-      );
-    case 'birthday':
-      return (
-        <StepScreen {...common} icon={<JerseyMark size={96} />} title="When’s your birthday?">
-          <BirthdayWheels onChange={(birthDate) => update({ birthDate })} value={draft.birthDate} />
-          {keepsSavedAge ? <Text style={styles.hint}>Already saved. Change it only if it’s wrong.</Text> : null}
-        </StepScreen>
-      );
-    case 'grade':
-      return (
-        <StepScreen {...common} icon={<JerseyMark size={96} />} title="What grade are you in?" top="tight">
-          <ChoiceRows label="Grade" onChange={(grade) => update({ grade })} options={GRADES.map((grade) => ({ value: grade, label: grade }))} value={draft.grade as Grade | null} />
-        </StepScreen>
-      );
-    case 'sport':
-      return (
-        <StepScreen {...common} icon={<JerseyMark size={96} />} title="What do you play?" top={teamSport ? 'open' : 'tight'}>
-          {teamSport && team?.preview ? (
-            <TeamSportField sport={teamSport} teamName={team.preview.teamName} pending={team.status === 'pending'} />
-          ) : (
-            <ChoiceRows label="Sport" onChange={(value) => update({ sport: value })} options={SPORTS.map((value) => ({ value, label: value }))} value={draft.sport as (typeof SPORTS)[number] | null} />
-          )}
-        </StepScreen>
-      );
-    case 'jersey':
-      return (
-        <StepScreen {...common} icon={<JerseyMark size={96} />} title="Jersey number">
-          <StepField autoFocus inputMode="numeric" keyboardType="number-pad" label="Jersey number" maxLength={3} onChangeText={(text) => update({ jersey: text.replace(/\D/g, '').slice(0, 3) })} onSubmitEditing={goNext} placeholder="12" returnKeyType="done" value={draft.jersey} />
-          {failure}
-        </StepScreen>
-      );
-  }
-}
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
-const THIS_YEAR = new Date().getFullYear();
-// Middle and high school athletes, with room either side.
-const YEARS = Array.from({ length: 16 }, (_, i) => THIS_YEAR - 22 + i);
-const pad = (n: number) => String(n).padStart(2, '0');
-
-/** Month · day · year wheels writing the same "MM / DD / YYYY" the typed field used. */
-function BirthdayWheels({ value, onChange }: { value: string; onChange: (birthDate: string) => void }) {
-  const digits = value.replace(/\D/g, '');
-  const month = digits.length === 8 ? Number(digits.slice(0, 2)) : 1;
-  const year = digits.length === 8 ? Number(digits.slice(4, 8)) : THIS_YEAR - 15;
-  const days = new Date(year, month, 0).getDate();
-  const day = digits.length === 8 ? Math.min(Number(digits.slice(2, 4)), days) : 1;
-  const set = (m: number, d: number, y: number) => onChange(`${pad(m)} / ${pad(Math.min(d, new Date(y, m, 0).getDate()))} / ${y}`);
-  // Write the default once so "Next" is enabled without the athlete having to scroll.
-  useEffect(() => { if (digits.length !== 8) set(month, day, year); });
   return (
-    <View style={styles.wheels}>
-      <Wheel format={(m) => MONTHS[m - 1]} items={Array.from({ length: 12 }, (_, i) => i + 1)} label="Birth month" onChange={(m) => set(m, day, year)} value={month} width={92} />
-      <Wheel items={Array.from({ length: days }, (_, i) => i + 1)} label="Birth day" onChange={(d) => set(month, d, year)} value={day} width={64} />
-      <Wheel items={YEARS} label="Birth year" onChange={(y) => set(month, day, y)} value={year} width={92} />
-    </View>
+    <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined} onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
+      <StatusBar style="light" />
+      <ScrollView
+        bounces={false}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        {size.height > 0 && <OnboardingBackground variant="form" height={size.height} />}
+        <Animated.View entering={fade(200)}>
+          <AthleteHeader onBack={back} step={2} />
+        </Animated.View>
+
+        <Animated.Text entering={rise(350)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, { marginTop: compact ? 26 : 36 }]}>{'Make it\nyours.'}</Animated.Text>
+        <Animated.Text entering={fade(550)} style={entryStyles.description}>Let’s start with the basics.</Animated.Text>
+
+        <View style={[styles.form, { marginTop: compact ? 22 : 28 }]}>
+          <Animated.View entering={rise(fieldDelay(0))}>
+            <OnboardingTextField
+              label="Full name"
+              placeholder="Your full name"
+              value={draft.fullName}
+              onChangeText={(fullName) => update({ fullName })}
+              onBlur={() => touch('fullName')}
+              error={shown('fullName')}
+              autoCapitalize="words"
+              autoComplete="name"
+              textContentType="name"
+              autoCorrect={false}
+              maxLength={80}
+              returnKeyType="next"
+            />
+          </Animated.View>
+
+          <Animated.View entering={rise(fieldDelay(1))}>
+            <OnboardingTextField
+              label="Date of birth"
+              placeholder="MM / DD / YYYY"
+              value={draft.birthDate}
+              onChangeText={onBirthDateChange}
+              onBlur={() => touch('birthDate')}
+              error={shown('birthDate')}
+              keyboardType="number-pad"
+              inputMode="numeric"
+              autoComplete="birthdate-full"
+              accessibilityHint="Month, day, and year, as eight digits"
+              maxLength={14}
+              returnKeyType="done"
+            />
+            {keepsSavedAge && <Text style={[styles.hint]}>Already saved. Enter it again only to change it.</Text>}
+          </Animated.View>
+
+          <Animated.View entering={rise(fieldDelay(2))} style={styles.select}>
+            <OnboardingSelectField
+              label="Grade level"
+              placeholder="Select your grade"
+              options={GRADES}
+              value={draft.grade}
+              onChange={(grade) => { update({ grade }); touch('grade'); setOpenSelect(null); }}
+              open={openSelect === 'grade'}
+              onOpenChange={(open) => { setOpenSelect(open ? 'grade' : null); if (!open) touch('grade'); }}
+              error={shown('grade')}
+            />
+          </Animated.View>
+
+          <Animated.View entering={rise(fieldDelay(3))} style={styles.select}>
+            {teamSport && team?.preview ? (
+              <TeamSportField sport={teamSport} teamName={team.preview.teamName} pending={team.status === 'pending'} />
+            ) : (
+              <OnboardingSelectField
+                label="Sport"
+                placeholder="Select your sport"
+                options={SPORTS}
+                value={draft.sport}
+                onChange={(value) => { update({ sport: value }); touch('sport'); setOpenSelect(null); }}
+                open={openSelect === 'sport'}
+                onOpenChange={(open) => { setOpenSelect(open ? 'sport' : null); if (!open) touch('sport'); }}
+                error={shown('sport')}
+              />
+            )}
+          </Animated.View>
+
+          <Animated.View entering={rise(fieldDelay(4))}>
+            <OnboardingTextField
+              label="Jersey number (optional)"
+              placeholder="e.g. 12"
+              value={draft.jersey}
+              onChangeText={(text) => update({ jersey: text.replace(/\D/g, '').slice(0, 3) })}
+              keyboardType="number-pad"
+              inputMode="numeric"
+              maxLength={3}
+              returnKeyType="done"
+              onSubmitEditing={() => void submit()}
+            />
+          </Animated.View>
+        </View>
+
+        <View style={styles.spacer} />
+
+        <Animated.View entering={rise(1150)} style={styles.actions}>
+          <AthletePillButton label="Continue" enabled={valid && !saving} loading={saving} onPress={() => void submit()} />
+          {saveError && <Text accessibilityRole="alert" style={[styles.saveError]}>{saveError}</Text>}
+        </Animated.View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -261,18 +310,15 @@ function TeamSportField({ sport, teamName, pending }: { sport: string; teamName:
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 26 },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
-  title: { flex: 1 },
   form: { gap: 16 },
   // Keep an open dropdown above the fields that follow it.
   select: { zIndex: 1 },
-  label: { color: Entry.ink, fontWeight: '500', fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
+  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
   // Set by the team: shown, not editable, so it reads as information rather than a field.
-  readOnly: { height: 60, borderRadius: 16, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.canvas, justifyContent: 'center', paddingHorizontal: 18 },
-  readOnlyText: { color: Entry.ink, fontWeight: '500', fontSize: 16, letterSpacing: -0.1 },
-  hint: { color: Entry.subtle, fontWeight: '400', fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
+  readOnly: { height: 60, borderRadius: 18, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.canvas, justifyContent: 'center', paddingHorizontal: 18 },
+  readOnlyText: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 16, letterSpacing: -0.1 },
+  hint: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
   spacer: { flexGrow: 1, minHeight: 28 },
   actions: { gap: 12 },
-  wheels: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
-  saveError: { color: ATHLETE_ERROR, fontWeight: '400', fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

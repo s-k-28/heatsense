@@ -1,10 +1,12 @@
 import * as Clipboard from 'expo-clipboard';
 import { Redirect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
+  FadeInUp,
   FadeOut,
   interpolateColor,
   useAnimatedStyle,
@@ -13,11 +15,12 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Path, Rect } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RosterMark } from '@/components/onboarding-art';
-import { StepScreen } from '@/components/step-kit';
-import { Entry } from '@/constants/entry-theme';
+import { EntryButton, EntryHeader, entryStyles } from '@/components/entry-ui';
+import { MobileViewport } from '@/components/mobile-viewport';
+import { OnboardingBackground } from '@/components/onboarding-background';
+import { Entry, ONBOARDING_STEPS } from '@/constants/entry-theme';
 import {
   ensureTeamInvite,
   getMyTeamInvite,
@@ -32,10 +35,10 @@ import {
 } from '@/services/team-invites';
 import { setTeamId, useTeamDraft, type TeamDraft } from '@/state/onboarding';
 
-// Entry design language: display headline, the code in the display face over field
-// lines, quiet outlined secondary actions, and the peach primary button.
+// Entry design language: the code large and alone on the page, two quiet pill actions
+// to share it, and the peach primary button.
 const MUTED = Entry.muted;
-const FOCUS_RING = { outlineColor: Entry.blue, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
+const FOCUS_RING = { outlineColor: Entry.peach, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
 const isKeyboardFocus = (event: { target?: unknown }) => Platform.OS !== 'web' || Boolean((event.target as Element | null)?.matches?.(':focus-visible'));
 const ease = Easing.out(Easing.cubic);
 
@@ -46,12 +49,13 @@ export default function InviteTeamScreen() {
   // Without a finished draft (a page refresh, or a coach coming back later) the
   // screen loads the coach's existing team from the server instead.
   const complete = Boolean(draft.school.trim() && draft.teamName.trim() && draft.sport && draft.level);
-  return <Content draft={complete ? draft : null} />;
+  return <MobileViewport><Content draft={complete ? draft : null} /></MobileViewport>;
 }
 
 function Content({ draft }: { draft: TeamDraft | null }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
+  const insets = useSafeAreaInsets();
   const [team, setTeam] = useState<TeamSummary | null>(null);
   const [invite, setInvite] = useState<TeamInvite | null>(null);
   const [noTeam, setNoTeam] = useState(false);
@@ -82,6 +86,7 @@ function Content({ draft }: { draft: TeamDraft | null }) {
     return () => { cancelled = true; };
   }, [school, teamName, sport, level, attempt]);
 
+  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(480));
   const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(420));
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/team/create'));
@@ -91,16 +96,31 @@ function Content({ draft }: { draft: TeamDraft | null }) {
   if (noTeam) return <Redirect href="/team/create" />;
 
   return (
-    <StepScreen
-      icon={<RosterMark size={96} />}
-      next={{ enabled: invite !== null, label: 'Continue', onPress: next }}
-      onBack={back}
-      progress={0.8}
-      title={`Invite athletes to ${team?.teamName || teamName || 'your team'}`}
-      top="tight">
-      <View onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
-        <Text numberOfLines={1} style={styles.teamMeta}>{[team?.school ?? school, team?.sport ?? sport, team?.level ?? level].filter(Boolean).join(' · ')}</Text>
-        <CodeTiles invite={invite} compact={compact} width={size.width + 44} firstDelay={reducedMotion ? 0 : 250} />
+    <View style={styles.fill} onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
+      <StatusBar style="light" />
+      <ScrollView
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        {size.height > 0 && <OnboardingBackground variant="team" height={size.height} />}
+        <Animated.View entering={fade(0)}>
+          <EntryHeader onBack={back} progress={{ step: 3, total: ONBOARDING_STEPS.coach }} />
+        </Animated.View>
+
+        <Animated.Text entering={rise(200)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.noShrink, { marginTop: compact ? 26 : 36 }]}>
+          {'Bring your\nteam together.'}
+        </Animated.Text>
+        <Animated.Text entering={rise(350)} style={[entryStyles.description, styles.noShrink]}>Share this code so your athletes can join.</Animated.Text>
+
+        <View style={[styles.codePanel, { marginTop: compact ? 20 : 28 }]}>
+        <View style={styles.codeStage}>
+        <Animated.View entering={rise(500)} style={styles.identity}>
+          <Text numberOfLines={1} style={[styles.teamName]}>{team?.teamName ?? teamName}</Text>
+          <Text numberOfLines={1} style={[styles.teamMeta]}>{[team?.sport ?? sport, team?.level ?? level].filter(Boolean).join(' · ')}</Text>
+        </Animated.View>
+
+        <CodeTiles invite={invite} compact={compact} width={size.width} firstDelay={reducedMotion ? 0 : 650} />
+        </View>
         <View style={styles.status}>
           {loadError ? (
             <Animated.View entering={fade(0)} style={styles.errorRow}>
@@ -110,21 +130,31 @@ function Content({ draft }: { draft: TeamDraft | null }) {
               </Pressable>
             </Animated.View>
           ) : invite ? (
-            <Animated.Text key={invite.code} entering={fade(150)} style={[styles.expiry]}>
+            <Animated.Text key={invite.code} entering={fade(invite ? 150 : 0)} style={[styles.expiry]}>
               Expires {new Date(invite.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </Animated.Text>
           ) : (
             <ActivityIndicator size="small" color={MUTED} accessibilityLabel="Creating your invitation code" />
           )}
         </View>
-      </View>
-      <View style={{ gap: 10 }}>
-        <CopyButton code={invite?.code ?? null} />
-        <ShareButton code={invite?.code ?? null} />
-      </View>
-      <RegenerateControl invite={invite} onRegenerated={setInvite} />
-      {invite && <JoinRequests teamId={invite.teamId} />}
-    </StepScreen>
+        </View>
+
+        <View style={[styles.shareRow, { marginTop: compact ? 14 : 20 }]}>
+          <Animated.View entering={rise(1100)} style={styles.shareItem}><CopyButton code={invite?.code ?? null} /></Animated.View>
+          <Animated.View entering={rise(1180)} style={styles.shareItem}><ShareButton code={invite?.code ?? null} /></Animated.View>
+        </View>
+
+        <Animated.View entering={fade(1260)}>
+          <RegenerateControl invite={invite} onRegenerated={setInvite} />
+        </Animated.View>
+
+        {invite && <JoinRequests teamId={invite.teamId} />}
+
+        <Animated.View entering={rise(1350)} style={{ marginTop: compact ? 18 : 24 }}>
+          <EntryButton label="Continue" disabled={invite === null} onPress={next} />
+        </Animated.View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -172,14 +202,14 @@ function CodeTile({ digit, code, delay, width, height }: { digit: string | null;
   return (
     <Animated.View style={[{ width, height }, frame]}>
       <View style={[styles.tile, { width, height }]}>
-        <Animated.Text style={[styles.digit, { fontSize: Math.round(width * 0.72), lineHeight: Math.round(width * 0.8) }, text]}>{digit ?? ''}</Animated.Text>
+        <Animated.Text style={[styles.digit, { fontSize: Math.round(width * 0.58), lineHeight: Math.round(width * 0.72) }, text]}>{digit ?? ''}</Animated.Text>
       </View>
     </Animated.View>
   );
 }
 
-// Outlined pill in the sign-in buttons' style: charcoal, white outline, bold white type.
-function ActionPill({ label, icon, onPress, disabled, prominent, accessibilityLabel }: { label: string; icon: ReactNode; onPress: () => void; disabled?: boolean; prominent?: boolean; accessibilityLabel?: string }) {
+// Quiet outlined pill: charcoal with a neutral edge, so the peach Continue stays the one primary action.
+function ActionPill({ label, onPress, disabled, prominent, accessibilityLabel }: { label: string; onPress: () => void; disabled?: boolean; prominent?: boolean; accessibilityLabel?: string }) {
   const reducedMotion = useReducedMotion();
   const [focused, setFocused] = useState(false);
   const hover = useSharedValue(0);
@@ -203,9 +233,8 @@ function ActionPill({ label, icon, onPress, disabled, prominent, accessibilityLa
       onHoverOut={() => { hover.set(withTiming(0, { duration: ms(200), easing: ease })); }}
       onPressIn={() => { press.set(withTiming(1, { duration: ms(110), easing: ease })); }}
       onPressOut={() => { press.set(withTiming(0, { duration: ms(200), easing: ease })); }}
-      style={[{ borderRadius: 18 }, focused && FOCUS_RING]}>
+      style={[{ borderRadius: 999 }, focused && FOCUS_RING]}>
       <Animated.View style={[styles.pill, disabled && styles.pillDisabled, frame]}>
-        {icon}
         <Text style={[styles.pillText]}>{label}</Text>
       </Animated.View>
     </Pressable>
@@ -224,11 +253,6 @@ function useFlash(duration = 1800) {
   return [message, flash] as const;
 }
 
-function SwapIcon({ swapKey, children }: { swapKey: string; children: ReactNode }) {
-  const reducedMotion = useReducedMotion();
-  return <Animated.View key={swapKey} entering={reducedMotion ? undefined : FadeIn.duration(180)} exiting={reducedMotion ? undefined : FadeOut.duration(120)}>{children}</Animated.View>;
-}
-
 function CopyButton({ code }: { code: string | null }) {
   const [flash, setFlash] = useFlash();
   const copy = async () => {
@@ -240,14 +264,12 @@ function CopyButton({ code }: { code: string | null }) {
       setFlash("Couldn't copy");
     }
   };
-  const copied = flash === 'Copied';
   return (
     <ActionPill
       label={flash ?? 'Copy code'}
       accessibilityLabel={flash ?? 'Copy code'}
       disabled={!code}
       onPress={copy}
-      icon={<SwapIcon swapKey={copied ? 'check' : 'copy'}>{copied ? <CheckIcon /> : <CopyIcon />}</SwapIcon>}
     />
   );
 }
@@ -268,14 +290,13 @@ function ShareButton({ code }: { code: string | null }) {
       try { await Clipboard.setStringAsync(message); setFlash('Invitation copied'); } catch { setFlash("Couldn't share"); }
     }
   };
-  const copied = flash === 'Invitation copied';
   return (
     <ActionPill
       prominent
-      label={flash ?? 'Share invitation'}
+      label={flash ?? 'Share'}
+      accessibilityLabel={flash ?? 'Share invitation'}
       disabled={!code}
       onPress={share}
-      icon={<SwapIcon swapKey={copied ? 'check' : 'share'}>{copied ? <CheckIcon /> : <ShareIcon />}</SwapIcon>}
     />
   );
 }
@@ -303,7 +324,6 @@ function RegenerateControl({ invite, onRegenerated }: { invite: TeamInvite | nul
   if (!confirming) {
     return (
       <Pressable accessibilityRole="button" disabled={!invite} onPress={() => setConfirming(true)} hitSlop={8} style={({ pressed }) => [styles.textAction, pressed && { opacity: 0.75 }]}>
-        <RefreshIcon />
         <Text style={[styles.textActionLabel]}>Generate a new code</Text>
       </Pressable>
     );
@@ -384,20 +404,6 @@ function SmallPill({ label, onPress, disabled, strong }: { label: string; onPres
   );
 }
 
-// Lucide icons: copy, check, share, refresh-cw.
-function CopyIcon() {
-  return <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke={Entry.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Rect x={8} y={8} width={14} height={14} rx={2} /><Path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></Svg>;
-}
-function CheckIcon() {
-  return <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke={Entry.ink} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="M20 6 9 17l-5-5" /></Svg>;
-}
-function ShareIcon() {
-  return <Svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke={Entry.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M12 2v13" /><Path d="m16 6-4-4-4 4" /><Path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /></Svg>;
-}
-function RefreshIcon() {
-  return <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><Path d="M21 3v5h-5" /><Path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><Path d="M8 16H3v5" /></Svg>;
-}
-
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: Entry.canvas },
   content: { flexGrow: 1, paddingHorizontal: 26 },
@@ -406,35 +412,38 @@ const styles = StyleSheet.create({
   codePanel: { paddingVertical: 12, flexShrink: 0 },
   codeStage: { paddingBottom: 14 },
   identity: { alignItems: 'center', gap: 4 },
-  teamName: { color: Entry.ink, fontWeight: '600', fontSize: 18, letterSpacing: -0.3 },
-  teamMeta: { color: MUTED, fontWeight: '400', fontSize: 14 },
+  teamName: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 18, letterSpacing: -0.3 },
+  teamMeta: { color: MUTED, fontFamily: Entry.body, fontSize: 14 },
   tiles: { flexDirection: 'row', justifyContent: 'center' },
-  tile: { alignItems: 'center', justifyContent: 'center', borderRadius: 14, borderWidth: 1.5, borderColor: Entry.lineStrong, backgroundColor: Entry.surface },
-  digit: { color: Entry.ink, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  tile: { alignItems: 'center', justifyContent: 'center', borderRadius: 18, borderWidth: 1, borderColor: Entry.lineStrong, backgroundColor: Entry.surface },
+  digit: { color: Entry.ink, fontFamily: Entry.heading, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   status: { minHeight: 22, marginTop: 12, alignItems: 'center', justifyContent: 'center' },
-  expiry: { color: Entry.subtle, fontWeight: '400', fontSize: 13 },
-  errorRow: { alignItems: 'flex-start', gap: 6, alignSelf: 'stretch' },
-  errorText: { color: Entry.error, fontWeight: '400', fontSize: 13, lineHeight: 18, flexShrink: 1 },
-  retry: { color: Entry.ink, fontWeight: '500', fontSize: 13, textDecorationLine: 'underline' },
-  pill: { minHeight: 54, borderRadius: 18, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  expiry: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13 },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  errorText: { color: Entry.error, fontFamily: Entry.body, fontSize: 13, lineHeight: 18 },
+  retry: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13, textDecorationLine: 'underline' },
+  shareRow: { flexDirection: 'row', gap: 10 },
+  shareItem: { flex: 1 },
+  pill: { minHeight: 52, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   pillDisabled: { opacity: 0.45 },
-  pillText: { color: Entry.ink, fontWeight: '500', fontSize: 15.5, letterSpacing: -0.1 },
-  textAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, alignSelf: 'center', marginTop: 16, paddingVertical: 6, paddingHorizontal: 10 },
-  textActionLabel: { color: MUTED, fontWeight: '500', fontSize: 14 },
+  pillText: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 15, letterSpacing: -0.1 },
+  textAction: { alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 14, paddingVertical: 6, paddingHorizontal: 10 },
+  textActionLabel: { color: MUTED, fontFamily: Entry.medium, fontSize: 14 },
   confirm: { marginTop: 14, gap: 12, alignItems: 'center' },
-  confirmText: { color: MUTED, fontWeight: '400', fontSize: 13.5, lineHeight: 19, textAlign: 'center', maxWidth: 310 },
+  confirmText: { color: MUTED, fontFamily: Entry.body, fontSize: 13.5, lineHeight: 19, textAlign: 'center', maxWidth: 310 },
   confirmRow: { flexDirection: 'row', gap: 10 },
-  smallPill: { height: 40, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: Entry.lineStrong, backgroundColor: Entry.surface, alignItems: 'center', justifyContent: 'center' },
-  smallPillStrong: { borderColor: Entry.peach, backgroundColor: Entry.peach },
+  smallPill: { height: 40, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1, borderColor: Entry.lineStrong, backgroundColor: Entry.surface, alignItems: 'center', justifyContent: 'center' },
+  // Neutral, so Continue stays the one peach action on the page.
+  smallPillStrong: { borderColor: Entry.ink, backgroundColor: Entry.ink },
   smallPillActive: { opacity: 0.85 },
-  smallPillText: { color: Entry.ink, fontWeight: '600', fontSize: 14 },
+  smallPillText: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 14 },
   smallPillTextStrong: { color: Entry.canvas },
-  requests: { marginTop: 24, gap: 10, paddingTop: 18, borderTopWidth: 1, borderTopColor: Entry.line },
-  requestsLabel: { color: Entry.ink, fontWeight: '600', fontSize: 14 },
-  requestsEmpty: { color: Entry.subtle, fontWeight: '400', fontSize: 13.5, lineHeight: 19 },
+  requests: { marginTop: 30, gap: 10 },
+  requestsLabel: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 14 },
+  requestsEmpty: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13.5, lineHeight: 19 },
   request: { gap: 6 },
   requestRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   requestCopy: { flex: 1, gap: 2 },
-  requestName: { color: Entry.ink, fontWeight: '500', fontSize: 15.5 },
-  requestMeta: { color: MUTED, fontWeight: '400', fontSize: 13 },
+  requestName: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 15.5 },
+  requestMeta: { color: MUTED, fontFamily: Entry.body, fontSize: 13 },
 });
