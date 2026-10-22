@@ -9,7 +9,7 @@ import { Palette } from '@/constants/theme';
 import { ZONES, type Zone } from '@/lib/practice';
 import { recheckStatus, SOURCE_LABEL } from '@/services/practice-sessions';
 import { useTemperature } from '@/state/preferences';
-import { useCoachData, useNow } from '@/state/team-session';
+import { useCoachData, useNow, type SessionRole } from '@/state/team-session';
 
 // Coach Home, after WHOOP's Home: one living orb with the latest field reading, three rings for
 // the practice loop (recheck, readings, acknowledged), then "Get started" cards and today's record.
@@ -19,8 +19,8 @@ import { useCoachData, useNow } from '@/state/team-session';
 const BAND = require('@/assets/images/heatsense-band-refined.png');
 const NEUTRAL = '#6B7A82';
 
-export function CoachToday({ onInvite }: { onInvite: () => void }) {
-  const data = useCoachData();
+export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onInvite?: () => void; readOnly?: boolean; role?: SessionRole }) {
+  const data = useCoachData(role);
   const temp = useTemperature();
   const now = useNow();
   const [sheet, setSheet] = useState(false);
@@ -54,9 +54,11 @@ export function CoachToday({ onInvite }: { onInvite: () => void }) {
             </>
           )}
         </HeatOrb>
-        <Pressable accessibilityRole="button" onPress={() => setSheet(true)} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
-          <Text style={styles.ctaText}>{action.toUpperCase()}</Text>
-        </Pressable>
+        {readOnly ? null : (
+          <Pressable accessibilityRole="button" onPress={() => setSheet(true)} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
+            <Text style={styles.ctaText}>{action.toUpperCase()}</Text>
+          </Pressable>
+        )}
         {latest ? <Text style={styles.measured}>WBGT measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text> : null}
       </View>
 
@@ -83,18 +85,20 @@ export function CoachToday({ onInvite }: { onInvite: () => void }) {
         </Metric>
       </View>
 
+      {readOnly ? null : <>
       <Text accessibilityRole="header" style={styles.section}>Get started</Text>
       <View style={styles.cards}>
         {!latest && !dismissed.includes('reading') ? (
           <StartCard accent action="Check field conditions" body="Enter the WBGT from your meter. HeatSense sets the zone from your UIL class and tells you what to change." onAction={() => setSheet(true)} onDismiss={() => setDismissed([...dismissed, 'reading'])} title="Take a field reading" art={<Glyph color={Palette.coral} />} />
         ) : null}
         {!dismissed.includes('invite') ? (
-          <StartCard action="Share team code" body="Athletes join with your 6-digit code. You approve each one." onAction={onInvite} onDismiss={() => setDismissed([...dismissed, 'invite'])} title="Invite your athletes" art={<Glyph color={Palette.info} people />} />
+          <StartCard action="Share team code" body="Athletes join with your 6-digit code. You approve each one." onAction={() => onInvite?.()} onDismiss={() => setDismissed([...dismissed, 'invite'])} title="Invite your athletes" art={<Glyph color={Palette.info} people />} />
         ) : null}
         {!dismissed.includes('band') ? (
           <StartCard action="How pairing works" body="Athletes pair a HeatSense Band during setup. Bands are optional; field readings drive every decision." onAction={() => setDismissed([...dismissed, 'band'])} onDismiss={() => setDismissed([...dismissed, 'band'])} title="Pair athlete bands" art={<Image contentFit="contain" source={BAND} style={styles.bandArt} />} />
         ) : null}
       </View>
+      </>}
 
       {total > 0 ? (
         <>
@@ -114,7 +118,7 @@ export function CoachToday({ onInvite }: { onInvite: () => void }) {
         </>
       ) : null}
 
-      <FieldCheckSheet onClose={() => setSheet(false)} visible={sheet} />
+      {readOnly ? null : <FieldCheckSheet onClose={() => setSheet(false)} visible={sheet} />}
     </>
   );
 }

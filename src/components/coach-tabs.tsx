@@ -8,6 +8,7 @@ import { Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, zoneRange } from '@/lib/uil-wbgt';
 import { firebaseAuth } from '@/services/firebase';
+import type { FieldReading } from '@/services/practice-sessions';
 import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
 import { buildSchedule, clockTime, usePracticePlans } from '@/state/practice-plans';
@@ -29,7 +30,7 @@ function useMyTeam() {
 
 /* ─────────────────────────────── Team ─────────────────────────────── */
 
-export function TeamTab() {
+export function TeamTab({ readOnly = false }: { readOnly?: boolean }) {
   const data = useCoachData();
   const mine = useMyTeam();
   const roster = useRoster(data?.teamId ?? null);
@@ -62,7 +63,7 @@ export function TeamTab() {
         />
       </Rows>
 
-      {waiting.length ? (
+      {waiting.length && !readOnly ? (
         <>
           <SectionTitle title={`Waiting to join · ${waiting.length}`} />
           <Rows>
@@ -106,8 +107,6 @@ export function PlanTab() {
   const latest = data?.readings.at(-1) ?? null;
   const session = data?.session ?? null;
   const uilClass = session?.uilClass ?? 3;
-  const guidance = latest ? UIL_GUIDANCE[latest.zone] : null;
-
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
@@ -120,21 +119,7 @@ export function PlanTab() {
         </View>
       </View>
 
-      {guidance ? (
-        <>
-          <Text style={styles.summary}>{guidance.summary}</Text>
-          <Tiles>
-            <MetricTile label="Rest breaks" pill={`UIL Class ${uilClass}`} pillTone={Palette.inkMuted} unit={guidance.breaksPerHour ? 'per hr' : 'min/hr'} value={guidance.breaksPerHour ? `${guidance.breaksPerHour}+` : guidance.restMinutesPerHour ? String(guidance.restMinutesPerHour) : '--'} />
-            <MetricTile label="Break length" unit="min" value={guidance.breakMinutes ? `${guidance.breakMinutes}+` : '--'} />
-            <MetricTile label="Max practice" unit={guidance.maxPracticeMinutes ? 'hr' : undefined} value={guidance.maxPracticeMinutes ? String(guidance.maxPracticeMinutes / 60) : guidance.outdoorAllowed ? 'No limit' : 'None'} />
-            <MetricTile label="Cooling zone" pill={guidance.coolingZoneRequired ? 'Required' : 'Optional'} pillTone={guidance.coolingZoneRequired ? Palette.warning : Palette.safe} value={guidance.coolingZoneRequired ? 'Tub' : '--'} />
-          </Tiles>
-          {guidance.football ? <ListRow detail={guidance.football} label="Football equipment" /> : null}
-        </>
-      ) : null}
-      <Pressable accessibilityRole="link" onPress={() => Linking.openURL(UIL_SOURCE_URL)}>
-        <Text style={styles.source}>Source: UIL WBGT activity guidelines {UIL_VERSION}. Your school’s plan may be stricter.</Text>
-      </Pressable>
+      <ZoneRules latest={latest} uilClass={uilClass} />
 
       <SectionTitle action="New" onAction={() => router.push('/plan-editor')} title="Practice plans" />
       <Rows>
@@ -152,6 +137,31 @@ export function PlanTab() {
           );
         })}
       </Rows>
+    </>
+  );
+}
+
+/** What UIL requires for the latest reading's zone, as tiles, with the source. */
+export function ZoneRules({ latest, uilClass }: { latest: FieldReading | null; uilClass: 2 | 3 }) {
+  const guidance = latest ? UIL_GUIDANCE[latest.zone] : null;
+  return (
+    <>
+      {guidance ? (
+        <>
+          <Text style={styles.summary}>{guidance.summary}</Text>
+          <Tiles>
+            <MetricTile label="Rest breaks" pill={`UIL Class ${uilClass}`} pillTone={Palette.inkMuted} unit={guidance.breaksPerHour ? 'per hr' : 'min/hr'} value={guidance.breaksPerHour ? `${guidance.breaksPerHour}+` : guidance.restMinutesPerHour ? String(guidance.restMinutesPerHour) : '--'} />
+            <MetricTile label="Break length" unit="min" value={guidance.breakMinutes ? `${guidance.breakMinutes}+` : '--'} />
+            <MetricTile label="Max practice" unit={guidance.maxPracticeMinutes ? 'hr' : undefined} value={guidance.maxPracticeMinutes ? String(guidance.maxPracticeMinutes / 60) : guidance.outdoorAllowed ? 'No limit' : 'None'} />
+            <MetricTile label="Cooling zone" pill={guidance.coolingZoneRequired ? 'Required' : 'Optional'} pillTone={guidance.coolingZoneRequired ? Palette.warning : Palette.safe} value={guidance.coolingZoneRequired ? 'Tub' : '--'} />
+          </Tiles>
+          {guidance.football ? <ListRow detail={guidance.football} label="Football equipment" /> : null}
+        </>
+      ) : null}
+      <Pressable accessibilityRole="link" onPress={() => Linking.openURL(UIL_SOURCE_URL)}>
+        <Text style={styles.source}>Source: UIL WBGT activity guidelines {UIL_VERSION}. Your school’s plan may be stricter.</Text>
+      </Pressable>
+
     </>
   );
 }

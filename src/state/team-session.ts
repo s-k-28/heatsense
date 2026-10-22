@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 
 import { SAMPLE_READING } from '@/lib/practice';
-import { firestore } from '@/services/firebase';
 import { watchActiveSession, watchReadings, type FieldReading, type PracticeSession } from '@/services/practice-sessions';
-import { getMyTeamInvite } from '@/services/team-invites';
+import { firebaseAuth, firestore } from '@/services/firebase';
+import { getMyTeamInvite, watchMyMembership } from '@/services/team-invites';
 import { watchRoster, type RosterMember } from '@/services/team-roster';
 
-// The coach's team and its open practice session, live. Home and the Practice sheet both read this,
-// so they always agree on the latest reading.
+// The team's open practice session, live: the coach's own team, or the team an athlete belongs to.
+// Every Home and the Practice sheet read this, so they always agree on the latest reading.
 
 export type TeamSession =
   | { status: 'loading' }
@@ -17,20 +17,30 @@ export type TeamSession =
 
 let cachedTeamId: string | null | undefined;
 
-export function useTeamSession(): TeamSession {
-  const [teamId, setTeamId] = useState<string | null | undefined>(cachedTeamId);
+export type SessionRole = 'coach' | 'athlete';
+
+export function useTeamSession(role: SessionRole = 'coach'): TeamSession {
+  const [teamId, setTeamId] = useState<string | null | undefined>(role === 'coach' ? cachedTeamId : undefined);
   const [session, setSession] = useState<PracticeSession | null | undefined>(undefined);
   const [readings, setReadings] = useState<FieldReading[]>([]);
   const [failed, setFailed] = useState(false);
 
+  // Coaches find their team through their invite; athletes through an approved membership.
   useEffect(() => {
-    if (cachedTeamId !== undefined) return;
+    if (role !== 'athlete') return;
+    const uid = firebaseAuth?.currentUser?.uid;
+    if (!uid) return;
+    return watchMyMembership(uid, (membership) => setTeamId(membership?.status === 'active' ? membership.teamId : null), () => setTeamId(null));
+  }, [role]);
+
+  useEffect(() => {
+    if (role !== 'coach' || cachedTeamId !== undefined) return;
     let live = true;
     getMyTeamInvite()
       .then((mine) => { cachedTeamId = mine?.invite.teamId ?? null; if (live) setTeamId(cachedTeamId); })
       .catch(() => { if (live) setTeamId(null); });
     return () => { live = false; };
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     if (!teamId) return;
@@ -42,6 +52,8 @@ export function useTeamSession(): TeamSession {
     return watchReadings(session, setReadings, () => setFailed(true));
   }, [session]);
 
+  // No signed-in athlete means no membership to wait for.
+  if (teamId === undefined && role === 'athlete' && !firebaseAuth?.currentUser) return { status: 'no-team' };
   if (teamId === undefined) return { status: 'loading' };
   if (!teamId) return { status: 'no-team' };
   if (failed) return { status: 'error' };
@@ -55,8 +67,8 @@ export type CoachData = { sample: boolean; teamId: string | null; session: Pract
  * What the coach tabs render: the live session, or, in a build with no Firebase at all, one sample
  * reading so the screens can be reviewed. Screens must label sample data wherever it shows.
  */
-export function useCoachData(): CoachData | null {
-  const team = useTeamSession();
+export function useCoachData(role: SessionRole = 'coach'): CoachData | null {
+  const team = useTeamSession(role);
   // Fixed on mount, so the sample doesn't drift on every render.
   const [base] = useState(() => Date.now());
   if (team.status === 'ready') return { sample: false, teamId: team.teamId, session: team.session, readings: team.readings };
