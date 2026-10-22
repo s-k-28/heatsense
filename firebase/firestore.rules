@@ -22,10 +22,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // An athlete can watch their own membership; the team's coach can see all of the
-    // team's (pending requests included). Nobody can approve or edit from the app.
+    function isActiveTrainer(teamId) {
+      let path = /databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid);
+      return signedIn() && exists(path) && get(path).data.status == 'active' && get(path).data.role == 'trainer';
+    }
+
+    // Everyone can watch their own membership; the team's coach sees all of the team's (pending
+    // requests included); an approved trainer sees the roster; an approved athlete sees who the
+    // team's athletic trainers are, but not other athletes. Nobody can approve or edit from the app.
     match /teamMembers/{membershipId} {
-      allow read: if signedIn() && (resource.data.userId == request.auth.uid || isCoach(resource.data.teamId));
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || isCoach(resource.data.teamId)
+        || isActiveTrainer(resource.data.teamId)
+        || (resource.data.role == 'trainer' && resource.data.status == 'active' && isActiveMember(resource.data.teamId)));
       allow write: if false;
     }
 

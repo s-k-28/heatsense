@@ -52,7 +52,7 @@ type InviteDoc = {
   createdBy: string; createdAt: Timestamp; expiresAt: Timestamp; revokedAt: Timestamp | null; usageCount: number;
 };
 type IndexDoc = { inviteId: string; teamId: string; expiresAt: Timestamp };
-type MemberDoc = { teamId: string; userId: string; role: 'coach' | 'athlete'; status: 'pending' | 'active' | 'declined'; inviteId?: string };
+type MemberDoc = { teamId: string; userId: string; role: 'coach' | 'athlete' | 'trainer'; status: 'pending' | 'active' | 'declined'; inviteId?: string };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -302,10 +302,14 @@ export const lookupInvite = onCall(options, async (request) => {
   return { status: result.status, teamId: result.teamId, team: result.team };
 });
 
-/** Athlete: asks to join. Creates one PENDING membership per athlete per team; never grants access. */
+/** Athlete or athletic trainer: asks to join. Creates one PENDING membership per person per team; never grants access. */
 export const requestToJoinTeam = onCall(options, async (request) => {
   const uid = requireUid(request);
-  const result = await lookup(request, uid, (request.data as Record<string, unknown> | undefined)?.code);
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  // Trainers join with the same code; the coach sees the role on the request before approving.
+  const role = data.role === undefined ? 'athlete' : data.role;
+  if (role !== 'athlete' && role !== 'trainer') throw new HttpsError('invalid-argument', 'Role must be athlete or trainer.');
+  const result = await lookup(request, uid, data.code);
   if (result.status === 'expired') throw new HttpsError('failed-precondition', 'This code has expired.');
   if (result.status === 'rate-limited') throw new HttpsError('resource-exhausted', 'Too many attempts. Try again in a few minutes.');
   if (result.status !== 'valid') throw new HttpsError('not-found', 'Code not found. Try again.');
@@ -323,7 +327,7 @@ export const requestToJoinTeam = onCall(options, async (request) => {
     if (existing?.status === 'active') return { teamId: result.teamId, status: 'member' as const };
     if (existing?.status === 'pending') return { teamId: result.teamId, status: 'pending' as const };
     tx.set(ref, {
-      teamId: result.teamId, userId: uid, role: 'athlete', status: 'pending', inviteId: result.inviteId,
+      teamId: result.teamId, userId: uid, role, status: 'pending', inviteId: result.inviteId,
       // The athlete can read their own membership but not the team until approved; this is what they asked to join.
       team: { teamName: team.name, school: team.school, sport: team.sport },
       displayName: request.auth?.token.name ?? null, email: request.auth?.token.email ?? null,
@@ -334,7 +338,7 @@ export const requestToJoinTeam = onCall(options, async (request) => {
   });
 });
 
-/** Coach: approves or declines a pending request. Approval is the only way an athlete becomes a member. */
+/** Coach: approves or declines a pending request. Approval is the only way an athlete or trainer becomes a member. */
 export const respondToJoinRequest = onCall(options, async (request) => {
   const uid = requireUid(request);
   const data = (request.data ?? {}) as Record<string, unknown>;
@@ -346,7 +350,7 @@ export const respondToJoinRequest = onCall(options, async (request) => {
   await db.runTransaction(async (tx) => {
     await requireCoach(tx, teamId, uid);
     const pending = (await tx.get(ref)).data() as MemberDoc | undefined;
-    if (pending?.role !== 'athlete' || pending.status !== 'pending') throw new HttpsError('failed-precondition', 'That request is no longer pending.');
+    if ((pending?.role !== 'athlete' && pending?.role !== 'trainer') || pending.status !== 'pending') throw new HttpsError('failed-precondition', 'That request is no longer pending.');
     tx.update(ref, {
       status: approve ? 'active' : 'declined',
       joinedAt: approve ? FieldValue.serverTimestamp() : null,

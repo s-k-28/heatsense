@@ -488,6 +488,45 @@ console.log('Athlete emergency information (onboarding page 3)');
   });
 }
 
+// Athletic trainers: join with the same code as staff, read the team's record, never write it.
+const trainer = await signUp('trainer');
+{
+  const teamId = invite.teamId;
+  const live = await coach.call('ensureTeamInvite', { details });
+  const sessionRef = (await admin.collection(`teams/${teamId}/sessions`).limit(1).get()).docs[0];
+  const sessions = (user) => collection(user.db, 'teams', teamId, 'sessions');
+  const readings = (user) => collection(user.db, 'teams', teamId, 'sessions', sessionRef.id, 'readings');
+  const { addDoc, serverTimestamp } = await import('firebase/firestore');
+
+  await test('a trainer asks to join as staff; an unknown role is rejected', async () => {
+    await rejects(trainer.call('requestToJoinTeam', { code: live.code, role: 'principal' }), 'functions/invalid-argument', 'unknown role');
+    equal((await trainer.call('requestToJoinTeam', { code: live.code, role: 'trainer' })).status, 'pending', 'request status');
+    equal((await admin.doc(`teamMembers/${teamId}_${trainer.uid}`).get()).data().role, 'trainer', 'stored role');
+  });
+  await test('a pending trainer cannot read the practice record', async () => {
+    await rejects(getDocs(readings(trainer)), 'permission-denied', 'pending trainer reading');
+  });
+  await test('the coach approves the trainer', async () => {
+    equal((await coach.call('respondToJoinRequest', { teamId, athleteUid: trainer.uid, approve: true })).status, 'approved', 'approval');
+  });
+  await test('an approved trainer reads sessions, readings and the full roster', async () => {
+    assert((await getDocs(sessions(trainer))).size >= 1, 'trainer sees sessions');
+    assert((await getDocs(readings(trainer))).size >= 1, 'trainer sees readings');
+    const roster = await getDocs(query(collection(trainer.db, 'teamMembers'), where('teamId', '==', teamId), where('role', 'in', ['athlete', 'trainer'])));
+    assert(roster.docs.some((d) => d.data().userId === athlete.uid), 'trainer sees the athlete');
+  });
+  await test('a trainer cannot start sessions or record readings', async () => {
+    await rejects(addDoc(sessions(trainer), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: trainer.uid, startedAt: serverTimestamp(), endedAt: null }), 'permission-denied', 'trainer session');
+    await rejects(addDoc(readings(trainer), { wbgtF: 84, enteredValue: 84, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(), zone: 'yellow', uilClass: 3, recordedBy: trainer.uid, recordedAt: serverTimestamp(), acknowledgedBy: null, acknowledgedAt: null }), 'permission-denied', 'trainer reading');
+  });
+  await test('an athlete sees their trainer but not other athletes; a stranger sees neither', async () => {
+    const staff = await getDocs(query(collection(athlete.db, 'teamMembers'), where('teamId', '==', teamId), where('role', '==', 'trainer'), where('status', '==', 'active')));
+    equal(staff.size, 1, 'athlete sees one trainer');
+    await rejects(getDocs(query(collection(athlete.db, 'teamMembers'), where('teamId', '==', teamId), where('role', '==', 'athlete'))), 'permission-denied', 'athlete listing athletes');
+    await rejects(getDocs(query(collection(stranger.db, 'teamMembers'), where('teamId', '==', teamId), where('role', '==', 'trainer'), where('status', '==', 'active'))), 'permission-denied', 'stranger listing staff');
+  });
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
-await Promise.all([coach, athlete, stranger].map((u) => deleteApp(u.app)));
+await Promise.all([coach, athlete, stranger, trainer].map((u) => deleteApp(u.app)));
 process.exit(failed ? 1 : 0);

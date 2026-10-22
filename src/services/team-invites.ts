@@ -23,7 +23,8 @@ export type JoinRequest = { teamId: string; status: 'pending' | 'member' };
 
 /** What a join request saved about the team, so a still-pending athlete can see which team they asked to join. */
 export type TeamPreview = { teamName: string; school: string; sport: string };
-export type Membership = { teamId: string; status: 'pending' | 'active' | 'declined'; team: TeamPreview | null };
+export type MemberRole = 'athlete' | 'trainer';
+export type Membership = { teamId: string; role: MemberRole; status: 'pending' | 'active' | 'declined'; team: TeamPreview | null };
 export type PendingAthlete = { userId: string; displayName: string | null; email: string | null; requestedAt: Date | null };
 
 export const NETWORK_ERROR = 'Something went wrong. Please try again.';
@@ -66,9 +67,9 @@ export function lookupInvite(code: string): Promise<InviteLookup> {
   return call('lookupInvite', { code });
 }
 
-/** Athlete: asks to join the team behind a still-valid code, as the signed-in account. */
-export function requestToJoinTeam(code: string): Promise<JoinRequest> {
-  return call('requestToJoinTeam', { code });
+/** Athlete or trainer: asks to join the team behind a still-valid code, as the signed-in account. */
+export function requestToJoinTeam(code: string, role: MemberRole = 'athlete'): Promise<JoinRequest> {
+  return call('requestToJoinTeam', { code, role });
 }
 
 /** Coach: live list of athletes waiting for approval. Returns the unsubscribe function. */
@@ -88,12 +89,12 @@ export function watchPendingAthletes(teamId: string, onChange: (athletes: Pendin
 /** Athlete: live view of the signed-in athlete's team membership (active wins over pending). Returns the unsubscribe function. */
 export function watchMyMembership(userId: string, onChange: (membership: Membership | null) => void, onError: () => void): () => void {
   if (!firestore) return () => {};
-  const mine = query(collection(firestore, 'teamMembers'), where('userId', '==', userId), where('role', '==', 'athlete'));
+  const mine = query(collection(firestore, 'teamMembers'), where('userId', '==', userId), where('role', 'in', ['athlete', 'trainer']));
   const rank = { active: 0, pending: 1, declined: 2 } as const;
   return onSnapshot(mine, (snapshot) => {
     const memberships = snapshot.docs.map((member) => {
       const data = member.data();
-      return { teamId: data.teamId as string, status: data.status as Membership['status'], team: (data.team as TeamPreview | undefined) ?? null };
+      return { teamId: data.teamId as string, role: data.role as MemberRole, status: data.status as Membership['status'], team: (data.team as TeamPreview | undefined) ?? null };
     });
     memberships.sort((a, b) => rank[a.status] - rank[b.status]);
     onChange(memberships[0] ?? null);

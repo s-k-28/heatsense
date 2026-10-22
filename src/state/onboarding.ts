@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 // The selected role is a preference for which experience to show, NOT verified
 // authorization. Coach access must be confirmed later through
 // organization/team setup.
-export type OnboardingRole = 'coach' | 'athlete';
+export type OnboardingRole = 'coach' | 'athlete' | 'trainer';
 
 export type TeamChoice = 'create' | 'join';
 
