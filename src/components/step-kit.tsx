@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type NativeScrollEvent, type NativeSyntheticEvent, type TextInputProps } from 'react-native';
-import Animated, { Easing, FadeIn, useAnimatedProps, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, interpolateColor, useAnimatedProps, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -142,22 +142,28 @@ export function CapsButton({ label, onPress, outline = false, disabled = false, 
 export function ChoiceRows<T extends string>({ options, value, onChange, label }: { options: readonly { value: T; label: string; detail?: string }[]; value: T | null; onChange: (value: T) => void; label: string }) {
   return (
     <View accessibilityLabel={label} accessibilityRole="radiogroup" style={styles.rows}>
-      {options.map((option) => {
-        const on = option.value === value;
-        return (
-          <Pressable
-            accessibilityLabel={option.detail ? `${option.label}. ${option.detail}` : option.label}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: on }}
-            key={option.value}
-            onPress={() => onChange(option.value)}
-            style={({ pressed }) => [styles.choice, on && styles.choiceOn, pressed && styles.pressed]}>
-            <Text style={[caps, styles.choiceText, on && { color: Entry.canvas }]}>{option.label}</Text>
-            {option.detail ? <Text style={[styles.choiceDetail, on && { color: Entry.raised }]}>{option.detail}</Text> : null}
-          </Pressable>
-        );
-      })}
+      {options.map((option) => (
+        <ChoiceRow detail={option.detail} key={option.value} label={option.label} on={option.value === value} onPress={() => onChange(option.value)} />
+      ))}
     </View>
+  );
+}
+
+/** The fill eases in over 160 ms so the choice registers; reduced motion switches instantly. */
+function ChoiceRow({ detail, label, on, onPress }: { detail?: string; label: string; on: boolean; onPress: () => void }) {
+  const reduced = useReducedMotion();
+  const picked = useSharedValue(on ? 1 : 0);
+  useEffect(() => { picked.set(reduced ? (on ? 1 : 0) : withTiming(on ? 1 : 0, { duration: 160, easing: ease })); }, [on, picked, reduced]);
+  const surface = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(picked.value, [0, 1], [Entry.raised, Entry.ink]) }));
+  const ink = useAnimatedStyle(() => ({ color: interpolateColor(picked.value, [0, 1], [Entry.ink, Entry.canvas]) }));
+  const sub = useAnimatedStyle(() => ({ color: interpolateColor(picked.value, [0, 1], [Entry.muted, Entry.raised]) }));
+  return (
+    <Pressable accessibilityLabel={detail ? `${label}. ${detail}` : label} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+      <Animated.View style={[styles.choice, surface]}>
+        <Animated.Text style={[caps, styles.choiceText, ink]}>{label}</Animated.Text>
+        {detail ? <Animated.Text style={[styles.choiceDetail, sub]}>{detail}</Animated.Text> : null}
+      </Animated.View>
+    </Pressable>
   );
 }
 

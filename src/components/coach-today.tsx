@@ -1,11 +1,13 @@
 import { Image } from 'expo-image';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { FieldCheckSheet } from '@/components/field-check-sheet';
 import { HeatOrb } from '@/components/heat-orb';
 import { Ring } from '@/components/ui/visuals';
 import { Palette } from '@/constants/theme';
+import { enter, swap } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { recheckStatus, SOURCE_LABEL } from '@/services/practice-sessions';
 import { useTemperature } from '@/state/preferences';
@@ -25,6 +27,7 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
   const now = useNow();
   const [sheet, setSheet] = useState(false);
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const reduced = useReducedMotion();
 
   const latest = data?.readings.at(-1) ?? null;
   const zone: Zone | null = latest?.zone ?? null;
@@ -43,10 +46,10 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
         {data?.sample ? <Text style={styles.sampleTag}>SAMPLE DATA</Text> : null}
         <HeatOrb color={color} size={268} still={!latest}>
           {latest ? (
-            <>
+            <Animated.View entering={swap(reduced)} key={latest.id} style={styles.orbCopy}>
               <Text style={styles.orbValue}>{temp.value(latest.wbgtF)}<Text style={styles.orbUnit}>{temp.unit}</Text></Text>
               <Text style={[styles.orbZone, { color: ZONES[latest.zone].text }]}>{ZONES[latest.zone].label.toUpperCase()}</Text>
-            </>
+            </Animated.View>
           ) : (
             <>
               <Text style={styles.orbEmpty}>--</Text>
@@ -62,7 +65,7 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
         {latest ? <Text style={styles.measured}>WBGT measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text> : null}
       </View>
 
-      <View style={styles.rings}>
+      <Animated.View entering={enter(2, reduced)} style={styles.rings}>
         <Metric label="Recheck" sub={recheck ? (recheck.overdue ? 'Overdue' : 'Next reading') : 'No session'}>
           <Ring
             max={1}
@@ -83,11 +86,11 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
             <Text style={styles.ringValue}>{total ? `${acked}/${total}` : '--'}</Text>
           </Ring>
         </Metric>
-      </View>
+      </Animated.View>
 
       {readOnly ? null : <>
       <Text accessibilityRole="header" style={styles.section}>Get started</Text>
-      <View style={styles.cards}>
+      <Animated.View entering={enter(4, reduced)} style={styles.cards}>
         {!latest && !dismissed.includes('reading') ? (
           <StartCard accent action="Check field conditions" body="Enter the WBGT from your meter. HeatSense sets the zone from your UIL class and tells you what to change." onAction={() => setSheet(true)} onDismiss={() => setDismissed([...dismissed, 'reading'])} title="Take a field reading" art={<Glyph color={Palette.coral} />} />
         ) : null}
@@ -97,7 +100,7 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
         {!dismissed.includes('band') ? (
           <StartCard action="How pairing works" body="Athletes pair a HeatSense Band during setup. Bands are optional; field readings drive every decision." onAction={() => setDismissed([...dismissed, 'band'])} onDismiss={() => setDismissed([...dismissed, 'band'])} title="Pair athlete bands" art={<Image contentFit="contain" source={BAND} style={styles.bandArt} />} />
         ) : null}
-      </View>
+      </Animated.View>
       </>}
 
       {total > 0 ? (
@@ -165,6 +168,7 @@ function Glyph({ color, people }: { color: string; people?: boolean }) {
 const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   hero: { alignItems: 'center', marginTop: 8 },
+  orbCopy: { alignItems: 'center' },
   sampleTag: { color: Palette.inkMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1.6, marginBottom: 4 },
   orbValue: { color: Palette.ink, fontSize: 58, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -1 },
   orbUnit: { color: Palette.inkMuted, fontSize: 22, fontWeight: '600' },

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { FieldCheckSheet } from '@/components/field-check-sheet';
 import { Palette } from '@/constants/theme';
+import { enter, leave, settle } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { recheckStatus } from '@/services/practice-sessions';
 import { useTemperature } from '@/state/preferences';
@@ -31,6 +33,7 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
   const temp = useTemperature();
   const now = useNow();
   const [sheet, setSheet] = useState(false);
+  const reduced = useReducedMotion();
   const openSheet = { label: 'Open practice', onPress: () => setSheet(true) };
 
   const items: Item[] = [];
@@ -76,13 +79,13 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
           <Text style={styles.clearBody}>{session ? 'Readings are on time and every change has been applied.' : 'No practice running. Alerts show up here once you start one.'}</Text>
         </View>
       ) : (
-        <View style={styles.list}>{open.map((item) => <AlertCard item={item} key={item.id} />)}</View>
+        <View style={styles.list}>{open.map((item, i) => <Animated.View entering={enter(i, reduced)} exiting={leave(reduced)} key={item.id} layout={settle(reduced)}><AlertCard item={item} /></Animated.View>)}</View>
       )}
 
       {history.length ? (
         <>
           <Text accessibilityRole="header" style={styles.section}>Earlier today</Text>
-          <View style={styles.list}>{history.map((item) => <AlertCard item={item} key={item.id} />)}</View>
+          <View style={styles.list}>{history.map((item, i) => <Animated.View entering={enter(i + open.length, reduced)} key={item.id} layout={settle(reduced)}><AlertCard item={item} /></Animated.View>)}</View>
         </>
       ) : null}
 
