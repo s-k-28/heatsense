@@ -13,6 +13,8 @@ import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, 
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
 import { buildSchedule, clockTime, usePracticePlans } from '@/state/practice-plans';
 import { useAuthSession } from '@/state/auth-session';
+import { SimulatedTag, TeamVitalsRows } from '@/components/vitals';
+import { useDemoTeam } from '@/state/demo-team';
 import { useCoachData, useRoster, useTrainers, type SessionRole } from '@/state/team-session';
 
 // Team, Plan and Profile, decluttered after WHOOP: one heading per section, small caps groups,
@@ -36,6 +38,7 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
   const roster = useRoster(data?.teamId ?? null);
   const [busy, setBusy] = useState<string | null>(null);
   const waiting = roster?.filter((m) => m.status === 'pending') ?? [];
+  const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
   const staff = roster?.filter((m) => m.status === 'active' && m.role === 'trainer') ?? [];
   const active = roster?.filter((m) => m.status === 'active' && m.role === 'athlete') ?? [];
 
@@ -100,12 +103,20 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
       {active.length ? (
         <Rows>
           {active.map((m) => (
-            <ListRow detail={m.joinedAt ? `Joined ${m.joinedAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : undefined} key={m.userId} label={m.displayName ?? 'Athlete'} />
+            <ListRow detail="No band data yet" key={m.userId} label={m.displayName ?? 'Athlete'} onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: m.userId, role: role === 'trainer' ? 'trainer' : 'coach' } })} />
           ))}
         </Rows>
       ) : (
         <Text style={styles.empty}>{roster === null && data?.teamId ? 'Loading roster…' : 'No athletes yet. Share your team code to invite them.'}</Text>
       )}
+
+      {demo.enabled ? (
+        <>
+          <SectionTitle title="Live vitals" />
+          <SimulatedTag />
+          <TeamVitalsRows members={demo.members} role={role === 'trainer' ? 'trainer' : 'coach'} />
+        </>
+      ) : null}
     </>
   );
 }
@@ -185,7 +196,7 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
   const member = useCoachData(role === 'Athlete' ? 'athlete' : role === 'Athletic trainer' ? 'trainer' : 'coach');
   const trainers = useTrainers(role === 'Athlete' ? member?.teamId ?? null : null);
   const mine = useMyTeam();
-  const { bandConnected, celsius, practiceLiveActivity } = usePreferences();
+  const { bandConnected, celsius, demoTeam, practiceLiveActivity } = usePreferences();
   const name = user?.displayName?.trim() || 'Your profile';
   const initials = name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
@@ -208,6 +219,7 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
       <CapsLabel>Account</CapsLabel>
       <Rows>
         <ListRow label="Team" value={mine?.team.teamName ?? '--'} />
+        {role !== 'Coach' && !member?.teamId ? <ListRow detail="Enter the code from your coach" label="Join a team" onPress={() => router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')} /> : null}
         {role === 'Athlete' ? <ListRow label="Athletic trainer" value={trainers.length ? trainers.map((t) => t.displayName ?? 'Trainer').join(', ') : 'None yet'} /> : null}
         {role === 'Athlete' ? (
           <ListRow label="HeatSense Band" onPress={() => router.push('/pair-band')} value={bandConnected ? 'Connected' : 'Not paired'} valueTone={bandConnected ? Palette.safe : Palette.inkMuted} />
@@ -216,6 +228,7 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
 
       <CapsLabel>App settings</CapsLabel>
       <Rows>
+        <ListRow detail="Made-up athletes with simulated band vitals" label="Demo team" trailing={<Switch accessibilityLabel="Show the simulated demo team" onValueChange={(value) => setPreference('demoTeam', value)} trackColor={{ true: Palette.coral }} value={demoTeam} />} />
         <ListRow label="Temperatures in °C" trailing={<Switch accessibilityLabel="Show temperatures in Celsius" onValueChange={(value) => setPreference('celsius', value)} trackColor={{ true: Palette.coral }} value={celsius} />} />
         <ListRow detail="Field zone and practice clock on the Lock Screen" label="Live Activity" trailing={<Switch accessibilityLabel="Show practice on the Dynamic Island and Lock Screen" onValueChange={(value) => setPreference('practiceLiveActivity', value)} trackColor={{ true: Palette.coral }} value={practiceLiveActivity} />} />
       </Rows>

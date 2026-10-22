@@ -50,7 +50,7 @@ const roleTabs: Record<DashboardRole, DashboardTab[]> = {
     { id: 'profile', icon: icons.person, label: 'Profile' },
   ],
   athlete: [
-    { id: 'status', icon: icons.heart, label: 'Status' },
+    { id: 'band', icon: icons.heart, label: 'Band' },
     { id: 'sessions', icon: icons.run, label: 'Sessions' },
     { id: 'home', icon: icons.home, label: 'Home' },
     { id: 'learn', icon: icons.book, label: 'Learn' },

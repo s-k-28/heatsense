@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
@@ -7,6 +8,7 @@ import { Palette } from '@/constants/theme';
 import { enter, leave, settle } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { recheckStatus } from '@/services/practice-sessions';
+import { useDemoTeam } from '@/state/demo-team';
 import { useTemperature } from '@/state/preferences';
 import { useCoachData, useNow, useRoster } from '@/state/team-session';
 
@@ -50,6 +52,10 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
   if (latest && !latest.acknowledgedAt) {
     items.push({ id: `ack-${latest.id}`, tone: Palette.warning, open: true, at: latest.measuredAt, title: 'Guidance not applied yet', detail: `${temp.value(latest.wbgtF)}${temp.unit} · ${ZONES[latest.zone].label}. Confirm you’ve made the UIL changes.`, action: openSheet });
   }
+  const demo = useDemoTeam(latest?.zone ?? 'yellow');
+  demo.members.filter((m) => m.status === 'watch').forEach((m) => {
+    items.push({ id: `vitals-${m.athlete.id}`, tone: Palette.warning, open: true, at: null, title: `${m.athlete.name}: slow recovery`, detail: `Heart rate ${m.vitals.heartRate} bpm and staying high through this break. Simulated band data.`, action: { label: 'View vitals', onPress: () => router.push({ pathname: '/athlete-vitals', params: { id: m.athlete.id } }) } });
+  });
   const waiting = roster?.filter((m) => m.status === 'pending') ?? [];
   if (waiting.length) {
     items.push({ id: 'join', tone: Palette.info, open: true, at: waiting[0].requestedAt, title: `${waiting.length} ${waiting.length === 1 ? 'athlete is' : 'athletes are'} waiting to join`, detail: 'Approve them so they see the field zone and practice plan.', action: { label: 'Review', onPress: () => onNavigate('team') } });
