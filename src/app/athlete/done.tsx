@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { CapsButton, StepScreen } from '@/components/step-kit';
 import { WelcomeWristband } from '@/components/welcome-wristband';
@@ -17,9 +17,9 @@ const DASHBOARD = '/dashboard?role=athlete';
 type State = { kind: 'loading' } | { kind: 'member'; teamName: string | null } | { kind: 'pending'; teamName: string | null } | { kind: 'none' };
 
 const COPY = {
-  member: (team: string | null) => ({ title: 'You’re all set.', body: 'Your profile is ready. Your coach can see you on the roster.', status: team ? `${team} · You’re on the team` : 'You’re on the team' }),
-  pending: (team: string | null) => ({ title: 'Request sent.', body: 'Your coach will need to approve your request before you can access your team.', status: team ? `${team} · Waiting for your coach` : 'Waiting for your coach' }),
-  none: () => ({ title: 'You’re all set.', body: 'Your profile is ready. You can join a team anytime with a code from your coach.', status: 'No team yet' }),
+  member: (team: string | null) => ({ title: 'You’re all set.' }),
+  pending: (team: string | null) => ({ title: 'Request sent.' }),
+  none: () => ({ title: 'You’re all set.' }),
 };
 
 export default function AthleteDoneScreen() {
@@ -72,28 +72,13 @@ export default function AthleteDoneScreen() {
         </View>
       }
       icon={<View style={styles.band}><WelcomeWristband width={210} /></View>}
-      title={copy.title}>
-      <View accessibilityLiveRegion="polite" style={styles.statusLine}>
-        <View style={[styles.signal, state.kind === 'pending' && styles.signalPending, state.kind === 'none' && styles.signalNone]} />
-        <View style={styles.statusCopy}>
-          <Text style={styles.statusText}>{copy.status}</Text>
-          {state.kind === 'pending' && <Text style={styles.statusNote}>This screen updates as soon as your coach responds.</Text>}
-        </View>
-      </View>
-    </StepScreen>
+      title={copy.title}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   band: { alignSelf: 'center' },
-  // The welcome screen's product line, reused for the real team status.
-  statusLine: { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopColor: Entry.line, borderTopWidth: 1, marginTop: 24, paddingTop: 18 },
-  signal: { width: 4, alignSelf: 'stretch', minHeight: 24, borderRadius: 2, backgroundColor: Entry.blue },
-  signalPending: { backgroundColor: Entry.peach },
-  signalNone: { backgroundColor: Entry.line },
-  statusCopy: { flex: 1, gap: 3 },
-  statusText: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 16, lineHeight: 22 },
-  statusNote: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   loading: { marginTop: 32 },
   actions: { gap: 12 },
 });

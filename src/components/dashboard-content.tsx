@@ -1,5 +1,4 @@
 import { SegmentedControl } from '@expo/ui/community/segmented-control';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
@@ -10,21 +9,20 @@ import { Alert, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Switch
 import { LargeTitle, SectionHeader, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
 import { AlertIsland } from '@/components/alert-island';
-import { FieldCheckSheet } from '@/components/field-check-sheet';
+import { CoachToday } from '@/components/coach-today';
 import { LocationCard } from '@/components/location-card';
 import { SlidingTabs } from '@/components/sliding-tabs';
 import { BarChart, LineChart } from '@/components/ui/charts';
-import { InsightCard } from '@/components/ui/instruments';
 import { BaselineChart, DateTile, PhotoBanner, RingAvatar, Ring, SegmentBar, Spark, StatStrip, Timeline } from '@/components/ui/visuals';
 import { WeekSwitcher } from '@/components/week-switcher';
-import { Card, CardHeader, Group, IconTile, Row, TextLink, chevron, textStyles } from '@/components/ui/list';
+import { Card, CardHeader, Group, IconTile, Row, TextLink, textStyles } from '@/components/ui/list';
 import { Face, Palette, Spacing, Type } from '@/constants/theme';
 import { INCIDENT, TODAY, ZONES } from '@/lib/practice';
 import { ensureTeamInvite, getMyTeamInvite } from '@/services/team-invites';
 import { firebaseAuth } from '@/services/firebase';
 import { useTeamDraft, type TeamDraft } from '@/state/onboarding';
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
-import { EQUIPMENT_LABEL, buildSchedule, clockTime, practiceStart, usePracticePlans, type Block, type PracticePlan as PracticePlanType } from '@/state/practice-plans';
+import { buildSchedule, clockTime, practiceStart, usePracticePlans, type Block, type PracticePlan as PracticePlanType } from '@/state/practice-plans';
 
 type IconName = ComponentProps<typeof HeatIcon>['name'];
 
@@ -110,113 +108,15 @@ function AthleteContent({ tab }: { tab: string }) {
 
 /* ─────────────────────────────── Home screens ─────────────────────────────── */
 
-const FIELD_PHOTO = require('@/assets/images/home/field-hero.webp');
 
-/** Coach Home, kept short: readiness hero, one Today bar, the field reading, invite. */
+/** Coach Home: the WHOOP-style orb, practice rings, get-started cards and today's readings. */
 function CoachHome() {
-  const go = useContext(NavContext);
-  const { draft, name } = useTeam();
-  const [conditionsOpen, setConditionsOpen] = useState(false);
+  const { draft } = useTeam();
   return (
     <>
       <LargeTitle title="Today" />
-      <ReadinessHero onAction={() => setConditionsOpen(true)} />
-      <TodayBar onNavigate={go} />
-      <View style={styles.block}><FieldCard onPress={() => go('plan')} showZone={false} /></View>
-
-      <InviteRow name={name} onShare={() => shareTeamCode(draft)} />
-      <FieldCheckSheet onClose={() => setConditionsOpen(false)} visible={conditionsOpen} />
+      <CoachToday onInvite={() => shareTeamCode(draft)} />
     </>
-  );
-}
-
-/** The photo card that asks the coach the one question that matters before practice. */
-function ReadinessHero({ onAction }: { onAction: () => void }) {
-  const { practiceStartedAt } = usePreferences();
-  const running = practiceStartedAt !== null;
-  return (
-    <View style={styles.hero}>
-      <Image accessibilityIgnoresInvertColors contentFit="cover" contentPosition={{ top: '12%', left: '50%' }} source={FIELD_PHOTO} style={StyleSheet.absoluteFill} />
-      {/* Keeps the copy readable where it sits, at the bottom of the photo. */}
-      <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.9)']} locations={[0.1, 0.55, 1]} pointerEvents="none" style={StyleSheet.absoluteFill} />
-      <View accessible accessibilityLabel={ZONES[TODAY.zone].label} style={styles.zoneTag}>
-        <View style={[styles.zoneDot, { backgroundColor: ZONES[TODAY.zone].color }]} />
-        <Text style={styles.zoneTagText}>{ZONES[TODAY.zone].label}</Text>
-      </View>
-      <View style={styles.heroCopy}>
-        <Text accessibilityRole="header" style={styles.heroTitle}>{running ? 'Practice is on.' : 'Ready for practice?'}</Text>
-        <Pressable accessibilityHint={running ? 'Shows the practice clock' : 'Checks the field and starts practice'} accessibilityLabel={running ? 'View practice' : 'Check field conditions'} accessibilityRole="button" onPress={onAction} style={({ pressed }) => [styles.heroButton, pressed && styles.pressed]}>
-          <Text style={styles.heroButtonText}>{running ? 'View practice clock' : 'Check field conditions'}</Text>
-          <HeatIcon name={chevron} size={12} tintColor="#FFFFFF" weight="bold" />
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-/** Three readouts, each opening its tab, with the rest of today's plan on one line beneath. */
-function TodayBar({ onNavigate }: { onNavigate: (tab: string) => void }) {
-  const { incidentAcknowledged } = usePreferences();
-  const { active: plan } = usePracticePlans();
-  const open = incidentAcknowledged ? 0 : 1;
-  return (
-    <Card style={styles.todayBar}>
-      <View style={styles.todayRow}>
-        <TodayItem accessibilityLabel={`Plan: ${plan.workMinutes} minutes work, ${plan.restMinutes} minutes rest`} label="Plan" onPress={() => onNavigate('plan')} value="Work / rest">
-          <Ring segments={[{ color: Palette.coral, value: plan.workMinutes }, { color: Palette.info, value: plan.restMinutes }]} size={TODAY_RING} stroke={6} summary={`${plan.workMinutes} minutes work, ${plan.restMinutes} minutes rest`}>
-            <Text style={[styles.todayNumber, styles.todayNumberSmall]}>{plan.workMinutes}/{plan.restMinutes}</Text>
-          </Ring>
-        </TodayItem>
-        <TodayItem accessibilityLabel={open ? 'Alerts: 1 needs a response, 3 handled earlier today' : 'Alerts: all clear, 4 handled today'} label="Alerts" onPress={() => onNavigate('alerts')} value={open ? 'Active' : 'All clear'}>
-          <Ring segments={[{ color: Palette.emergency, value: open }, { color: open ? 'rgba(235,235,245,0.28)' : Palette.safe, value: 4 - open }]} size={TODAY_RING} stroke={6} summary={open ? '1 open alert, 3 handled' : 'No open alerts, 4 handled'}>
-            <Text style={[styles.todayNumber, { color: open ? Palette.emergency : Palette.ink }]}>{open}</Text>
-          </Ring>
-        </TodayItem>
-        <TodayItem accessibilityLabel="Team: 24 athletes, 3 need follow-up" label="Team" onPress={() => onNavigate('team')} value="Athletes">
-          <Ring segments={[{ color: Palette.safe, value: 21 }, { color: Palette.caution, value: 2 }, { color: Palette.warning, value: 1 }]} size={TODAY_RING} stroke={6} summary="21 within plan, 2 caution, 1 to review">
-            <Text style={styles.todayNumber}>24</Text>
-          </Ring>
-        </TodayItem>
-      </View>
-      <Pressable accessibilityLabel={`Water every ${plan.waterEveryMinutes} minutes. Equipment ${EQUIPMENT_LABEL[plan.equipment].toLowerCase()}.`} accessibilityRole="button" onPress={() => onNavigate('plan')} style={({ pressed }) => [styles.todayPlanLine, pressed && styles.pressed]}>
-        <Text numberOfLines={1} style={styles.todayPlanText}>Water every {plan.waterEveryMinutes} min · Equipment {EQUIPMENT_LABEL[plan.equipment].toLowerCase()}</Text>
-      </Pressable>
-    </Card>
-  );
-}
-
-const TODAY_RING = 70;
-
-function TodayItem({ accessibilityLabel, children, label, onPress, value }: { accessibilityLabel: string; children: React.ReactNode; label: string; onPress: () => void; value: string }) {
-  return (
-    <Pressable accessibilityLabel={accessibilityLabel} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.todayItem, pressed && styles.pressed]}>
-      {children}
-      <View style={styles.todayLabelRow}>
-        <Text style={styles.todayLabel}>{label}</Text>
-        <HeatIcon name={chevron} size={9} tintColor={Palette.inkMuted} weight="bold" />
-      </View>
-      <Text numberOfLines={1} style={styles.todayValue}>{value}</Text>
-    </Pressable>
-  );
-}
-
-const BAND_PHOTO = require('@/assets/images/heatsense-band-refined.png');
-
-/** Invite card: share the team code, or dismiss it. */
-function InviteRow({ name, onShare }: { name: string; onShare: () => void }) {
-  const [dismissed, setDismissed] = useState(false);
-  if (dismissed) return null;
-  return (
-    <View style={styles.inviteRow}>
-      <InsightCard
-        action="Share team code"
-        body={`Athletes join ${name} with a team code. Once they pair a band, their recovery shows up here during practice.`}
-        image={BAND_PHOTO}
-        onAction={onShare}
-        onDismiss={() => setDismissed(true)}
-        title="Invite your athletes"
-      />
-    </View>
   );
 }
 
@@ -963,13 +863,6 @@ function Legend({ label, tone, value }: { label: string; tone: string; value: st
   );
 }
 
-function StepNumber({ n }: { n: number }) {
-  return (
-    <View style={styles.step}>
-      <Text style={styles.stepText}>{n}</Text>
-    </View>
-  );
-}
 
 function Toggle({ label, onChange, value }: { label: string; onChange: (value: boolean) => void; value: boolean }) {
   return (
@@ -984,40 +877,7 @@ function Toggle({ label, onChange, value }: { label: string; onChange: (value: b
   );
 }
 
-function Guide({ body, expanded, onPress, title }: { body: string; expanded: boolean; onPress: () => void; title: string }) {
-  return (
-    <View>
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={onPress}>
-        {({ pressed }) => (
-          <View style={[styles.guideRow, pressed && styles.guidePressed]}>
-            <Text style={styles.guideTitle}>{title}</Text>
-            <View style={expanded ? styles.rotated : undefined}>
-              <HeatIcon name={chevron} size={13} tintColor={Palette.inkFaint} weight="semibold" />
-            </View>
-          </View>
-        )}
-      </Pressable>
-      {expanded ? <Text style={styles.guideBody}>{body}</Text> : null}
-    </View>
-  );
-}
 
-function Suggestion({ action, body, onAction, title }: { action: string; body: string; onAction: () => void; title: string }) {
-  const [dismissed, setDismissed] = useState(false);
-  if (dismissed) return null;
-  return (
-    <>
-      <SectionHeader title={title} />
-      <Card>
-        <Text style={styles.suggestionBody}>{body}</Text>
-        <View style={styles.suggestionAction}><TextLink label={action} onPress={onAction} /></View>
-        <Pressable accessibilityLabel={`Dismiss ${title}`} accessibilityRole="button" hitSlop={14} onPress={() => setDismissed(true)} style={styles.dismiss}>
-          <HeatIcon name={icons.close} size={12} tintColor={Palette.inkMuted} weight="bold" />
-        </Pressable>
-      </Card>
-    </>
-  );
-}
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.55 },

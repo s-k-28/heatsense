@@ -22,7 +22,7 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const POINTS = 10;
 // Per-point (frequency multiplier, phase offset, amplitude) -- irregular on
 // purpose so the wobble never looks synchronized/mechanical.
-const WOBBLE = Array.from({ length: POINTS }, (_, i) => ({
+export const WOBBLE = Array.from({ length: POINTS }, (_, i) => ({
   freq: 0.7 + ((i * 37) % 5) * 0.18,
   phase: (i / POINTS) * Math.PI * 2 + ((i * 53) % 7) * 0.31,
   amp: 0.16 + ((i * 29) % 4) * 0.045,
@@ -31,7 +31,7 @@ const WOBBLE = Array.from({ length: POINTS }, (_, i) => ({
 // -- deliberately uneven so it reads as a spiky frozen blob, not a circle.
 const REST_MULT = [1, 0.82, 1.18, 0.9, 1.24, 0.88, 1.1, 0.95, 1.16, 0.86];
 
-function buildBlobPath(cx: number, cy: number, baseR: number, radii: number[]): string {
+export function buildBlobPath(cx: number, cy: number, baseR: number, radii: number[]): string {
   'worklet';
   const n = radii.length;
   const pts = radii.map((r, i) => {
