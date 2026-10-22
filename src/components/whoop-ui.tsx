@@ -1,8 +1,10 @@
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import { Palette } from '@/constants/theme';
+import { enter, settle } from '@/lib/motion';
 
 // The dashboard's building blocks, after WHOOP: one heading per section, small caps group labels,
 // full-width dark rows with one idea each, and metric tiles. One accent color, no decoration.
@@ -47,8 +49,16 @@ export function ListRow({ label, detail, value, valueTone, onPress, trailing, de
   );
 }
 
+/** Rows arrive one after another and close up smoothly when one leaves. */
 export function Rows({ children }: { children: ReactNode }) {
-  return <View style={styles.rows}>{children}</View>;
+  const reduced = useReducedMotion();
+  return (
+    <View style={styles.rows}>
+      {Children.toArray(children).map((child, i) => (
+        <Animated.View entering={enter(i, reduced)} key={(child as { key?: string }).key ?? i} layout={settle(reduced)}>{child}</Animated.View>
+      ))}
+    </View>
+  );
 }
 
 /** A metric tile: small caps label, a big value, and an optional status pill. */
@@ -63,7 +73,14 @@ export function MetricTile({ label, value, unit, pill, pillTone = Palette.safe }
 }
 
 export function Tiles({ children }: { children: ReactNode }) {
-  return <View style={styles.tiles}>{children}</View>;
+  const reduced = useReducedMotion();
+  return (
+    <View style={styles.tiles}>
+      {Children.toArray(children).map((child, i) => (
+        <Animated.View entering={enter(i, reduced)} key={(child as { key?: string }).key ?? i} style={styles.tileSlot}>{child}</Animated.View>
+      ))}
+    </View>
+  );
 }
 
 export function SampleTag() {
@@ -83,7 +100,8 @@ const styles = StyleSheet.create({
   rowDetail: { color: Palette.inkMuted, fontSize: 14, lineHeight: 19 },
   rowValue: { color: Palette.ink, fontSize: 17, fontVariant: ['tabular-nums'], fontWeight: '600' },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tile: { backgroundColor: Palette.card, borderRadius: 16, gap: 8, minHeight: 122, padding: 16, width: '48.5%' },
+  tileSlot: { width: '48.5%' },
+  tile: { backgroundColor: Palette.card, borderRadius: 16, gap: 8, minHeight: 122, padding: 16 },
   tileLabel: { color: Palette.inkMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1.3 },
   tileValue: { color: Palette.ink, fontSize: 30, fontVariant: ['tabular-nums'], fontWeight: '700' },
   tileUnit: { color: Palette.inkMuted, fontSize: 16, fontWeight: '600' },

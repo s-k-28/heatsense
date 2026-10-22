@@ -1,11 +1,13 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import Animated, { useAnimatedProps, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Line, Path, Polyline, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 import { Palette, Spacing, Type } from '@/constants/theme';
+import { EASE_OUT, FILL_MS } from '@/lib/motion';
 
 /** A ring made of segments. The centre holds whatever you pass as children. */
 export function Ring({
@@ -24,45 +26,68 @@ export function Ring({
   stroke?: number;
   summary: string;
 }) {
+  const reduced = useReducedMotion();
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const total = max ?? (segments.reduce((sum, segment) => sum + segment.value, 0) || 1);
   const gap = segments.filter((segment) => segment.value > 0).length > 1 ? 4 : 0;
   // Where each segment starts along the ring, worked out before rendering.
   const starts = segments.map((_, i) => segments.slice(0, i).reduce((sum, segment) => sum + (segment.value / total) * c, 0));
+
+  // The ring fills to its value on first show and whenever the value changes, so it reads as a quantity.
+  const fill = useSharedValue(reduced ? 1 : 0);
+  const signature = segments.map((segment) => segment.value).join(',') + `/${total}`;
+  useEffect(() => {
+    if (reduced) { fill.set(1); return; }
+    fill.set(0);
+    fill.set(withTiming(1, { duration: FILL_MS, easing: EASE_OUT }));
+  }, [fill, reduced, signature]);
+
   return (
     <View accessible accessibilityLabel={summary} style={{ height: size, width: size }}>
       <Svg height={size} width={size}>
         <Circle cx={size / 2} cy={size / 2} fill="none" r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
-        {segments.map((segment, index) => {
-          const length = Math.max(0, (segment.value / total) * c - gap);
-          const start = starts[index];
-          if (segment.value <= 0) return null;
-          return (
-            <Circle
-              cx={size / 2}
-              cy={size / 2}
-              fill="none"
-              key={index}
-              r={r}
-              rotation={-90}
-              originX={size / 2}
-              originY={size / 2}
-              stroke={segment.color}
-              strokeDasharray={`${length} ${c}`}
-              strokeDashoffset={-start}
-              strokeLinecap="round"
-              strokeWidth={stroke}
-            />
-          );
-        })}
+        {segments.map((segment, index) => (segment.value <= 0 ? null : (
+          <RingSegment
+            circumference={c}
+            color={segment.color}
+            fill={fill}
+            key={index}
+            length={Math.max(0, (segment.value / total) * c - gap)}
+            r={r}
+            size={size}
+            start={starts[index]}
+            stroke={stroke}
+          />
+        )))}
       </Svg>
       <View style={styles.ringCenter}>{children}</View>
     </View>
   );
 }
 
-/** An initials avatar with a status-colored ring, so who needs a look reads before any text does. */
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+function RingSegment({ circumference, color, fill, length, r, size, start, stroke }: { circumference: number; color: string; fill: SharedValue<number>; length: number; r: number; size: number; start: number; stroke: number }) {
+  const props = useAnimatedProps(() => ({ strokeDasharray: [length * fill.value, circumference] }));
+  return (
+    <AnimatedCircle
+      animatedProps={props}
+      cx={size / 2}
+      cy={size / 2}
+      fill="none"
+      originX={size / 2}
+      originY={size / 2}
+      r={r}
+      rotation={-90}
+      stroke={color}
+      strokeDashoffset={-start}
+      strokeLinecap="round"
+      strokeWidth={stroke}
+    />
+  );
+}
+
 export function RingAvatar({ color, name, size = 44 }: { color: string; name: string; size?: number }) {
   const letters = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]!.toUpperCase()).join('');
   return (
