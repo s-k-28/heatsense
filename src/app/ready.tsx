@@ -1,205 +1,114 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import type { ComponentProps } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 
-import { HeatIcon } from '@/components/heat-icon';
-import { Fonts, MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
+import { StepScreen, caps } from '@/components/step-kit';
+import { Entry } from '@/constants/entry-theme';
 
-const icons = {
-  back: { ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' },
-  coach: { ios: 'person.3.fill', android: 'groups', web: 'groups' },
-  trainer: { ios: 'cross.case.fill', android: 'medical_services', web: 'medical_services' },
-  athlete: { ios: 'figure.run', android: 'directions_run', web: 'directions_run' },
-  check: { ios: 'checkmark', android: 'check', web: 'check' },
-} as const;
+// End of setup: what happens next, in three steps, instead of a preview full of sample numbers.
+// After WHOOP's "What to expect next" calibration screen.
 
 type ReadyRole = 'Coach' | 'Athletic trainer' | 'Athlete';
-type IconName = ComponentProps<typeof HeatIcon>['name'];
 
-type RoleSetup = {
-  body: string;
-  button: string;
-  colors: readonly [string, string, ...string[]];
-  dashboardRole: 'coach' | 'trainer' | 'athlete';
-  icon: IconName;
-  kicker: string;
-  previewDetail: string;
-  previewLabel: string;
-  previewUnit: string;
-  previewValue: string;
-  steps: { detail: string; label: string; optional?: boolean }[];
-  title: string;
-};
-
-const setupByRole: Record<ReadyRole, RoleSetup> = {
+const SETUP: Record<ReadyRole, { dashboardRole: 'coach' | 'trainer' | 'athlete'; steps: { title: string; detail: string }[] }> = {
   Coach: {
-    body: 'Connect the school, sport, and current UIL plan before the first outdoor practice.',
-    button: 'Enter coach workspace',
-    colors: ['#F6A35A', '#FFD28C', '#FFF2D7'],
     dashboardRole: 'coach',
-    icon: icons.coach,
-    kicker: 'Coach setup',
-    previewDetail: 'WBGT plan and live roster',
-    previewLabel: 'Team view preview',
-    previewUnit: 'athletes',
-    previewValue: '24',
     steps: [
-      { label: 'Confirm school and sport', detail: 'Liberty High School · varsity soccer' },
-      { label: 'Choose the UIL activity class', detail: 'Controls work, rest, water, and equipment guidance' },
-      { label: 'Invite staff and athletes', detail: 'Share a team code when you are ready', optional: true },
+      { title: 'Take a field reading', detail: 'Enter the WBGT from your meter. HeatSense sets the zone from your UIL class.' },
+      { title: 'Approve your athletes', detail: 'Join requests show up on the Team tab as athletes enter your code.' },
+      { title: 'Recheck on time', detail: 'HeatSense counts down to the next reading and flags it when it’s late.' },
     ],
-    title: 'Set up the team view.',
   },
   'Athletic trainer': {
-    body: 'Prepare the sideline response view and decide who can share optional wristband signals.',
-    button: 'Enter trainer workspace',
-    colors: ['#E86C5D', '#F5A897', '#FCE8DF'],
     dashboardRole: 'trainer',
-    icon: icons.trainer,
-    kicker: 'Athletic trainer setup',
-    previewDetail: 'Prioritized for human review',
-    previewLabel: 'Sideline queue preview',
-    previewUnit: 'active reviews',
-    previewValue: '2',
     steps: [
-      { label: 'Confirm school access', detail: 'Liberty High School athletics' },
-      { label: 'Review the emergency action plan', detail: 'Contacts, cooling location, and response roles' },
-      { label: 'Set athlete data permissions', detail: 'Wristband sharing stays optional', optional: true },
+      { title: 'Review the heat plan', detail: 'Check the UIL class and recheck interval for each team.' },
+      { title: 'Follow live readings', detail: 'Every reading, zone and acknowledgment is recorded as it happens.' },
+      { title: 'Export the record', detail: 'Share any practice’s full record from the Practice sheet.' },
     ],
-    title: 'Prepare your sideline tools.',
   },
   Athlete: {
-    body: 'Join your team’s heat-safety plan. Personal wristband signals are optional and never replace WBGT guidance.',
-    button: 'Enter athlete view',
-    colors: ['#75B99C', '#B8DDC7', '#F2EBD9'],
     dashboardRole: 'athlete',
-    icon: icons.athlete,
-    kicker: 'Athlete setup',
-    previewDetail: 'Team plan works without a band',
-    previewLabel: 'Practice view preview',
-    previewUnit: 'WBGT example',
-    previewValue: '84°',
     steps: [
-      { label: 'Join your team', detail: 'Enter the code from your coach' },
-      { label: 'Review sharing choices', detail: 'You control optional personal signal access' },
-      { label: 'Pair a HeatSense Band', detail: 'Adds personal trends to the team plan', optional: true },
+      { title: 'Wear your band to practice', detail: 'Optional. It helps your coach and trainer notice when you need a break.' },
+      { title: 'Check the zone', detail: 'See the field’s heat zone and what it means for practice today.' },
+      { title: 'Speak up early', detail: 'Feeling dizzy, sick or confused? Stop and tell a coach right away.' },
     ],
-    title: 'Get your practice view ready.',
   },
 };
 
-export default function ReadyScreen() {
-  const router = useRouter();
-  const { role = 'Coach' } = useLocalSearchParams<{ role?: string }>();
-  const normalizedRole: ReadyRole = role === 'Athlete' || role === 'Athletic trainer' ? role : 'Coach';
-  const setup = setupByRole[normalizedRole];
+const SIZE = 220;
+const R = 92;
 
+/** Three arcs around a center mark, numbered like WHOOP's calibration ring. */
+function StepRing() {
+  const c = SIZE / 2;
+  const point = (deg: number) => [c + R * Math.cos((deg * Math.PI) / 180), c + R * Math.sin((deg * Math.PI) / 180)];
+  const arc = (from: number, to: number) => {
+    const [x1, y1] = point(from);
+    const [x2, y2] = point(to);
+    return `M${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2}`;
+  };
+  const segments = [[-80, 25], [35, 140], [150, 260]] as const;
   return (
-    <View style={styles.screen}>
-      <StatusBar style="light" />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.shell}>
-          <Pressable
-            accessibilityLabel="Back to onboarding"
-            accessibilityRole="button"
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}>
-            <HeatIcon name={icons.back} size={23} tintColor={Palette.ink} />
-          </Pressable>
-
-          <View style={styles.content}>
-            <Text style={styles.kicker}>{setup.kicker}</Text>
-            <Text style={styles.title}>{setup.title}</Text>
-            <Text style={styles.body}>{setup.body}</Text>
-
-            <LinearGradient colors={setup.colors} style={styles.preview}>
-              <View style={styles.previewTopline}>
-                <Text style={styles.previewLabel}>{setup.previewLabel}</Text>
-                <HeatIcon name={setup.icon} size={24} tintColor={Palette.ink} />
-              </View>
-              <View style={styles.previewMetric}>
-                <Text style={styles.previewValue}>{setup.previewValue}</Text>
-                <Text style={styles.previewUnit}>{setup.previewUnit}</Text>
-              </View>
-              <Text style={styles.previewDetail}>{setup.previewDetail}</Text>
-            </LinearGradient>
-
-            <View style={styles.setupHeading}>
-              <Text style={styles.setupTitle}>Before you start</Text>
-              <Text style={styles.setupTime}>About 2 minutes</Text>
-            </View>
-            <View style={styles.setupList}>
-              {setup.steps.map((step, index) => (
-                <ReadyRow
-                  detail={step.detail}
-                  index={index + 1}
-                  key={step.label}
-                  label={step.label}
-                  last={index === setup.steps.length - 1}
-                  optional={step.optional}
-                />
-              ))}
-            </View>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.replace(`/dashboard?role=${setup.dashboardRole}` as never)}
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}>
-            <Text style={styles.buttonText}>{setup.button}</Text>
-            <HeatIcon name={icons.check} size={18} tintColor={Palette.surface} />
-          </Pressable>
-        </View>
-      </SafeAreaView>
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.ring}>
+      <Svg height={SIZE} width={SIZE}>
+        {segments.map(([from, to], i) => (
+          <Path d={arc(from, to)} fill="none" key={i} stroke={i === 0 ? Entry.peach : Entry.lineStrong} strokeLinecap="round" strokeWidth={14} />
+        ))}
+        {segments.map(([, to], i) => {
+          const [x, y] = point(to);
+          return <Circle cx={x} cy={y} fill={Entry.canvas} key={`n${i}`} r={14} stroke={i === 0 ? Entry.peach : Entry.lineStrong} strokeWidth={2} />;
+        })}
+      </Svg>
+      {segments.map(([, to], i) => {
+        const [x, y] = point(to);
+        return <Text key={`t${i}`} style={[styles.ringNumber, { left: x - 14, top: y - 10, color: i === 0 ? Entry.peach : Entry.muted }]}>{i + 1}</Text>;
+      })}
+      <View style={styles.ringCenter}>
+        <Text style={styles.ringBig}>3</Text>
+        <Text style={[caps, { color: Entry.muted }]}>steps</Text>
+      </View>
     </View>
   );
 }
 
-function ReadyRow({ detail, index, label, last, optional }: { detail: string; index: number; label: string; last: boolean; optional?: boolean }) {
+export default function ReadyScreen() {
+  const router = useRouter();
+  const { role } = useLocalSearchParams<{ role?: string }>();
+  const setup = SETUP[(role && role in SETUP ? role : 'Coach') as ReadyRole];
   return (
-    <View style={[styles.setupRow, last && styles.setupRowLast]}>
-      <Text style={styles.stepNumber}>{String(index).padStart(2, '0')}</Text>
-      <View style={styles.rowCopy}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        <Text style={styles.rowDetail}>{detail}</Text>
+    <StepScreen
+      next={{ enabled: true, label: 'Finish', onPress: () => router.replace(`/dashboard?role=${setup.dashboardRole}` as never) }}
+      onBack={() => (router.canGoBack() ? router.back() : router.replace('/role'))}
+      progress={1}
+      title="What to expect next"
+      top="tight">
+      <StepRing />
+      <View style={styles.list}>
+        {setup.steps.map((step, i) => (
+          <View accessible key={step.title} style={styles.item}>
+            <Text style={[styles.index, i === 0 && { color: Entry.peach }]}>{i + 1}</Text>
+            <View style={styles.copy}>
+              <Text style={styles.itemTitle}>{step.title}</Text>
+              <Text style={styles.itemDetail}>{step.detail}</Text>
+            </View>
+          </View>
+        ))}
       </View>
-      <Text style={optional ? styles.optionalText : styles.requiredText}>{optional ? 'Optional' : 'Required'}</Text>
-    </View>
+    </StepScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: Palette.canvas, flex: 1 },
-  safeArea: { flex: 1 },
-  shell: { alignSelf: 'center', flex: 1, maxWidth: MaxContentWidth, paddingHorizontal: Spacing.five, paddingVertical: Spacing.three, width: '100%' },
-  backButton: { alignItems: 'center', backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: 24, borderWidth: 1, height: 48, justifyContent: 'center', width: 48 },
-  content: { flex: 1, paddingTop: Spacing.six },
-  kicker: { color: Palette.coralDark, fontFamily: Fonts.bold, fontSize: 12 },
-  title: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 31, letterSpacing: -1.1, lineHeight: 36, marginTop: Spacing.two, maxWidth: 430 },
-  body: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 14, lineHeight: 20, marginTop: Spacing.three, maxWidth: 430 },
-  preview: { borderRadius: Radius.large, marginTop: Spacing.five, minHeight: 142, overflow: 'hidden', padding: Spacing.four },
-  previewTopline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  previewLabel: { color: 'rgba(27,28,25,0.72)', fontFamily: Fonts.semibold, fontSize: 12 },
-  previewMetric: { alignItems: 'flex-end', flexDirection: 'row', marginTop: Spacing.three },
-  previewValue: { color: Palette.ink, fontFamily: Fonts.extrabold, fontSize: 45, letterSpacing: -2, lineHeight: 47 },
-  previewUnit: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 12, marginBottom: 7, marginLeft: 7 },
-  previewDetail: { color: 'rgba(27,28,25,0.72)', fontFamily: Fonts.semibold, fontSize: 12, marginTop: 2 },
-  setupHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.five },
-  setupTitle: { color: Palette.ink, fontFamily: Fonts.bold, fontSize: 16 },
-  setupTime: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 12 },
-  setupList: { borderBottomColor: Palette.border, borderBottomWidth: 1, borderTopColor: Palette.border, borderTopWidth: 1, marginTop: Spacing.three },
-  setupRow: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.three, minHeight: 67, paddingVertical: Spacing.two },
-  setupRowLast: { borderBottomWidth: 0 },
-  stepNumber: { color: Palette.coralDark, fontFamily: Fonts.bold, fontSize: 12, width: 22 },
-  rowCopy: { flex: 1 },
-  rowLabel: { color: Palette.ink, fontFamily: Fonts.semibold, fontSize: 13 },
-  rowDetail: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11, lineHeight: 15, marginTop: 3 },
-  requiredText: { color: Palette.ink, fontFamily: Fonts.semibold, fontSize: 11 },
-  optionalText: { color: Palette.inkMuted, fontFamily: Fonts.medium, fontSize: 11 },
-  button: { alignItems: 'center', backgroundColor: Palette.ink, borderRadius: Radius.pill, flexDirection: 'row', gap: Spacing.two, height: 54, justifyContent: 'center' },
-  buttonText: { color: Palette.surface, fontFamily: Fonts.bold, fontSize: 14 },
-  buttonPressed: { opacity: 0.7 },
+  ring: { alignSelf: 'center', height: SIZE, width: SIZE },
+  ringNumber: { fontFamily: Entry.strong, fontSize: 13, position: 'absolute', textAlign: 'center', width: 28 },
+  ringCenter: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
+  ringBig: { color: Entry.ink, fontFamily: Entry.display, fontSize: 56, lineHeight: 58 },
+  list: { gap: 18 },
+  item: { flexDirection: 'row', gap: 14 },
+  index: { color: Entry.muted, fontFamily: Entry.strong, fontSize: 15, width: 18 },
+  copy: { flex: 1, gap: 3 },
+  itemTitle: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16 },
+  itemDetail: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
 });

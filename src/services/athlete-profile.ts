@@ -3,7 +3,7 @@ import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { firestore } from '@/services/firebase';
 
 // The athlete's own profile: athletes/{uid}. The athlete writes it directly; the
-// Firestore rules check every field (see firestore.rules). Health answers and
+// Firestore rules check every field (see firebase/firestore.rules). Health answers and
 // emergency contacts will live in separate documents under athletes/{uid}/private,
 // so saving this page never touches them.
 //

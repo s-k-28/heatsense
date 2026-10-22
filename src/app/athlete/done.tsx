@@ -1,11 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 
-import { AthleteTextLink, useAthleteEntrance } from '@/components/athlete-onboarding';
-import { EntryButton, EntryHeader, EntryScreen, entryStyles } from '@/components/entry-ui';
-import { FieldlineScene } from '@/components/fieldline-character';
+import { CapsButton, StepScreen } from '@/components/step-kit';
+import { WelcomeWristband } from '@/components/welcome-wristband';
 import { Entry } from '@/constants/entry-theme';
 import { watchMyMembership, type Membership } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
@@ -26,7 +24,6 @@ const COPY = {
 
 export default function AthleteDoneScreen() {
   const router = useRouter();
-  const { rise, fade } = useAthleteEntrance();
   const uid = getCurrentUserId();
   const [state, setState] = useState<State>(uid ? { kind: 'loading' } : { kind: 'none' });
 
@@ -49,54 +46,54 @@ export default function AthleteDoneScreen() {
     return watchMyMembership(uid, apply, () => setState({ kind: 'none' }));
   }, [uid]);
 
+  // A listener that never answers (offline, or no account in this build) must not spin forever.
+  useEffect(() => {
+    if (state.kind !== 'loading') return;
+    const timer = setTimeout(() => setState((current) => (current.kind === 'loading' ? { kind: 'none' } : current)), 6000);
+    return () => clearTimeout(timer);
+  }, [state.kind]);
+
   const copy = state.kind === 'member' ? COPY.member(state.teamName) : state.kind === 'pending' ? COPY.pending(state.teamName) : state.kind === 'none' ? COPY.none() : null;
 
+  if (!copy) {
+    return (
+      <StepScreen title="Setting up your account…">
+        <ActivityIndicator accessibilityLabel="Checking your team status" color={Entry.muted} style={styles.loading} />
+      </StepScreen>
+    );
+  }
+
   return (
-    <EntryScreen>{(compact) => <>
-      <Animated.View entering={fade(100)}>
-        <EntryHeader />
-      </Animated.View>
-
-      <Animated.View entering={fade(250)} style={[styles.illustration, compact && { marginVertical: 10 }]}>
-        <FieldlineScene compact={compact} reaction={state.kind === 'member' ? 'athlete' : null} />
-      </Animated.View>
-
-      {copy ? (
-        <View key={state.kind} accessibilityLiveRegion="polite">
-          <Animated.Text entering={rise(400)} accessibilityRole="header" style={[entryStyles.headline, compact && entryStyles.headlineCompact]}>{copy.title}</Animated.Text>
-          <Animated.Text entering={fade(550)} style={entryStyles.description}>{copy.body}</Animated.Text>
-          <Animated.View entering={fade(650)} style={styles.statusLine}>
-            <View style={[styles.signal, state.kind === 'pending' && styles.signalPending, state.kind === 'none' && styles.signalNone]} />
-            <View style={styles.statusCopy}>
-              <Text style={styles.statusText}>{copy.status}</Text>
-              {state.kind === 'pending' && <Text style={styles.statusNote}>This screen updates as soon as your coach responds.</Text>}
-            </View>
-          </Animated.View>
+    <StepScreen
+      footer={
+        <View style={styles.actions}>
+          <CapsButton label={state.kind === 'member' ? 'Go to dashboard' : 'Continue'} onPress={() => router.replace(DASHBOARD as never)} />
+          {state.kind === 'none' ? <CapsButton label="Join a team" onPress={() => router.push('/setup/athlete')} outline /> : null}
         </View>
-      ) : (
-        <ActivityIndicator style={styles.loading} color={Entry.muted} accessibilityLabel="Checking your team status" />
-      )}
-
-      {copy && (
-        <Animated.View entering={rise(800)} style={styles.actions}>
-          <EntryButton label={state.kind === 'member' ? 'Go to dashboard' : 'Continue'} onPress={() => router.replace(DASHBOARD as never)} />
-          {state.kind === 'none' && <AthleteTextLink label="Join a team" onPress={() => router.push('/setup/athlete')} />}
-        </Animated.View>
-      )}
-    </>}</EntryScreen>
+      }
+      icon={<View style={styles.band}><WelcomeWristband width={210} /></View>}
+      title={copy.title}>
+      <View accessibilityLiveRegion="polite" style={styles.statusLine}>
+        <View style={[styles.signal, state.kind === 'pending' && styles.signalPending, state.kind === 'none' && styles.signalNone]} />
+        <View style={styles.statusCopy}>
+          <Text style={styles.statusText}>{copy.status}</Text>
+          {state.kind === 'pending' && <Text style={styles.statusNote}>This screen updates as soon as your coach responds.</Text>}
+        </View>
+      </View>
+    </StepScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  illustration: { flexGrow: 1, justifyContent: 'center', marginVertical: 20 },
+  band: { alignSelf: 'center' },
   // The welcome screen's product line, reused for the real team status.
   statusLine: { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopColor: Entry.line, borderTopWidth: 1, marginTop: 24, paddingTop: 18 },
   signal: { width: 4, alignSelf: 'stretch', minHeight: 24, borderRadius: 2, backgroundColor: Entry.blue },
   signalPending: { backgroundColor: Entry.peach },
   signalNone: { backgroundColor: Entry.line },
   statusCopy: { flex: 1, gap: 3 },
-  statusText: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13, lineHeight: 20 },
-  statusNote: { color: Entry.muted, fontFamily: Entry.body, fontSize: 12, lineHeight: 18 },
+  statusText: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 16, lineHeight: 22 },
+  statusNote: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   loading: { marginTop: 32 },
-  actions: { marginTop: 28, gap: 14 },
+  actions: { gap: 12 },
 });

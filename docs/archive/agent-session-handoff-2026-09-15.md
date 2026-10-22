@@ -97,9 +97,9 @@ This problem was identified after the latest implementation commit. It has **not
 
 ### Documentation and presentation
 
-- Created `docs/ui-product-contract.md`.
-- Created `docs/design-reference-map.md`.
-- Created `docs/component-reference-inventory.md`.
+- Created `docs/design/ui-product-contract.md`.
+- Created `docs/design/design-reference-map.md`.
+- Created `docs/design/component-reference-inventory.md`.
 - Preserved source links and the exact HeatSense adaptation for major component families.
 - Replaced the old README with a professional product, architecture, setup, review, and roadmap document.
 - Added a custom animated HeatSense SVG banner and restrained GitHub badges.

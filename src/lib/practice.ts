@@ -1,6 +1,8 @@
 // Today's field conditions. One source for the dashboard card and the Dynamic Island, so the two
 // can't disagree. These are sample readings until the field sensor feeds real ones.
-export type Zone = 'green' | 'yellow' | 'orange' | 'red' | 'black';
+import { classifyWbgt, type UilClass, type Zone } from '@/lib/uil-wbgt';
+
+export type { Zone };
 
 export const ZONES: Record<Zone, { label: string; color: string; text: string }> = {
   green: { label: 'Green zone', color: '#30D158', text: '#30D158' },
@@ -11,7 +13,12 @@ export const ZONES: Record<Zone, { label: string; color: string; text: string }>
   black: { label: 'Black zone', color: '#000000', text: '#FFFFFF' },
 };
 
-export const TODAY: { zone: Zone; wbgtF: number } = { zone: 'orange', wbgtF: 84 };
+/** UIL heat class for the sample school. Real teams pick theirs; the sample just needs one. */
+export const SAMPLE_UIL_CLASS: UilClass = 3;
+const SAMPLE_WBGT_F = 84;
+
+// The zone is derived from the reading, never typed in next to it.
+export const TODAY: { zone: Zone; wbgtF: number } = { zone: classifyWbgt(SAMPLE_WBGT_F, SAMPLE_UIL_CLASS)!, wbgtF: SAMPLE_WBGT_F };
 
 /** Sample practice session: 72 minutes long, water every 10 minutes. */
 export const PRACTICE_MINUTES = 72;

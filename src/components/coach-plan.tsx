@@ -19,7 +19,7 @@ import { useTemperature } from '@/state/preferences';
 // Every adjustment comes from a configured heat policy and a verified reading. Neither exists in
 // this build, so by default the page says exactly what's missing. `?sample=1` runs the same page on
 // the sample reading and SAMPLE_POLICY, with "sample" written wherever those values appear.
-// Layout and anti-pattern rules: docs/design-system.md.
+// Layout and anti-pattern rules: docs/design/design-system.md.
 
 const PLAN_PHOTO = require('@/assets/images/home/plan-hero.webp');
 

@@ -1,12 +1,10 @@
 import * as Clipboard from 'expo-clipboard';
 import { Redirect, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
-  FadeInUp,
   FadeOut,
   interpolateColor,
   useAnimatedStyle,
@@ -15,12 +13,10 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
-import { EntryButton, EntryHeader, entryStyles } from '@/components/entry-ui';
-import { MobileViewport } from '@/components/mobile-viewport';
-import { FieldLines } from '@/components/onboarding-art';
+import { RosterMark } from '@/components/onboarding-art';
+import { StepScreen } from '@/components/step-kit';
 import { Entry } from '@/constants/entry-theme';
 import {
   ensureTeamInvite,
@@ -50,13 +46,12 @@ export default function InviteTeamScreen() {
   // Without a finished draft (a page refresh, or a coach coming back later) the
   // screen loads the coach's existing team from the server instead.
   const complete = Boolean(draft.school.trim() && draft.teamName.trim() && draft.sport && draft.level);
-  return <MobileViewport><Content draft={complete ? draft : null} /></MobileViewport>;
+  return <Content draft={complete ? draft : null} />;
 }
 
 function Content({ draft }: { draft: TeamDraft | null }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
-  const insets = useSafeAreaInsets();
   const [team, setTeam] = useState<TeamSummary | null>(null);
   const [invite, setInvite] = useState<TeamInvite | null>(null);
   const [noTeam, setNoTeam] = useState(false);
@@ -87,41 +82,25 @@ function Content({ draft }: { draft: TeamDraft | null }) {
     return () => { cancelled = true; };
   }, [school, teamName, sport, level, attempt]);
 
-  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(480));
   const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(420));
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/team/create'));
-  const next = () => { if (invite) router.push('/team/practice-location'); };
+  const next = () => { if (invite) router.push('/ready?role=Coach'); };
 
   // No draft and no team on the server yet: start at Create Your Team.
   if (noTeam) return <Redirect href="/team/create" />;
 
   return (
-    <View style={styles.fill} onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
-      <StatusBar style="light" />
-      <ScrollView
-        bounces={false}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
-        <Animated.View entering={fade(0)}>
-          <EntryHeader onBack={back} />
-        </Animated.View>
-
-        <Animated.Text entering={rise(200)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.noShrink, { marginTop: compact ? 22 : 30 }]}>
-          {'Bring your\nteam together.'}
-        </Animated.Text>
-        <Animated.Text entering={rise(350)} style={[entryStyles.description, styles.noShrink]}>Share this code with your athletes so they can join your team.</Animated.Text>
-
-        <View style={[styles.codePanel, { marginTop: compact ? 20 : 28 }]}>
-        <View style={styles.codeStage}>
-        <FieldLines opacity={0.55} />
-        <Animated.View entering={rise(500)} style={styles.identity}>
-          <Text numberOfLines={1} style={[styles.teamName]}>{team?.teamName ?? teamName}</Text>
-          <Text numberOfLines={1} style={[styles.teamMeta]}>{[team?.sport ?? sport, team?.level ?? level].filter(Boolean).join(' · ')}</Text>
-        </Animated.View>
-
-        <CodeTiles invite={invite} compact={compact} width={size.width} firstDelay={reducedMotion ? 0 : 650} />
-        </View>
+    <StepScreen
+      icon={<RosterMark size={96} />}
+      next={{ enabled: invite !== null, label: 'Continue', onPress: next }}
+      onBack={back}
+      progress={0.8}
+      title={`Invite athletes to ${team?.teamName || teamName || 'your team'}`}
+      top="tight">
+      <View onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
+        <Text numberOfLines={1} style={styles.teamMeta}>{[team?.school ?? school, team?.sport ?? sport, team?.level ?? level].filter(Boolean).join(' · ')}</Text>
+        <CodeTiles invite={invite} compact={compact} width={size.width + 44} firstDelay={reducedMotion ? 0 : 250} />
         <View style={styles.status}>
           {loadError ? (
             <Animated.View entering={fade(0)} style={styles.errorRow}>
@@ -131,31 +110,21 @@ function Content({ draft }: { draft: TeamDraft | null }) {
               </Pressable>
             </Animated.View>
           ) : invite ? (
-            <Animated.Text key={invite.code} entering={fade(invite ? 150 : 0)} style={[styles.expiry]}>
+            <Animated.Text key={invite.code} entering={fade(150)} style={[styles.expiry]}>
               Expires {new Date(invite.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </Animated.Text>
           ) : (
             <ActivityIndicator size="small" color={MUTED} accessibilityLabel="Creating your invitation code" />
           )}
         </View>
-        </View>
-
-        <View style={{ gap: compact ? 10 : 12, marginTop: compact ? 18 : 24 }}>
-          <Animated.View entering={rise(1100)}><CopyButton code={invite?.code ?? null} /></Animated.View>
-          <Animated.View entering={rise(1180)}><ShareButton code={invite?.code ?? null} /></Animated.View>
-        </View>
-
-        <Animated.View entering={fade(1260)}>
-          <RegenerateControl invite={invite} onRegenerated={setInvite} />
-        </Animated.View>
-
-        {invite && <JoinRequests teamId={invite.teamId} />}
-
-        <Animated.View entering={rise(1350)} style={{ marginTop: compact ? 18 : 24 }}>
-          <EntryButton label="Continue" disabled={invite === null} onPress={next} />
-        </Animated.View>
-      </ScrollView>
-    </View>
+      </View>
+      <View style={{ gap: 10 }}>
+        <CopyButton code={invite?.code ?? null} />
+        <ShareButton code={invite?.code ?? null} />
+      </View>
+      <RegenerateControl invite={invite} onRegenerated={setInvite} />
+      {invite && <JoinRequests teamId={invite.teamId} />}
+    </StepScreen>
   );
 }
 
@@ -444,8 +413,8 @@ const styles = StyleSheet.create({
   digit: { color: Entry.ink, fontFamily: Entry.display, fontVariant: ['tabular-nums'] },
   status: { minHeight: 22, marginTop: 12, alignItems: 'center', justifyContent: 'center' },
   expiry: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13 },
-  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  errorText: { color: Entry.error, fontFamily: Entry.body, fontSize: 13, lineHeight: 18 },
+  errorRow: { alignItems: 'flex-start', gap: 6, alignSelf: 'stretch' },
+  errorText: { color: Entry.error, fontFamily: Entry.body, fontSize: 13, lineHeight: 18, flexShrink: 1 },
   retry: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13, textDecorationLine: 'underline' },
   pill: { minHeight: 54, borderRadius: 18, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   pillDisabled: { opacity: 0.45 },

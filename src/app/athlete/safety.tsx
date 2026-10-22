@@ -1,26 +1,12 @@
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
-import Animated, { FadeIn, FadeOut, useReducedMotion } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
-import {
-  AthleteHeader,
-  AthletePillButton,
-  AthleteSectionLabel,
-  AthleteTextLink,
-  ATHLETE_ERROR,
-  ATHLETE_MUTED,
-  ATHLETE_SCREEN,
-  useAthleteEntrance,
-} from '@/components/athlete-onboarding';
-import { entryStyles } from '@/components/entry-ui';
+import { ATHLETE_ERROR } from '@/components/athlete-onboarding';
 import { ShieldMark } from '@/components/onboarding-art';
-import { MobileViewport } from '@/components/mobile-viewport';
+import { ChoiceRows, StepField, StepLink, StepScreen, caps } from '@/components/step-kit';
 import { Entry } from '@/constants/entry-theme';
-import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
 import { getAthleteProfile } from '@/services/athlete-profile';
 import {
   canStoreSafety,
@@ -45,7 +31,9 @@ import { getCurrentUserId, getSafetyDraft, setSafetyDraft, type ContactDraft, ty
 // Athlete onboarding, page 3 of 3: "Safety comes first." Emergency contacts and notes,
 // all optional. Nothing here contacts anyone, and only the athlete can read it (see
 // services/athlete-safety.ts for where, and whether, it's stored).
-const NEXT_STEP = '/athlete/done';
+// Next: pair the HeatSense Band (skippable), then notifications, then done.
+const NEXT_STEP = '/pair-band?onboarding=1';
+const STEPS = ['contact', 'notes', 'consent'] as const;
 const RELATIONSHIP_LABELS = RELATIONSHIPS.map((item) => item.label);
 
 const EMPTY_CONTACT: ContactDraft = { name: '', relationship: null, phone: '' };
@@ -76,29 +64,23 @@ function fromContact(contact: EmergencyContact | null): ContactDraft | null {
 }
 
 export default function AthleteSafetyScreen() {
-  return <MobileViewport><View style={[styles.fill, { backgroundColor: ATHLETE_SCREEN }]}><Content /></View></MobileViewport>;
+  return <Content />;
 }
 
 function Content() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotion();
-  const { rise, fade } = useAthleteEntrance();
   const uid = getCurrentUserId();
   const saved = getSafetyDraft();
   const edited = useRef(saved !== null);
 
-  const [size, setSize] = useState({ width: 0, height: 0 });
   const [draft, setDraft] = useState<SafetyDraft>(saved ?? EMPTY);
   const [storedSafety, setStoredSafety] = useState(false);
-  const [openSelect, setOpenSelect] = useState<'primary' | 'secondary' | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [notesFocused, setNotesFocused] = useState(false);
   const [busy, setBusy] = useState<'finish' | 'skip' | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [step, setStep] = useState<(typeof STEPS)[number]>('contact');
+  const [agreed, setAgreed] = useState<string[]>([]);
 
-  const compact = size.height > 0 && size.height < 760;
-  const revealed = (enter: boolean) => (reducedMotion ? undefined : enter ? FadeIn.duration(220) : FadeOut.duration(160));
 
   const update = (next: Partial<SafetyDraft>) => {
     edited.current = true;
@@ -177,157 +159,118 @@ function Content() {
   const contactFields = (which: 'primary' | 'secondary') => {
     const contact = draft[which] ?? EMPTY_CONTACT;
     return (
-      <View style={styles.fields}>
-        <OnboardingTextField
-          label="Full name"
-          placeholder="Contact’s full name"
-          value={contact.name}
-          onChangeText={(name) => updateContact(which, { name })}
-          onBlur={() => touch(which, 'name')}
-          error={shown(which, 'name')}
-          autoCapitalize="words"
-          autoComplete="off"
-          maxLength={CONTACT_NAME_MAX}
-        />
-        <View style={styles.select}>
-          <OnboardingSelectField
-            label="Relationship"
-            placeholder="Select relationship"
-            options={RELATIONSHIP_LABELS}
-            value={contact.relationship}
-            onChange={(relationship) => { updateContact(which, { relationship }); touch(which, 'relationship'); setOpenSelect(null); }}
-            open={openSelect === which}
-            onOpenChange={(open) => { setOpenSelect(open ? which : null); if (!open && !isBlankContact(contact)) touch(which, 'relationship'); }}
-            error={shown(which, 'relationship')}
-            maxVisibleRows={4}
-          />
-        </View>
-        <OnboardingTextField
-          label="Phone number"
-          placeholder="(000) 000-0000"
-          value={contact.phone}
-          onChangeText={(text) => updateContact(which, { phone: formatPhoneInput(text) })}
-          onBlur={() => touch(which, 'phone')}
-          error={shown(which, 'phone')}
-          keyboardType="phone-pad"
-          inputMode="tel"
-          autoComplete="off"
-          maxLength={22}
-        />
-      </View>
+      <>
+        <StepField autoCapitalize="words" autoComplete="off" error={shown(which, 'name')} label="Full name" maxLength={CONTACT_NAME_MAX} onBlur={() => touch(which, 'name')} onChangeText={(name) => updateContact(which, { name })} placeholder="Contact’s full name" value={contact.name} />
+        <StepField autoComplete="off" error={shown(which, 'phone')} inputMode="tel" keyboardType="phone-pad" label="Phone number" maxLength={22} onBlur={() => touch(which, 'phone')} onChangeText={(text) => updateContact(which, { phone: formatPhoneInput(text) })} placeholder="(000) 000-0000" value={contact.phone} />
+        <Text style={[caps, styles.fieldLabel]}>Relationship</Text>
+        <ChoiceRows label="Relationship" onChange={(relationship) => { updateContact(which, { relationship }); touch(which, 'relationship'); }} options={RELATIONSHIP_LABELS.map((value) => ({ value, label: value }))} value={contact.relationship} />
+        {shown(which, 'relationship') ? <Text style={styles.saveError}>{shown(which, 'relationship')}</Text> : null}
+      </>
     );
   };
 
-  return (
-    <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined} onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
-      <StatusBar style="light" />
-      <ScrollView
-        bounces={false}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
-        <Animated.View entering={fade(200)}>
-          <AthleteHeader onBack={back} step="03 / 03" />
-        </Animated.View>
+  const index = STEPS.indexOf(step);
+  const goBack = () => (index > 0 ? setStep(STEPS[index - 1]) : back());
+  const failure = saveError ? <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text> : null;
+  const skip = <StepLink label="Skip for now" onPress={() => void finish('skip')} />;
+  const allAgreed = CONSENTS.every((item) => agreed.includes(item.id));
 
-        <Animated.View entering={rise(350)} style={[styles.titleRow, { marginTop: compact ? 22 : 30 }]}>
-          <Text accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.title]}>{'Safety comes\nfirst.'}</Text>
-          <ShieldMark size={compact ? 72 : 88} />
-        </Animated.View>
-        {/* HeatSense doesn't send emergency notifications, so the page never says it will reach anyone. */}
-        <Animated.Text entering={fade(550)} style={entryStyles.description}>Keep important contact information available to authorized safety staff.</Animated.Text>
-
-        <Animated.View entering={rise(700)} style={styles.section}>
-          <AthleteSectionLabel>Primary emergency contact</AthleteSectionLabel>
+  switch (step) {
+    case 'contact':
+      return (
+        <StepScreen icon={<ShieldMark size={96} />} next={{ enabled: valid, onPress: () => setStep('notes') }} onBack={goBack} progress={0.78} title="Emergency contact" top="tight">
           {contactFields('primary')}
-        </Animated.View>
-
-        <Animated.View entering={rise(800)} style={styles.secondaryWrap}>
           {draft.secondary ? (
-            <Animated.View entering={revealed(true)} exiting={revealed(false)} style={styles.section}>
-              <View style={styles.sectionRow}>
-                <AthleteSectionLabel>Secondary emergency contact</AthleteSectionLabel>
-                <Pressable accessibilityRole="button" accessibilityLabel="Remove secondary contact" hitSlop={10} onPress={() => { update({ secondary: null }); if (openSelect === 'secondary') setOpenSelect(null); }}>
-                  {({ hovered }: { hovered?: boolean }) => <Text style={[styles.remove, hovered && styles.underline]}>Remove contact</Text>}
-                </Pressable>
-              </View>
+            <>
+              <Text style={[caps, styles.section]}>Second contact</Text>
               {contactFields('secondary')}
-            </Animated.View>
+              <StepLink label="Remove second contact" onPress={() => update({ secondary: null })} />
+            </>
           ) : (
-            <Pressable accessibilityRole="button" accessibilityLabel="Add another contact" hitSlop={10} onPress={() => update({ secondary: EMPTY_CONTACT })} style={styles.addWrap}>
-              {({ hovered }: { hovered?: boolean }) => <Text style={[styles.add, hovered && styles.underline]}>+ Add another contact</Text>}
-            </Pressable>
+            <StepLink label="+ Add a second contact" onPress={() => update({ secondary: EMPTY_CONTACT })} />
           )}
-        </Animated.View>
-
-        <Animated.View entering={rise(900)} style={styles.section}>
-          <View>
-            <AthleteSectionLabel>Additional safety notes (optional)</AthleteSectionLabel>
-            <Text style={[styles.hint]}>Share anything important authorized safety staff should know. No medical records, medication lists, or insurance details.</Text>
-          </View>
-          <TextInput
-            accessibilityLabel="Additional safety notes, optional"
-            value={draft.notes}
-            onChangeText={(notes) => update({ notes })}
-            onFocus={() => setNotesFocused(true)}
-            onBlur={() => setNotesFocused(false)}
-            placeholder="Add any additional information here..."
-            placeholderTextColor={Entry.placeholder}
-            selectionColor={Entry.peach}
-            cursorColor={Entry.peach}
-            keyboardAppearance="dark"
-            multiline
-            textAlignVertical="top"
+          {skip}
+        </StepScreen>
+      );
+    case 'notes':
+      return (
+        <StepScreen icon={<ShieldMark size={96} />} next={{ enabled: true, onPress: () => setStep('consent') }} onBack={goBack} progress={0.83} title="Safety notes" top="tight">
+          <StepField
+            label={`Notes · ${draft.notes.length} / ${SAFETY_NOTES_MAX}`}
             maxLength={SAFETY_NOTES_MAX}
-            style={[styles.notes, notesFocused && styles.notesFocused, Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null]}
+            multiline
+            onChangeText={(notes) => update({ notes })}
+            placeholder="e.g. I have asthma and carry an inhaler"
+            style={styles.notes}
+            textAlignVertical="top"
+            value={draft.notes}
           />
-          <Text style={[styles.counter]}>{draft.notes.length} / {SAFETY_NOTES_MAX}</Text>
-        </Animated.View>
+          <View style={styles.privacyRow}>
+            <LockIcon />
+            <Text style={styles.privacy}>Only you can see this right now. It isn’t shared with coaches or teammates.</Text>
+          </View>
+        </StepScreen>
+      );
+    case 'consent':
+      return (
+        <StepScreen
+          icon={<LockIcon size={56} />}
+          next={{ enabled: allAgreed && busy === null, label: 'Agree', loading: busy === 'finish', onPress: () => void finish('finish') }}
+          onBack={goBack}
+          progress={0.88}
+          title="Privacy and safety">
+          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: allAgreed }} onPress={() => setAgreed(allAgreed ? [] : CONSENTS.map((item) => item.id))} style={[styles.consent, styles.consentAll]}>
+            <Box on={allAgreed} />
+            <Text style={[caps, { color: Entry.ink }]}>Select and agree to all</Text>
+          </Pressable>
+          {CONSENTS.map((item) => {
+            const on = agreed.includes(item.id);
+            return (
+              <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} key={item.id} onPress={() => setAgreed(on ? agreed.filter((id) => id !== item.id) : [...agreed, item.id])} style={styles.consent}>
+                <Box on={on} />
+                <Text style={styles.consentText}>{item.text}</Text>
+              </Pressable>
+            );
+          })}
+          {failure}
+        </StepScreen>
+      );
+  }
+}
 
-        <Animated.View entering={fade(1000)} style={styles.privacyRow}>
-          <LockIcon />
-          <Text style={[styles.privacy]}>Only you can see this information right now. It isn’t shared with coaches or teammates, and HeatSense never contacts anyone automatically.</Text>
-        </Animated.View>
+// ponytail: consent gates the flow but isn't stored yet; persist it with the athlete profile before a real pilot.
+const CONSENTS = [
+  { id: 'notMedical', text: 'I understand HeatSense is not a medical device. It doesn’t diagnose heat illness, and I’ll tell a coach right away if I feel unwell.' },
+  { id: 'teamSees', text: 'My coach and athletic trainer can see my name, team, and whether my band is connected.' },
+  { id: 'private', text: 'My health answers and emergency contacts stay private to me unless I choose to share them.' },
+] as const;
 
-        <Animated.View entering={rise(1100)} style={styles.actions}>
-          <AthletePillButton label="Finish setup" enabled={busy === null} loading={busy === 'finish'} onPress={() => void finish('finish')} />
-          <AthleteTextLink label="Skip for now" disabled={busy !== null} onPress={() => void finish('skip')} />
-          {saveError && <Text accessibilityRole="alert" style={[styles.saveError]}>{saveError}</Text>}
-        </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+function Box({ on }: { on: boolean }) {
+  return (
+    <View style={[styles.box, on && styles.boxOn]}>
+      {on ? <Svg fill="none" height={14} stroke={Entry.canvas} strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} viewBox="0 0 24 24" width={14}><Path d="m5 12 4 4 10-10" /></Svg> : null}
+    </View>
   );
 }
 
-function LockIcon() {
+function LockIcon({ size = 14 }: { size?: number }) {
   return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={Entry.blue} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2 }}>
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={Entry.blue} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ marginTop: 2 }}>
       <Rect x={4} y={11} width={16} height={10} rx={2} /><Path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </Svg>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 26 },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
-  title: { flex: 1 },
-  section: { marginTop: 30, gap: 16 },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  fields: { gap: 16 },
-  // Keep an open dropdown above the field that follows it.
-  select: { zIndex: 1 },
-  secondaryWrap: { marginTop: 4 },
-  addWrap: { alignSelf: 'flex-start', marginTop: 18, paddingVertical: 4 },
-  add: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 14.5 },
-  remove: { color: ATHLETE_MUTED, fontFamily: Entry.medium, fontSize: 13.5 },
-  underline: { textDecorationLine: 'underline' },
-  hint: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13, lineHeight: 18, marginTop: 6 },
-  notes: { minHeight: 120, borderRadius: 16, borderWidth: 1.5, borderColor: Entry.line, backgroundColor: Entry.surface, color: Entry.ink, fontFamily: Entry.body, fontSize: 16, lineHeight: 22, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 16 },
-  notesFocused: { borderColor: Entry.blue },
-  counter: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12, textAlign: 'right', marginTop: -8, marginRight: 6 },
-  privacyRow: { flexDirection: 'row', gap: 8, marginTop: 24, paddingRight: 8 },
-  privacy: { flex: 1, color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 18 },
-  actions: { marginTop: 28, gap: 14 },
+  fieldLabel: { color: Entry.muted, fontSize: 10, marginBottom: -8 },
+  section: { color: Entry.muted, marginTop: 8 },
+  notes: { minHeight: 140, paddingTop: 14 },
+  privacyRow: { flexDirection: 'row', gap: 8, paddingRight: 8 },
+  privacy: { color: Entry.subtle, flex: 1, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 18 },
+  consent: { alignItems: 'flex-start', flexDirection: 'row', gap: 14, paddingVertical: 6 },
+  consentAll: { alignItems: 'center', backgroundColor: Entry.raised, borderRadius: 12, padding: 14 },
+  consentText: { color: Entry.ink, flex: 1, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
+  box: { alignItems: 'center', borderColor: Entry.muted, borderRadius: 6, borderWidth: 1.5, height: 24, justifyContent: 'center', width: 24 },
+  boxOn: { backgroundColor: Entry.ink, borderColor: Entry.ink },
   saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

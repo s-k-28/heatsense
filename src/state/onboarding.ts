@@ -25,7 +25,7 @@ export async function hydrateOnboardingRole(userId: string | null) {
   const version = ++hydrationVersion;
   currentUserId = userId;
   state = { role: null, teamChoice: null };
-  teamDraft = { school: '', teamName: '', sport: null, level: null };
+  teamDraft = { school: '', teamName: '', sport: null, level: null, uilClass: null };
   teamId = null;
   athleteTeam = { status: 'unassigned', teamId: null };
   athleteDraft = null;
@@ -78,9 +78,9 @@ export function useTeamChoice() {
 
 // Create-a-team details. This is a local draft only: no team exists on a server
 // until a backend accepts it. Dropdowns stay null until the coach picks a value.
-export type TeamDraft = { school: string; teamName: string; sport: string | null; level: string | null };
+export type TeamDraft = { school: string; teamName: string; sport: string | null; level: string | null; uilClass: 2 | 3 | null };
 
-let teamDraft: TeamDraft = { school: '', teamName: '', sport: null, level: null };
+let teamDraft: TeamDraft = { school: '', teamName: '', sport: null, level: null, uilClass: null };
 
 export function setTeamDraft(update: Partial<TeamDraft>) {
   teamDraft = { ...teamDraft, ...update };

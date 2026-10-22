@@ -114,6 +114,60 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    // Practice sessions and WBGT readings. The coach records; approved members can follow along.
+    // Readings are append-only: the only later change is the coach's one-time acknowledgment.
+    function uilZone(f, uilClass) {
+      let b = uilClass == 3
+        ? { 'yellow': 82.0, 'orange': 87.0, 'red': 90.1, 'black': 92.1 }
+        : { 'yellow': 79.7, 'orange': 84.7, 'red': 87.7, 'black': 89.8 };
+      return f >= b.black ? 'black' : f >= b.red ? 'red' : f >= b.orange ? 'orange' : f >= b.yellow ? 'yellow' : 'green';
+    }
+
+    match /teams/{teamId}/sessions/{sessionId} {
+      allow read: if isCoach(teamId) || isActiveMember(teamId);
+      allow create: if isCoach(teamId)
+        && request.resource.data.keys().hasOnly(['venue', 'uilClass', 'recheckMinutes', 'policy', 'startedBy', 'startedAt', 'endedAt'])
+        && request.resource.data.venue is string && request.resource.data.venue.size() >= 1 && request.resource.data.venue.size() <= 80
+        && request.resource.data.uilClass in [2, 3]
+        && request.resource.data.recheckMinutes is int && request.resource.data.recheckMinutes >= 5 && request.resource.data.recheckMinutes <= 120
+        && request.resource.data.policy is string
+        && request.resource.data.startedBy == request.auth.uid
+        && request.resource.data.startedAt == request.time
+        && request.resource.data.endedAt == null;
+      allow update: if isCoach(teamId)
+        && resource.data.endedAt == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endedAt'])
+        && request.resource.data.endedAt == request.time;
+      allow delete: if false;
+
+      match /readings/{readingId} {
+        function session() { return get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)).data; }
+        allow read: if isCoach(teamId) || isActiveMember(teamId);
+        allow create: if isCoach(teamId)
+          && session().endedAt == null
+          && request.resource.data.keys().hasOnly(['wbgtF', 'enteredValue', 'enteredUnit', 'source', 'measuredAt', 'zone', 'uilClass', 'recordedBy', 'recordedAt', 'acknowledgedBy', 'acknowledgedAt'])
+          && request.resource.data.wbgtF is number && request.resource.data.wbgtF >= 32 && request.resource.data.wbgtF <= 120
+          && request.resource.data.enteredValue is number
+          && request.resource.data.enteredUnit in ['F', 'C']
+          && request.resource.data.source in ['handheld', 'station', 'other']
+          && request.resource.data.measuredAt is timestamp
+          && request.resource.data.measuredAt <= request.time + duration.value(1, 'm')
+          && request.resource.data.uilClass == session().uilClass
+          // The server, not the app, decides the zone a reading falls in.
+          && request.resource.data.zone == uilZone(request.resource.data.wbgtF, session().uilClass)
+          && request.resource.data.recordedBy == request.auth.uid
+          && request.resource.data.recordedAt == request.time
+          && request.resource.data.acknowledgedBy == null
+          && request.resource.data.acknowledgedAt == null;
+        allow update: if isCoach(teamId)
+          && resource.data.acknowledgedAt == null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledgedBy', 'acknowledgedAt'])
+          && request.resource.data.acknowledgedBy == request.auth.uid
+          && request.resource.data.acknowledgedAt == request.time;
+        allow delete: if false;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

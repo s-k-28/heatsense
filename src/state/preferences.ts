@@ -38,8 +38,9 @@ export function acknowledgeIncident() {
  * The coach started practice after checking the field. The clock starts now, and the session begins
  * clean: the sample incident belongs to the practice that was already running.
  */
-export function startPractice() {
-  state = { ...state, incidentAcknowledged: true, practiceStartedAt: Date.now() };
+export function startPractice(startedAt = Date.now()) {
+  if (state.practiceStartedAt === startedAt) return;
+  state = { ...state, incidentAcknowledged: true, practiceStartedAt: startedAt };
   emit();
 }
 
