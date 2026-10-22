@@ -6,15 +6,18 @@ import Svg, { Path } from 'react-native-svg';
 
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { MobileViewport } from '@/components/mobile-viewport';
+import { OnboardingBackground, type CurveDraw, type OnboardingBackgroundVariant } from '@/components/onboarding-background';
 import { Entry } from '@/constants/entry-theme';
 
-export function EntryScreen({ children }: { children: (compact: boolean) => ReactNode }) {
+/** `background` adds thin peach curves behind the page (welcome); `backgroundDraw` draws them in on the intro clock. */
+export function EntryScreen({ children, background, backgroundDraw }: { children: (compact: boolean) => ReactNode; background?: OnboardingBackgroundVariant; backgroundDraw?: CurveDraw }) {
   const insets = useSafeAreaInsets();
   const [height, setHeight] = useState(0);
   return (
     <MobileViewport>
       <View onLayout={(event: LayoutChangeEvent) => setHeight(event.nativeEvent.layout.height)} style={entryStyles.screen}>
         <StatusBar style="light" />
+        {background ? <OnboardingBackground variant={background} draw={backgroundDraw} /> : null}
         <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={[entryStyles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
           {children(height > 0 && height < 760)}
         </ScrollView>
