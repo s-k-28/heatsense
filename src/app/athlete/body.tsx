@@ -1,11 +1,26 @@
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import Animated, { FadeIn, FadeOut, useReducedMotion } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ATHLETE_ERROR, MultiChoice } from '@/components/athlete-onboarding';
-import { HeatMark } from '@/components/onboarding-art';
-import { ChoiceRows, StepField, StepLink, StepScreen, Wheel } from '@/components/step-kit';
+import {
+  AthleteHeader,
+  AthletePillButton,
+  AthleteSectionLabel,
+  AthleteTextLink,
+  ATHLETE_ERROR,
+  ATHLETE_SCREEN,
+  MultiChoice,
+  SingleChoice,
+  useAthleteEntrance,
+} from '@/components/athlete-onboarding';
+import { entryStyles } from '@/components/entry-ui';
+import { OnboardingBackground } from '@/components/onboarding-background';
+import { MobileViewport } from '@/components/mobile-viewport';
 import { Entry } from '@/constants/entry-theme';
+import { OnboardingTextField } from '@/components/onboarding-fields';
 import {
   ACCLIMATIZATION,
   canStoreHealth,
@@ -36,6 +51,7 @@ import { getBodyDraft, getCurrentUserId, setBodyDraft, type BodyDraft } from '@/
 const NEXT_STEP = '/athlete/safety';
 
 const EMPTY: BodyDraft = { feet: '', inches: '', pounds: '', previousHeatIllness: null, previousHeatIllnessType: null, heatConcerns: [], otherConcern: '', heatAcclimatization: null };
+const digits = (text: string, max: number) => text.replace(/\D/g, '').slice(0, max);
 
 function draftFrom(health: AthleteHealth): BodyDraft {
   const height = health.heightCm ? fromHeightCm(health.heightCm) : null;
@@ -86,22 +102,28 @@ const isBlank = (health: AthleteHealth) =>
   health.heightCm === null && health.weightKg === null && !health.previousHeatIllness && health.heatConcerns.length === 0 && !health.heatAcclimatization;
 
 export default function AthleteBodyScreen() {
-  return <Content />;
+  return <MobileViewport><View style={[styles.fill, { backgroundColor: ATHLETE_SCREEN }]}><Content /></View></MobileViewport>;
 }
 
 function Content() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
+  const { rise, fade } = useAthleteEntrance();
   const uid = getCurrentUserId();
   const saved = getBodyDraft();
   const edited = useRef(saved !== null);
 
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const [draft, setDraft] = useState<BodyDraft>(saved ?? EMPTY);
   const [profile, setProfile] = useState<AthleteProfile | null>(null);
   const [storedHealth, setStoredHealth] = useState(false);
+  const [touched, setTouched] = useState({ height: false, weight: false });
   const [busy, setBusy] = useState<'continue' | 'skip' | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [step, setStep] = useState<(typeof STEPS)[number]>('size');
 
+  const compact = size.height > 0 && size.height < 760;
+  const revealed = (enter: boolean) => (reducedMotion ? undefined : enter ? FadeIn.duration(220) : FadeOut.duration(160));
 
   const update = (next: Partial<BodyDraft>) => {
     edited.current = true;
@@ -141,6 +163,7 @@ function Content() {
   const finish = async (mode: 'continue' | 'skip') => {
     if (busy) return;
     if (mode === 'continue') {
+      setTouched({ height: true, weight: true });
       if (!valid) return;
     }
     if (!uid || !firebaseAuth?.currentUser) {
@@ -165,73 +188,153 @@ function Content() {
   };
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/athlete/profile'));
-  const index = STEPS.indexOf(step);
-  const last = index === STEPS.length - 1;
-  const goBack = () => (index > 0 ? setStep(STEPS[index - 1]) : back());
-  const goNext = () => (last ? void finish('continue') : setStep(STEPS[index + 1]));
-  const common = {
-    next: { enabled: valid && busy === null, label: last ? 'Save' : 'Next', loading: busy === 'continue', onPress: goNext },
-    onBack: goBack,
-    progress: 0.62 + index * 0.04,
-    top: 'tight' as const,
-  };
-  const skip = <StepLink label="Skip these questions" onPress={() => void finish('skip')} />;
-  const failure = saveError ? <Text accessibilityRole="alert" style={styles.saveError}>{saveError}</Text> : null;
-  const rows = (choices: readonly { code: string; label: string }[]) => choices.map((choice) => ({ value: choice.code, label: choice.label }));
+  const showHeightError = touched.height ? errors.height : null;
+  const showWeightError = touched.weight ? errors.weight : null;
 
-  switch (step) {
-    case 'size': {
-      const set = draft.feet !== '' && draft.pounds !== '';
-      return (
-        <StepScreen {...common} icon={<HeatMark size={96} />} title="Height and weight" top="open">
-          <View style={styles.wheels}>
-            <Wheel format={(f) => `${f} ft`} items={FEET} label="Height, feet" onChange={(feet) => update({ feet: String(feet), inches: draft.inches || '0' })} value={Number(draft.feet || 5)} width={84} />
-            <Wheel format={(i) => `${i} in`} items={INCHES} label="Height, inches" onChange={(inches) => update({ inches: String(inches), feet: draft.feet || '5' })} value={Number(draft.inches || 6)} width={84} />
-            <Wheel format={(lb) => `${lb} lb`} items={POUNDS} label="Weight, pounds" onChange={(pounds) => update({ pounds: String(pounds) })} value={Number(draft.pounds || 140)} width={104} />
+  return (
+    <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined} onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
+      <StatusBar style="light" />
+      <ScrollView
+        bounces={false}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
+        {size.height > 0 && <OnboardingBackground variant="form" height={size.height} />}
+        <Animated.View entering={fade(200)}>
+          <AthleteHeader onBack={back} step={3} />
+        </Animated.View>
+
+        <Animated.Text entering={rise(350)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, { marginTop: compact ? 26 : 36 }]}>{'Know your\nbody.'}</Animated.Text>
+        <Animated.View entering={fade(550)}>
+          <Text style={entryStyles.description}>Every question here is optional.</Text>
+          <Text style={[styles.privacy]}>You can update your answers anytime.</Text>
+        </Animated.View>
+
+        <Animated.View entering={rise(700)} style={styles.section}>
+          <AthleteSectionLabel>Physical metrics</AthleteSectionLabel>
+          <View>
+            <Text style={[styles.label]}>Height (optional)</Text>
+            <View style={styles.pair}>
+              <View style={styles.half}>
+                <OnboardingTextField
+                  hideLabel
+                  label="Height, feet"
+                  placeholder="Feet"
+                  value={draft.feet}
+                  onChangeText={(text) => update({ feet: digits(text, 1) })}
+                  onBlur={() => setTouched((current) => ({ ...current, height: true }))}
+                  invalid={!!showHeightError}
+                  keyboardType="number-pad"
+                  inputMode="numeric"
+                  maxLength={1}
+                />
+              </View>
+              <View style={styles.half}>
+                <OnboardingTextField
+                  hideLabel
+                  label="Height, inches"
+                  placeholder="Inches"
+                  value={draft.inches}
+                  onChangeText={(text) => update({ inches: digits(text, 2) })}
+                  onBlur={() => setTouched((current) => ({ ...current, height: true }))}
+                  invalid={!!showHeightError}
+                  keyboardType="number-pad"
+                  inputMode="numeric"
+                  maxLength={2}
+                />
+              </View>
+            </View>
+            {showHeightError && <Text role="alert" style={[styles.fieldError]}>{showHeightError}</Text>}
           </View>
-          <Text style={styles.note}>{set ? `${draft.feet} ft ${draft.inches} in · ${draft.pounds} lb` : 'Not set. Scroll to set it, or leave it blank.'}</Text>
-          {set ? <StepLink label="Clear" onPress={() => update({ feet: '', inches: '', pounds: '' })} /> : skip}
-        </StepScreen>
-      );
-    }
-    case 'history':
-      return (
-        <StepScreen {...common} icon={<HeatMark size={96} />} title="Have you had a heat-related illness before?">
-          <ChoiceRows label="Previous heat illness" onChange={(code) => update({ previousHeatIllness: code === draft.previousHeatIllness ? null : code, ...(code === 'yes' ? {} : { previousHeatIllnessType: null }) })} options={rows(HEAT_ILLNESS)} value={draft.previousHeatIllness} />
-          {draft.previousHeatIllness === 'yes' ? (
-            <ChoiceRows label="Type of heat illness" onChange={(code) => update({ previousHeatIllnessType: code === draft.previousHeatIllnessType ? null : code })} options={rows(HEAT_ILLNESS_TYPES)} value={draft.previousHeatIllnessType} />
-          ) : null}
-          {skip}
-        </StepScreen>
-      );
-    case 'concerns':
-      return (
-        <StepScreen {...common} icon={<HeatMark size={96} />} title="Anything that worries you about training in heat?">
-          <MultiChoice choices={HEAT_CONCERNS} exclusive={EXCLUSIVE_CONCERNS} onChange={(codes) => update({ heatConcerns: codes, ...(codes.includes('other') ? {} : { otherConcern: '' }) })} question="Concerns" value={draft.heatConcerns} />
-          {draft.heatConcerns.includes('other') ? (
-            <StepField autoCapitalize="sentences" label="Other concern" maxLength={OTHER_CONCERN_MAX} onChangeText={(otherConcern) => update({ otherConcern })} placeholder="A few words, no medical details" value={draft.otherConcern} />
-          ) : null}
-          {skip}
-        </StepScreen>
-      );
-    case 'acclimatization':
-      return (
-        <StepScreen {...common} icon={<HeatMark size={96} />} title="How used to the heat are you?">
-          <ChoiceRows label="Heat acclimatization" onChange={(code) => update({ heatAcclimatization: code === draft.heatAcclimatization ? null : code })} options={rows(ACCLIMATIZATION)} value={draft.heatAcclimatization} />
-          {skip}
-          {failure}
-        </StepScreen>
-      );
-  }
+          <OnboardingTextField
+            label="Weight (optional)"
+            placeholder="Weight in lbs"
+            value={draft.pounds}
+            onChangeText={(text) => update({ pounds: digits(text, 3) })}
+            onBlur={() => setTouched((current) => ({ ...current, weight: true }))}
+            error={showWeightError}
+            keyboardType="number-pad"
+            inputMode="numeric"
+            maxLength={3}
+          />
+        </Animated.View>
+
+        <Animated.View entering={rise(800)} style={styles.section}>
+          <AthleteSectionLabel>Heat history</AthleteSectionLabel>
+          <SingleChoice
+            question="Have you experienced a heat-related illness before?"
+            choices={HEAT_ILLNESS}
+            value={draft.previousHeatIllness}
+            // Moving off "Yes" drops the follow-up so an irrelevant disclosure isn't kept.
+            onChange={(code) => update({ previousHeatIllness: code, ...(code === 'yes' ? {} : { previousHeatIllnessType: null }) })}
+          />
+          {draft.previousHeatIllness === 'yes' && (
+            <Animated.View entering={revealed(true)} exiting={revealed(false)}>
+              <SingleChoice
+                question="What type of heat illness? (optional)"
+                choices={HEAT_ILLNESS_TYPES}
+                value={draft.previousHeatIllnessType}
+                onChange={(code) => update({ previousHeatIllnessType: code })}
+              />
+            </Animated.View>
+          )}
+        </Animated.View>
+
+        <Animated.View entering={rise(900)} style={styles.section}>
+          <AthleteSectionLabel>Heat-related concerns</AthleteSectionLabel>
+          <MultiChoice
+            question="Do you have any concerns about exercising in hot weather?"
+            choices={HEAT_CONCERNS}
+            exclusive={EXCLUSIVE_CONCERNS}
+            value={draft.heatConcerns}
+            onChange={(codes) => update({ heatConcerns: codes, ...(codes.includes('other') ? {} : { otherConcern: '' }) })}
+          />
+          {draft.heatConcerns.includes('other') && (
+            <Animated.View entering={revealed(true)} exiting={revealed(false)}>
+              <OnboardingTextField
+                label="Other concern (optional)"
+                placeholder="A few words"
+                value={draft.otherConcern}
+                onChangeText={(otherConcern) => update({ otherConcern })}
+                maxLength={OTHER_CONCERN_MAX}
+                autoCapitalize="sentences"
+              />
+              <Text style={[styles.note]}>No need to include medical details, diagnoses, or medication names.</Text>
+            </Animated.View>
+          )}
+        </Animated.View>
+
+        <Animated.View entering={rise(1000)} style={styles.section}>
+          <AthleteSectionLabel>Heat acclimatization</AthleteSectionLabel>
+          <SingleChoice
+            question="How accustomed are you to training in hot weather?"
+            choices={ACCLIMATIZATION}
+            value={draft.heatAcclimatization}
+            onChange={(code) => update({ heatAcclimatization: code })}
+          />
+          <Text style={[styles.note]}>Your heat tolerance can change after time away from training.</Text>
+        </Animated.View>
+
+        <Animated.View entering={rise(1100)} style={styles.actions}>
+          <AthletePillButton label="Continue" enabled={valid && busy === null} loading={busy === 'continue'} onPress={() => void finish('continue')} />
+          <AthleteTextLink label="Skip for now" disabled={busy !== null} onPress={() => void finish('skip')} />
+          {saveError && <Text accessibilityRole="alert" style={[styles.saveError]}>{saveError}</Text>}
+        </Animated.View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
 
-const STEPS = ['size', 'history', 'concerns', 'acclimatization'] as const;
-const FEET = [3, 4, 5, 6, 7] as const;
-const INCHES = Array.from({ length: 12 }, (_, i) => i);
-const POUNDS = Array.from({ length: 291 }, (_, i) => 60 + i);
-
 const styles = StyleSheet.create({
-  wheels: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
-  note: { color: Entry.subtle, fontWeight: '400', fontSize: 13, lineHeight: 18, textAlign: 'center' },
-  saveError: { color: ATHLETE_ERROR, fontWeight: '400', fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  fill: { flex: 1 },
+  content: { flexGrow: 1, paddingHorizontal: 26 },
+  privacy: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 18, marginTop: 8, maxWidth: 340 },
+  section: { marginTop: 34, gap: 16 },
+  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
+  pair: { flexDirection: 'row', gap: 12 },
+  half: { flex: 1 },
+  fieldError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
+  note: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 8, marginLeft: 6 },
+  actions: { marginTop: 36, gap: 14 },
+  saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

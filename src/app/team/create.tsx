@@ -1,101 +1,208 @@
 import { useFocusEffect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
-import { Keyboard, Linking } from 'react-native';
+import { Keyboard, Linking, ScrollView, StyleSheet, TextInput, View, type LayoutChangeEvent } from 'react-native';
+import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HeatMark, JerseyMark, RosterMark } from '@/components/onboarding-art';
-import { ChoiceRows, StepField, StepLink, StepScreen } from '@/components/step-kit';
+import { EntryButton, EntryHeader, EntryLink, entryStyles } from '@/components/entry-ui';
+import { MobileViewport } from '@/components/mobile-viewport';
+import { OnboardingBackground } from '@/components/onboarding-background';
+import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
+import { Entry, ONBOARDING_STEPS } from '@/constants/entry-theme';
 import { SPORTS } from '@/constants/sports';
 import { UIL_SOURCE_URL } from '@/lib/uil-wbgt';
-import { setTeamDraft, useTeamDraft } from '@/state/onboarding';
-
-// Create a team, one question at a time. Everything stays a local draft until the Invite step asks
-// the server to create the team, so stepping back and forth here never creates anything.
+import { setTeamDraft, useTeamDraft, type TeamDraft } from '@/state/onboarding';
 
 const MAX_NAME = 80;
-const LEVELS = ['Varsity', 'Junior Varsity', 'Freshman', 'Middle School', 'Club / Other'] as const;
-const STEPS = ['school', 'teamName', 'sport', 'level', 'uilClass'] as const;
-// Coach setup runs 0.28 (team choice) → 0.8 (invite); these five steps share the space between.
-const progressAt = (index: number) => 0.32 + index * 0.1;
 
+const LEVELS = ['Varsity', 'Junior Varsity', 'Freshman', 'Middle School', 'Club / Other'] as const;
+// The UIL heat chart the team follows; the dashboard and field check use it to set the zones.
+const UIL_CLASSES = ['Class 2', 'Class 3'] as const;
+
+type Field = keyof TeamDraft;
+type Menu = 'sport' | 'level' | 'uilClass' | null;
+
+// Collapse runs of whitespace and trim the ends.
 const clean = (value: string) => value.replace(/\s+/g, ' ').trim();
-const rows = (values: readonly string[]) => values.map((value) => ({ value, label: value }));
+
+function errorsFor(draft: TeamDraft): Record<Field, string | null> {
+  return {
+    school: clean(draft.school) ? null : 'Enter your school or organization.',
+    teamName: clean(draft.teamName) ? null : 'Enter a team name.',
+    sport: draft.sport ? null : 'Choose a sport.',
+    level: draft.level ? null : 'Choose a team level.',
+    uilClass: draft.uilClass ? null : 'Choose your UIL heat class.',
+  };
+}
 
 export default function CreateTeamScreen() {
-  const router = useRouter();
-  const draft = useTeamDraft();
-  const [index, setIndex] = useState(0);
-  const submitting = useRef(false);
-  const step = STEPS[index];
+  return <MobileViewport><Content /></MobileViewport>;
+}
 
-  // The screen stays mounted under Invite, so re-arm the last step when the coach comes back.
+function Content() {
+  const router = useRouter();
+  const reducedMotion = useReducedMotion();
+  const insets = useSafeAreaInsets();
+  const draft = useTeamDraft();
+  const teamNameRef = useRef<TextInput>(null);
+  const submitting = useRef(false);
+  const [menu, setMenu] = useState<Menu>(null);
+  // Errors show only after a coach has left a field, never while they are still filling it in.
+  const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
+  const [height, setHeight] = useState(0);
+  const compact = height > 0 && height < 720;
+  const fieldHeight = compact ? 58 : 60;
+
+  // The screen stays mounted under the next one, so re-arm Continue when the coach comes back.
   useFocusEffect(useCallback(() => { submitting.current = false; }, []));
 
-  const done = {
-    school: Boolean(clean(draft.school)),
-    teamName: Boolean(clean(draft.teamName)),
-    sport: Boolean(draft.sport),
-    level: Boolean(draft.level),
-    uilClass: draft.uilClass !== null,
-  }[step];
+  const errors = errorsFor(draft);
+  const valid = Object.values(errors).every((error) => error === null);
+  const shown = (field: Field) => (touched[field] ? errors[field] : null);
+  const touch = (field: Field) => setTouched((current) => (current[field] ? current : { ...current, [field]: true }));
 
-  const back = () => {
-    Keyboard.dismiss();
-    if (index > 0) setIndex(index - 1);
-    else if (router.canGoBack()) router.back();
-    else router.replace('/setup/coach');
+  const finishText = (field: 'school' | 'teamName') => {
+    touch(field);
+    const cleaned = clean(draft[field]);
+    if (cleaned !== draft[field]) setTeamDraft({ [field]: cleaned });
   };
 
-  const next = () => {
-    if (!done) return;
+  const toggleMenu = (name: 'sport' | 'level' | 'uilClass') => (open: boolean) => {
     Keyboard.dismiss();
-    if (step === 'school' || step === 'teamName') setTeamDraft({ [step]: clean(draft[step]) });
-    if (index < STEPS.length - 1) return setIndex(index + 1);
-    if (submitting.current) return;
+    // Closing a menu without choosing counts as leaving the field.
+    if (!open && menu === name) touch(name);
+    setMenu(open ? name : null);
+  };
+
+  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(480));
+  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(420));
+
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/setup/coach'));
+  const next = () => {
+    if (!valid || submitting.current) return;
     submitting.current = true;
+    Keyboard.dismiss();
+    setMenu(null);
+    // No team backend exists yet: keep this as a local draft and move on. The team is
+    // not created anywhere until a server accepts it in a later step.
+    setTeamDraft({ school: clean(draft.school), teamName: clean(draft.teamName) });
     router.push('/team/invite');
   };
 
-  const common = { next: { enabled: done, label: index === STEPS.length - 1 ? 'Create team' : 'Next', onPress: next }, onBack: back, progress: progressAt(index) };
+  return (
+    <View style={styles.fill} onLayout={(event: LayoutChangeEvent) => setHeight(event.nativeEvent.layout.height)}>
+      <StatusBar style="light" />
+      <ScrollView
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        {height > 0 && <OnboardingBackground variant="team" height={height} />}
+        <Animated.View entering={fade(0)}>
+          <EntryHeader onBack={back} progress={{ step: 2, total: ONBOARDING_STEPS.coach }} />
+        </Animated.View>
 
-  switch (step) {
-    case 'school':
-      return (
-        <StepScreen {...common} icon={<RosterMark size={96} />} title="What school is this for?">
-          <StepField autoCapitalize="words" autoComplete="organization" autoFocus label="School or organization" maxLength={MAX_NAME} onChangeText={(school) => setTeamDraft({ school })} onSubmitEditing={next} placeholder="Emerson High School" returnKeyType="next" textContentType="organizationName" value={draft.school} />
-        </StepScreen>
-      );
-    case 'teamName':
-      return (
-        <StepScreen {...common} icon={<JerseyMark size={96} />} title="Name your team">
-          <StepField autoCapitalize="words" autoFocus label="Team name" maxLength={MAX_NAME} onChangeText={(teamName) => setTeamDraft({ teamName })} onSubmitEditing={next} placeholder="Emerson Mavericks" returnKeyType="next" value={draft.teamName} />
-        </StepScreen>
-      );
-    case 'sport':
-      return (
-        <StepScreen {...common} icon={<JerseyMark size={96} />} title="Which sport?" top="tight">
-          <ChoiceRows label="Sport" onChange={(sport) => setTeamDraft({ sport })} options={rows(SPORTS)} value={draft.sport} />
-        </StepScreen>
-      );
-    case 'level':
-      return (
-        <StepScreen {...common} icon={<RosterMark size={96} />} title="What level?">
-          <ChoiceRows label="Team level" onChange={(level) => setTeamDraft({ level })} options={rows(LEVELS)} value={draft.level} />
-        </StepScreen>
-      );
-    case 'uilClass':
-      return (
-        <StepScreen {...common} icon={<HeatMark size={96} />} title="Your UIL heat class">
-          <ChoiceRows
-            label="UIL heat class"
-            onChange={(value) => setTeamDraft({ uilClass: value === '3' ? 3 : 2 })}
-            options={[
-              { value: '2', label: 'Class 2', detail: 'Orange starts at 84.7 °F WBGT' },
-              { value: '3', label: 'Class 3', detail: 'Orange starts at 87.0 °F WBGT' },
-            ]}
-            value={draft.uilClass === null ? null : String(draft.uilClass) as '2' | '3'}
-          />
-          <StepLink label="Not sure? View the UIL chart" onPress={() => Linking.openURL(UIL_SOURCE_URL)} />
-        </StepScreen>
-      );
-  }
+        <Animated.Text entering={rise(300)} accessibilityRole="header" style={[entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact, styles.noShrink, { marginTop: compact ? 26 : 36 }]}>{'Create your\nteam.'}</Animated.Text>
+        <Animated.Text entering={rise(400)} style={[entryStyles.description, styles.noShrink]}>A few details to get started.</Animated.Text>
+
+        <View style={{ gap: compact ? 16 : 20, marginTop: compact ? 24 : 30 }}>
+          <Animated.View entering={rise(650)}>
+            <OnboardingTextField
+              label="School or organization"
+              placeholder="e.g. Emerson High School"
+              value={draft.school}
+              onChangeText={(school) => setTeamDraft({ school })}
+              onFocus={() => setMenu(null)}
+              onBlur={() => finishText('school')}
+              error={shown('school')}
+              height={fieldHeight}
+              maxLength={MAX_NAME}
+              autoCapitalize="words"
+              autoComplete="organization"
+              textContentType="organizationName"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => teamNameRef.current?.focus()}
+            />
+          </Animated.View>
+          <Animated.View entering={rise(750)}>
+            <OnboardingTextField
+              inputRef={teamNameRef}
+              label="Team name"
+              placeholder="e.g. Emerson Mavericks"
+              value={draft.teamName}
+              onChangeText={(teamName) => setTeamDraft({ teamName })}
+              onFocus={() => setMenu(null)}
+              onBlur={() => finishText('teamName')}
+              error={shown('teamName')}
+              height={fieldHeight}
+              maxLength={MAX_NAME}
+              autoCapitalize="words"
+              returnKeyType="next"
+              onSubmitEditing={() => setMenu('sport')}
+            />
+          </Animated.View>
+          <Animated.View entering={rise(850)}>
+            <OnboardingSelectField
+              label="Sport"
+              placeholder="Select a sport"
+              options={SPORTS}
+              value={draft.sport}
+              onChange={(sport) => { setTeamDraft({ sport }); touch('sport'); }}
+              open={menu === 'sport'}
+              onOpenChange={toggleMenu('sport')}
+              error={shown('sport')}
+              height={fieldHeight}
+              maxVisibleRows={compact ? 4 : 5}
+            />
+          </Animated.View>
+          <Animated.View entering={rise(950)}>
+            <OnboardingSelectField
+              label="Team level"
+              placeholder="Select a level"
+              options={LEVELS}
+              value={draft.level}
+              onChange={(level) => { setTeamDraft({ level }); touch('level'); }}
+              open={menu === 'level'}
+              onOpenChange={toggleMenu('level')}
+              error={shown('level')}
+              height={fieldHeight}
+              maxVisibleRows={compact ? 4 : 5}
+            />
+          </Animated.View>
+          <Animated.View entering={rise(1050)}>
+            <OnboardingSelectField
+              label="UIL heat class"
+              placeholder="Select a class"
+              options={UIL_CLASSES}
+              value={draft.uilClass ? `Class ${draft.uilClass}` : null}
+              onChange={(value) => { setTeamDraft({ uilClass: value === 'Class 3' ? 3 : 2 }); touch('uilClass'); }}
+              open={menu === 'uilClass'}
+              onOpenChange={toggleMenu('uilClass')}
+              error={shown('uilClass')}
+              height={fieldHeight}
+            />
+            <View style={styles.chart}>
+              <EntryLink align="left" label="Not sure? View the UIL chart" onPress={() => Linking.openURL(UIL_SOURCE_URL)} />
+            </View>
+          </Animated.View>
+        </View>
+
+        <Animated.View entering={rise(1150)} style={{ marginTop: compact ? 22 : 28 }}>
+          <EntryButton label="Create team" disabled={!valid} onPress={next} />
+        </Animated.View>
+      </ScrollView>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1, backgroundColor: Entry.canvas },
+  content: { flexGrow: 1, paddingHorizontal: 26 },
+  // flexShrink 0: on web, text would otherwise shrink when an open menu makes the form taller than the screen.
+  noShrink: { flexShrink: 0 },
+  chart: { marginTop: 10 },
+});

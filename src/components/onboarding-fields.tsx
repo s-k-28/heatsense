@@ -14,17 +14,17 @@ import Svg, { Path } from 'react-native-svg';
 import { Entry } from '@/constants/entry-theme';
 
 // Form fields for onboarding, in the entry design language (welcome / sign-in /
-// role): raised charcoal fields with a quiet neutral outline, Inter type, and 16pt
-// corners to sit with the 18pt buttons. Focus draws a light-blue edge; errors add a
-// soft red edge plus a short message, so color is never the only signal.
+// role): raised charcoal fields with a quiet neutral outline, Inter type, and soft
+// 18pt corners beside the pill buttons. Focus draws a peach edge; errors add a soft
+// red edge plus a short message, so color is never the only signal.
 const ease = Easing.out(Easing.cubic);
 const ERROR = Entry.error;
 const ROW_HEIGHT = 48;
 // React Native's Role type omits 'listbox'; React Native Web passes it through to the DOM.
 const LISTBOX = 'listbox' as Role;
 const MENU_PADDING = 6;
-const FOCUS_RING = { outlineColor: Entry.blue, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
-const RADIUS = 16;
+const FOCUS_RING = { outlineColor: Entry.peach, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
+const RADIUS = 18;
 // The field draws its own focus state, so drop the browser's default input outline.
 // React Native's types omit 'none', but React Native Web passes it through (Chrome ignores a 0 width on its 'auto' outline).
 const noWebOutline = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as unknown as TextStyle) : null;
@@ -243,24 +243,24 @@ function MenuOption({ label, selected, onPress }: { label: string; selected: boo
 }
 
 const styles = StyleSheet.create({
-  label: { color: Entry.ink, fontWeight: '500', fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 2 },
-  error: { color: ERROR, fontWeight: '400', fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 2 },
+  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 2 },
+  error: { color: ERROR, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 2 },
   fill: { backgroundColor: Entry.surface },
   lift: { backgroundColor: 'rgba(255,255,255,0.025)' },
   outline: { borderWidth: 1.5 },
-  focusRing: { borderWidth: 1.5, borderColor: Entry.blue },
+  focusRing: { borderWidth: 1.5, borderColor: Entry.peach },
   errorRing: { borderWidth: 1.5, borderColor: ERROR },
-  input: { flex: 1, paddingHorizontal: 18, color: Entry.ink, fontWeight: '400', fontSize: 16, letterSpacing: -0.1 },
-  inputText: { color: Entry.ink, fontWeight: '400' },
-  placeholder: { color: Entry.placeholder, fontWeight: '400' },
+  input: { flex: 1, paddingHorizontal: 18, color: Entry.ink, fontFamily: Entry.body, fontSize: 16, letterSpacing: -0.1 },
+  inputText: { color: Entry.ink, fontFamily: Entry.body },
+  placeholder: { color: Entry.placeholder, fontFamily: Entry.body },
   selectRow: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingLeft: 18, paddingRight: 16, gap: 12 },
   selectText: { flex: 1, fontSize: 16, letterSpacing: -0.1 },
   menuClip: { overflow: 'hidden' },
   menu: { borderRadius: RADIUS, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.raised, overflow: 'hidden' },
   menuList: { padding: MENU_PADDING },
-  option: { height: ROW_HEIGHT, borderRadius: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  option: { height: ROW_HEIGHT, borderRadius: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   optionHover: { backgroundColor: 'rgba(255,255,255,0.05)' },
   optionPressed: { backgroundColor: 'rgba(255,255,255,0.09)' },
-  optionText: { color: Entry.muted, fontWeight: '400', fontSize: 15.5 },
-  optionTextSelected: { color: Entry.ink, fontWeight: '600' },
+  optionText: { color: Entry.muted, fontFamily: Entry.body, fontSize: 15.5 },
+  optionTextSelected: { color: Entry.ink, fontFamily: Entry.strong },
 });
