@@ -1,6 +1,6 @@
 import { Entry } from '@/constants/entry-theme';
 
-// HeatSense app design system (docs/design-system.md). Built on the Fieldline entry palette so the
+// HeatSense app design system (docs/design/design-system.md). Built on the Fieldline entry palette so the
 // signed-in app reads as the same product as onboarding. Coach Home uses it first; other screens
 // adopt it one at a time. Onboarding keeps importing `Entry` directly, so nothing here changes it.
 

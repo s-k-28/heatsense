@@ -1,154 +1,176 @@
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { Easing, FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
 
-import { HeatIcon } from '@/components/heat-icon';
+import { HeatSenseLogo } from '@/components/heatsense-logo';
+import { StepLink, StepScreen, caps } from '@/components/step-kit';
+import { Entry } from '@/constants/entry-theme';
 import { setPreference } from '@/state/preferences';
 
-// Pairing the HeatSense Band: a full-screen device picker. The band is found nearby, the athlete taps
-// it to pair, and the row confirms once it's connected. There's no Bluetooth layer yet, so the search
-// and the pairing are simulated with short delays.
+// Pairing the HeatSense Band, told as WHOOP tells it: get the band ready, put it on, look for the
+// pairing light, pick your band, connect. There is no Bluetooth layer yet (see README, "HeatSense
+// Band"), so finding and connecting are simulated, and every screen says it's a demo.
 
 const BAND = require('@/assets/images/heatsense-band-refined.png');
-const SERIAL = '02A7';
+const SERIAL = 'HS-02A7';
+const STEPS = ['ready', 'wear', 'light', 'select', 'connecting', 'connected'] as const;
+type Step = (typeof STEPS)[number];
 
-const chevronLeft = { ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' } as const;
-const chevronRight = { ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' } as const;
-const check = { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' } as const;
-
-type Phase = 'searching' | 'found' | 'pairing' | 'paired';
-
-export default function PairBandScreen() {
-  const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotion();
-  const [phase, setPhase] = useState<Phase>('searching');
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+function BandShot({ size = 260, light = false }: { size?: number; light?: boolean }) {
+  const reduced = useReducedMotion();
+  const pulse = useSharedValue(0.3);
   useEffect(() => {
-    timer.current = setTimeout(() => setPhase('found'), 1400);
-    return () => { if (timer.current) clearTimeout(timer.current); };
-  }, []);
-
-  const pair = () => {
-    if (phase !== 'found') return;
-    setPhase('pairing');
-    timer.current = setTimeout(() => {
-      setPreference('bandConnected', true);
-      setPhase('paired');
-    }, 1600);
-  };
-
-  const leave = () => (router.canGoBack() ? router.back() : router.replace('/dashboard?role=athlete&tab=profile'));
-
-  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(400));
-  const rise = (delay: number) => (reducedMotion ? undefined : FadeInDown.delay(delay).duration(450));
-
+    if (light && !reduced) pulse.set(withRepeat(withSequence(withTiming(1, { duration: 500 }), withTiming(0.3, { duration: 700 })), -1));
+  }, [light, pulse, reduced]);
+  const glow = useAnimatedStyle(() => ({ opacity: pulse.value }));
   return (
-    <View style={styles.screen}>
-      <StatusBar style="light" />
-      <LinearGradient colors={['#2B2F35', '#15171A', '#0B0C0E']} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
-
-      <View style={[styles.content, { paddingBottom: insets.bottom + 16, paddingTop: insets.top + 4 }]}>
-        <Pressable accessibilityLabel="Back" accessibilityRole="button" hitSlop={12} onPress={leave} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
-          <HeatIcon name={chevronLeft} size={22} tintColor="#FFFFFF" weight="semibold" />
-        </Pressable>
-
-        <Animated.Text accessibilityRole="header" entering={fade(80)} style={styles.title}>
-          {phase === 'paired' ? 'Band paired' : 'Select your device'}
-        </Animated.Text>
-        <Animated.Text entering={fade(160)} style={styles.subtitle}>
-          {phase === 'paired'
-            ? 'Your recovery, skin, sweat and movement trends will start with your next practice.'
-            : 'If more than one band appears, check the serial number on the back of your band to find yours.'}
-        </Animated.Text>
-
-        <Animated.View entering={rise(200)} style={styles.hero}>
-          <Image accessibilityLabel="HeatSense Band" contentFit="contain" source={BAND} style={styles.band} />
-        </Animated.View>
-
-        <View style={styles.list}>
-          {phase === 'searching' ? (
-            <View accessibilityLiveRegion="polite" style={styles.searching}>
-              <ActivityIndicator color="rgba(255,255,255,0.7)" />
-              <Text style={styles.searchingText}>Looking for bands nearby</Text>
-            </View>
-          ) : (
-            <Animated.View entering={fade(0)}>
-              <Pressable
-                accessibilityHint={phase === 'found' ? 'Pairs this band with your phone' : undefined}
-                accessibilityLabel={`HeatSense Band ${SERIAL}, ${phase === 'paired' ? 'connected' : phase === 'pairing' ? 'pairing' : 'ready to pair'}`}
-                accessibilityRole="button"
-                disabled={phase !== 'found'}
-                onPress={pair}
-                style={({ pressed }) => [styles.device, pressed && styles.devicePressed]}>
-                <View style={styles.deviceCopy}>
-                  <Text style={styles.deviceName}>HEATSENSE BAND {SERIAL}</Text>
-                  {phase === 'pairing' ? <Text style={styles.deviceState}>Pairing…</Text> : null}
-                  {phase === 'paired' ? <Text style={[styles.deviceState, styles.deviceConnected]}>Connected</Text> : null}
-                </View>
-                {phase === 'found' ? <HeatIcon name={chevronRight} size={17} tintColor="#FFFFFF" weight="semibold" /> : null}
-                {phase === 'pairing' ? <ActivityIndicator color="#FFFFFF" /> : null}
-                {phase === 'paired' ? <HeatIcon name={check} size={22} tintColor="#30D158" /> : null}
-              </Pressable>
-            </Animated.View>
-          )}
-        </View>
-
-        <View style={styles.footer}>
-          {phase === 'paired' ? (
-            <OutlineButton label="Done" onPress={() => router.replace('/dashboard?role=athlete&tab=profile')} strong />
-          ) : (
-            <>
-              <OutlineButton
-                label="Replacing a band?"
-                onPress={() => Alert.alert('Replacing a band', 'Disconnect the old band in Profile first, then pair the new one here. Your history stays with your account, not the band.')}
-              />
-              <OutlineButton
-                label="Need help?"
-                onPress={() => Alert.alert('Band not showing up?', 'Keep the band within a few feet of your phone, make sure it’s charged, and check that Bluetooth is on. Then go back and open this screen again.')}
-              />
-            </>
-          )}
-        </View>
-      </View>
+    <View style={[styles.shot, { height: size, width: size }]}>
+      <Image accessibilityIgnoresInvertColors contentFit="contain" source={BAND} style={StyleSheet.absoluteFill} />
+      {/* The pairing light sits on the sensor pod's edge. */}
+      {light ? <Animated.View style={[styles.led, { left: size * 0.6, top: size * 0.34 }, glow]} /> : null}
     </View>
   );
 }
 
-function OutlineButton({ label, onPress, strong }: { label: string; onPress: () => void; strong?: boolean }) {
+function DemoNote() {
+  return <Text style={styles.demo}>Demo pairing. Bluetooth arrives with the band firmware.</Text>;
+}
+
+/** Phone ⋯ band, with dots travelling between them, then a check once connected. */
+function Link({ connected }: { connected: boolean }) {
+  const reduced = useReducedMotion();
+  const travel = useSharedValue(0);
+  useEffect(() => {
+    if (!connected && !reduced) travel.set(withRepeat(withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) }), -1));
+  }, [connected, reduced, travel]);
+  const dot = useAnimatedStyle(() => ({ transform: [{ translateX: travel.value * 120 }] }));
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.outline, strong && styles.outlineStrong, pressed && styles.pressed]}>
-      <Text style={[styles.outlineText, strong && styles.outlineTextStrong]}>{label.toUpperCase()}</Text>
+    <View accessibilityLabel={connected ? 'Connected' : 'Connecting'} accessible style={styles.link}>
+      <View style={styles.phone}><HeatSenseLogo height={26} /></View>
+      <View style={styles.track}>
+        <View style={[styles.line, connected && { backgroundColor: Entry.peach, borderStyle: 'solid' }]} />
+        {connected ? (
+          <Animated.View entering={reduced ? undefined : FadeIn.duration(300)} style={styles.check}>
+            <Svg fill="none" height={26} stroke={Entry.canvas} strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} viewBox="0 0 24 24" width={26}><Path d="m5 12 4 4 10-10" /></Svg>
+          </Animated.View>
+        ) : <Animated.View style={[styles.travel, dot]} />}
+      </View>
+      <BandShot size={96} />
+    </View>
+  );
+}
+
+export default function PairBandScreen() {
+  const router = useRouter();
+  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
+  const inSetup = onboarding === '1';
+  const [step, setStep] = useState<Step>('ready');
+  const [help, setHelp] = useState(false);
+  const [found, setFound] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  const index = STEPS.indexOf(step);
+  const go = (next: Step) => { setHelp(false); if (next === 'select') setFound(false); setStep(next); };
+  const finish = () => (inSetup ? router.replace('/notifications') : router.canGoBack() ? router.back() : router.replace('/dashboard?role=athlete&tab=profile'));
+  const back = () => (index > 0 && step !== 'connected' ? go(STEPS[index - 1]) : router.canGoBack() ? router.back() : finish());
+  const progress = inSetup ? 0.9 + index * 0.012 : (index + 1) / STEPS.length;
+  const skip = inSetup ? <StepLink label="I don’t have a band yet" onPress={finish} /> : null;
+
+  // Searching for nearby bands.
+  useEffect(() => {
+    if (step !== 'select') return;
+    timer.current = setTimeout(() => setFound(true), 1200);
+  }, [step]);
+
+  // Connecting, then connected.
+  useEffect(() => {
+    if (step !== 'connecting') return;
+    timer.current = setTimeout(() => { setPreference('bandConnected', true); setStep('connected'); }, 1800);
+  }, [step]);
+
+  switch (step) {
+    case 'ready':
+      return (
+        <StepScreen icon={<BandShot />} next={{ enabled: true, label: 'Get started', onPress: () => go('wear') }} onBack={back} progress={progress} title="Pair your HeatSense Band">
+          <DemoNote />
+          {skip}
+        </StepScreen>
+      );
+    case 'wear':
+      return (
+        <StepScreen icon={<BandShot />} next={{ enabled: true, onPress: () => go('light') }} onBack={back} progress={progress} title="Put on your band">
+          <StepLink label={help ? 'Hide tips' : 'Need help?'} onPress={() => setHelp(!help)} />
+          {help ? <Text style={styles.help}>The sensors read through the back of the pod, so a loose band gives patchy readings. Tighten it one notch if it slides.</Text> : null}
+        </StepScreen>
+      );
+    case 'light':
+      return (
+        <StepScreen icon={<BandShot light />} next={{ enabled: true, label: 'Start pairing', onPress: () => go('select') }} onBack={back} progress={progress} title="Check for the pairing light">
+          <StepLink label={help ? 'Hide tips' : 'Not seeing the light?'} onPress={() => setHelp(!help)} />
+          {help ? (
+            <View style={styles.helpList}>
+              <Text style={styles.help}>1. Make sure the band has some charge: plug it in for 15 minutes.</Text>
+              <Text style={styles.help}>2. Double-tap the top of the pod. The light should start blinking.</Text>
+              <Text style={styles.help}>3. Still nothing? Keep it on the charger and try again in a few minutes.</Text>
+            </View>
+          ) : null}
+        </StepScreen>
+      );
+    case 'select':
+      return (
+        <StepScreen icon={<BandShot size={200} />} onBack={back} progress={progress} title="Select your band" top="tight">
+          {found ? (
+            <Pressable accessibilityHint="Pairs this band" accessibilityRole="button" onPress={() => go('connecting')} style={({ pressed }) => [styles.device, pressed && { opacity: 0.7 }]}>
+              <Text style={[caps, { color: Entry.ink, fontSize: 13 }]}>HeatSense Band {SERIAL}</Text>
+              <Svg fill="none" height={20} stroke={Entry.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={20}><Path d="m9 6 6 6-6 6" /></Svg>
+            </Pressable>
+          ) : (
+            <Text accessibilityLiveRegion="polite" style={[caps, styles.searching]}>Looking for bands nearby…</Text>
+          )}
+          <DemoNote />
+        </StepScreen>
+      );
+    case 'connecting':
+    case 'connected': {
+      const connected = step === 'connected';
+      return (
+        <StepScreen
+          footer={connected ? <StepContinue onPress={finish} /> : undefined}
+          onBack={connected ? undefined : back}
+          title={connected ? `${SERIAL} connected` : 'Connecting'}>
+          <Link connected={connected} />
+          <DemoNote />
+        </StepScreen>
+      );
+    }
+  }
+}
+
+function StepContinue({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.continue, pressed && { opacity: 0.7 }]}>
+      <Text style={[caps, { color: Entry.canvas, fontSize: 13 }]}>Continue</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#0B0C0E', flex: 1 },
-  content: { flex: 1, paddingHorizontal: 20 },
-  pressed: { opacity: 0.55 },
-  back: { alignItems: 'center', height: 44, justifyContent: 'center', marginLeft: -6, width: 44 },
-  title: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: 1.6, marginTop: 14, textAlign: 'center', textTransform: 'uppercase' },
-  subtitle: { alignSelf: 'center', color: 'rgba(235,235,245,0.6)', fontSize: 13, lineHeight: 18, marginTop: 8, maxWidth: 300, textAlign: 'center' },
-  hero: { alignItems: 'center', flex: 1, justifyContent: 'center', maxHeight: 380, minHeight: 220 },
-  band: { aspectRatio: 1, height: '100%', maxWidth: '100%' },
-  list: { minHeight: 64 },
-  searching: { alignItems: 'center', flexDirection: 'row', gap: 10, justifyContent: 'center', minHeight: 64 },
-  searchingText: { color: 'rgba(235,235,245,0.6)', fontSize: 14, letterSpacing: 0.3 },
-  device: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.08)', borderCurve: 'continuous', borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, flexDirection: 'row', minHeight: 64, paddingHorizontal: 18 },
-  devicePressed: { backgroundColor: 'rgba(255,255,255,0.13)' },
-  deviceCopy: { flex: 1, gap: 2 },
-  deviceName: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', letterSpacing: 1.1 },
-  deviceState: { color: 'rgba(235,235,245,0.6)', fontSize: 12 },
-  deviceConnected: { color: '#30D158' },
-  footer: { gap: 12, marginTop: 'auto', paddingTop: 24 },
-  outline: { alignItems: 'center', borderColor: 'rgba(255,255,255,0.32)', borderCurve: 'continuous', borderRadius: 14, borderWidth: 1, justifyContent: 'center', minHeight: 52 },
-  outlineStrong: { backgroundColor: '#FFFFFF', borderColor: '#FFFFFF' },
-  outlineText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1.3 },
-  outlineTextStrong: { color: '#0B0C0E' },
+  shot: { alignSelf: 'center' },
+  led: { backgroundColor: Entry.peach, borderRadius: 6, height: 12, position: 'absolute', shadowColor: Entry.peach, shadowOpacity: 1, shadowRadius: 10, width: 12 },
+  demo: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12, lineHeight: 17 },
+  help: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
+  helpList: { gap: 8 },
+  device: { alignItems: 'center', backgroundColor: Entry.raised, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', minHeight: 58, paddingHorizontal: 18 },
+  searching: { color: Entry.muted, paddingVertical: 20, textAlign: 'center' },
+  link: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginVertical: 24 },
+  phone: { alignItems: 'center', backgroundColor: '#000', borderColor: Entry.line, borderRadius: 18, borderWidth: 1, height: 110, justifyContent: 'center', width: 62 },
+  track: { alignItems: 'center', flex: 1, height: 40, justifyContent: 'center', marginHorizontal: 8 },
+  line: { borderColor: Entry.lineStrong, borderStyle: 'dashed', borderTopWidth: 2, height: 0, width: '100%' },
+  travel: { backgroundColor: Entry.peach, borderRadius: 5, height: 10, left: 0, position: 'absolute', width: 10 },
+  check: { alignItems: 'center', backgroundColor: Entry.peach, borderRadius: 26, height: 52, justifyContent: 'center', position: 'absolute', width: 52 },
+  continue: { alignItems: 'center', backgroundColor: Entry.peach, borderRadius: 999, justifyContent: 'center', minHeight: 54 },
 });

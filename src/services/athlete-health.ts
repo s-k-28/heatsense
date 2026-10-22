@@ -5,7 +5,7 @@ import { firestore } from '@/services/firebase';
 // Athlete onboarding page 2 ("Know your body."): optional heat-related health answers.
 //
 // Stored apart from the profile, at athletes/{uid}/private/health, which only the
-// athlete can read or write (firestore.rules). Nothing here is shared with coaches.
+// athlete can read or write (firebase/firestore.rules). Nothing here is shared with coaches.
 //
 // STORAGE IS OFF IN PRODUCTION until it's approved. HeatSense doesn't yet have a
 // parent/guardian consent flow or a published privacy notice, and athletes may be

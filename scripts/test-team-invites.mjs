@@ -430,6 +430,64 @@ console.log('Athlete emergency information (onboarding page 3)');
   });
 }
 
+// Practice sessions and WBGT readings: the coach records, the team reads, the rules check the zone.
+{
+  const { addDoc, serverTimestamp, updateDoc: update } = await import('firebase/firestore');
+  const teamId = invite.teamId;
+  const sessions = (user) => collection(user.db, 'teams', teamId, 'sessions');
+  const newSession = (user, extra = {}) => addDoc(sessions(user), {
+    venue: 'Memorial Stadium', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26',
+    startedBy: user.uid, startedAt: serverTimestamp(), endedAt: null, ...extra,
+  });
+  const reading = (user, extra = {}) => ({
+    wbgtF: 84, enteredValue: 84, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(), zone: 'yellow', uilClass: 3,
+    recordedBy: user.uid, recordedAt: serverTimestamp(), acknowledgedBy: null, acknowledgedAt: null, ...extra,
+  });
+  let session;
+
+  await test('only the coach can start a practice session, with valid settings', async () => {
+    await rejects(newSession(athlete), 'permission-denied', 'athlete starting a session');
+    await rejects(newSession(stranger), 'permission-denied', 'stranger starting a session');
+    await rejects(newSession(coach, { uilClass: 4 }), 'permission-denied', 'unknown UIL class');
+    await rejects(newSession(coach, { recheckMinutes: 2 }), 'permission-denied', 'recheck too frequent');
+    session = await newSession(coach);
+  });
+  const readings = (user) => collection(user.db, 'teams', teamId, 'sessions', session.id, 'readings');
+
+  await test('the rules recompute the UIL zone: 84 °F is Yellow in Class 3, never Orange', async () => {
+    await rejects(addDoc(readings(coach), reading(coach, { zone: 'orange' })), 'permission-denied', '84 °F stored as Orange');
+    const saved = await addDoc(readings(coach), reading(coach));
+    equal((await admin.doc(saved.path).get()).data().zone, 'yellow', 'stored zone');
+  });
+  await test('boundary readings must carry the published zone', async () => {
+    await addDoc(readings(coach), reading(coach, { wbgtF: 87.0, enteredValue: 87.0, zone: 'orange' }));
+    await addDoc(readings(coach), reading(coach, { wbgtF: 92.1, enteredValue: 92.1, zone: 'black' }));
+    await rejects(addDoc(readings(coach), reading(coach, { wbgtF: 86.9, enteredValue: 86.9, zone: 'orange' })), 'permission-denied', '86.9 as Orange');
+  });
+  await test('impossible, future-dated or forged readings are rejected', async () => {
+    await rejects(addDoc(readings(coach), reading(coach, { wbgtF: 840, zone: 'black' })), 'permission-denied', 'typo 840');
+    await rejects(addDoc(readings(coach), reading(coach, { measuredAt: new Date(Date.now() + 3_600_000) })), 'permission-denied', 'future reading');
+    await rejects(addDoc(readings(coach), reading(coach, { recordedBy: athlete.uid })), 'permission-denied', 'forged recorder');
+    await rejects(addDoc(readings(coach), reading(coach, { uilClass: 2 })), 'permission-denied', 'class differs from session');
+    await rejects(addDoc(readings(athlete), reading(athlete)), 'permission-denied', 'athlete recording');
+  });
+  await test('readings are append-only; the coach may acknowledge once', async () => {
+    const [first] = (await getDocs(query(readings(coach), where('wbgtF', '==', 84)))).docs;
+    await rejects(update(first.ref, { wbgtF: 80, zone: 'green' }), 'permission-denied', 'editing a reading');
+    await update(first.ref, { acknowledgedBy: coach.uid, acknowledgedAt: serverTimestamp() });
+    await rejects(update(first.ref, { acknowledgedBy: coach.uid, acknowledgedAt: serverTimestamp() }), 'permission-denied', 'second acknowledgment');
+  });
+  await test('the approved athlete can follow along; a stranger cannot', async () => {
+    equal((await getDocs(readings(athlete))).size, 3, 'athlete sees readings');
+    await rejects(getDocs(readings(stranger)), 'permission-denied', 'stranger reading');
+  });
+  await test('ending a session is final, and an ended session takes no readings', async () => {
+    await update(session, { endedAt: serverTimestamp() });
+    await rejects(update(session, { endedAt: serverTimestamp() }), 'permission-denied', 'ending twice');
+    await rejects(addDoc(readings(coach), reading(coach)), 'permission-denied', 'reading after end');
+  });
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 await Promise.all([coach, athlete, stranger].map((u) => deleteApp(u.app)));
 process.exit(failed ? 1 : 0);

@@ -6,7 +6,7 @@ import { firestore } from '@/services/firebase';
 // Athlete onboarding page 3 ("Safety comes first."): emergency contacts and notes.
 //
 // Stored apart from the profile, at athletes/{uid}/private/safety, which only the
-// athlete can read or write (firestore.rules). No coach or safety-staff role can
+// athlete can read or write (firebase/firestore.rules). No coach or safety-staff role can
 // read it yet: that access has to be designed and enforced on the server first.
 // HeatSense never calls, texts or alerts these contacts.
 //

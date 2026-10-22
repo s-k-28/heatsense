@@ -7,7 +7,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall, type CallableOptions, type CallableRequest } from 'firebase-functions/v2/https';
 
 // HeatSense team invites. The app never writes these collections directly
-// (see firestore.rules); every change goes through the callables below, which
+// (see firebase/firestore.rules); every change goes through the callables below, which
 // run with admin access and therefore check auth, role and ownership themselves.
 //
 //   teams/{teamId}                   name, school, sport, level, coachUid, createdBy, status, activeInviteId

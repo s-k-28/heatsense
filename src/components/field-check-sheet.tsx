@@ -1,175 +1,343 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
-import { HeatIcon } from '@/components/heat-icon';
 import { Group, Row, TextLink } from '@/components/ui/list';
 import { Palette, Radius, Spacing, Type } from '@/constants/theme';
-import { TODAY, ZONES } from '@/lib/practice';
-import { endPractice, startPractice, usePreferences, useTemperature } from '@/state/preferences';
-import { EQUIPMENT_LABEL, buildSchedule, usePracticePlans } from '@/state/practice-plans';
+import { ZONES } from '@/lib/practice';
+import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, zoneRange, type UilClass } from '@/lib/uil-wbgt';
+import { getMyTeamInvite } from '@/services/team-invites';
+import {
+  SOURCE_LABEL,
+  acknowledgeReading,
+  addReading,
+  endSession,
+  recheckStatus,
+  sessionReport,
+  startSession,
+  watchActiveSession,
+  watchReadings,
+  type FieldReading,
+  type PracticeSession,
+  type ReadingSource,
+} from '@/services/practice-sessions';
+import { useTeamDraft } from '@/state/onboarding';
+import { endPractice, startPractice, useTemperature } from '@/state/preferences';
 
-const check = { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' } as const;
-
-// What the check looks at, in order. Each step ticks off before the next starts.
-const STEPS = ['Field sensor at Memorial Stadium', 'Humidity, sun and wind', 'Your school’s heat policy'] as const;
-const STEP_MS = 550;
+const RECHECK_CHOICES = [15, 30, 45, 60] as const;
+const MEASURED_CHOICES = [0, 5, 10, 15] as const;
 
 function clock(ms: number) {
   const total = Math.max(0, Math.round(ms / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
+  const m = Math.floor(total / 60);
   const s = total % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
 /**
- * "Check field conditions": reads the field, shows the plan for that reading, and starts practice.
- * Once practice is running it shows the time left and the next water break, the same clocks the
- * Dynamic Island carries. There's no sensor yet, so the check uses the sample reading and says so.
+ * The practice record: start a session, enter field WBGT readings, see the UIL guidance for each,
+ * acknowledge it, and recheck on time. Everything is saved to the team in Firestore, so the clock
+ * and history survive a restart and assistant coaches see the same record.
  */
 export function FieldCheckSheet({ onClose, visible }: { onClose: () => void; visible: boolean }) {
-  const { practiceStartedAt } = usePreferences();
+  const [teamId, setTeamId] = useState<string | null | undefined>(undefined);
+  const [session, setSession] = useState<PracticeSession | null | undefined>(undefined);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    getMyTeamInvite()
+      .then((mine) => { if (live) setTeamId(mine?.invite.teamId ?? null); })
+      .catch(() => { if (live) setTeamId(null); });
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!teamId) return;
+    return watchActiveSession(teamId, (next) => {
+      setSession(next);
+      setFailed(false);
+      // The dashboard clock and Dynamic Island follow the saved session, so a restart picks it back up.
+      if (next) startPractice(next.startedAt.getTime());
+      else endPractice();
+    }, () => setFailed(true));
+  }, [teamId]);
+
+  let body;
+  if (teamId === undefined || (teamId && session === undefined && !failed)) body = <ActivityIndicator color={Palette.inkMuted} style={styles.loading} />;
+  else if (!teamId) body = <Notice text="Create your team first. Practice records are saved to the team so every coach sees the same readings." />;
+  else if (failed) body = <Notice text="Couldn’t load practice records. Check your connection and try again." />;
+  else if (!session) body = <StartForm teamId={teamId} />;
+  else body = <SessionView session={session} />;
+
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
-      <View style={styles.sheet}>
+      <KeyboardAvoidingView behavior="padding" style={styles.sheet}>
         <View style={styles.bar}>
-          <Text style={styles.title}>{practiceStartedAt ? 'Practice' : 'Field conditions'}</Text>
+          <Text style={styles.title}>{session ? 'Practice' : 'Field conditions'}</Text>
           <TextLink label="Done" onPress={onClose} />
         </View>
-        {/* The modal mounts its content each time it opens, so the check runs fresh every time. */}
-        <ScrollView contentContainerStyle={styles.content}>{practiceStartedAt ? <PracticeClock startedAt={practiceStartedAt} /> : <FieldCheck />}</ScrollView>
-      </View>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">{body}</ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
-/** The check ticking through its steps, then the reading, the plan for it, and Start practice. */
-function FieldCheck() {
-  const reduced = useReducedMotion();
-  const temp = useTemperature();
-  const { active: plan } = usePracticePlans();
-  const [done, setDone] = useState(0);
-  const zone = ZONES[TODAY.zone];
+function Notice({ text }: { text: string }) {
+  return <Text style={styles.note}>{text}</Text>;
+}
 
-  useEffect(() => {
-    const timers = STEPS.map((_, index) => setTimeout(() => setDone(index + 1), STEP_MS * (index + 1)));
-    return () => timers.forEach(clearTimeout);
-  }, []);
+function Chips<T extends string | number>({ label, onSelect, options, selected, format }: { label: string; onSelect: (v: T) => void; options: readonly T[]; selected: T; format: (v: T) => string }) {
+  return (
+    <View accessibilityLabel={label} accessibilityRole="radiogroup" style={styles.chips}>
+      {options.map((option) => (
+        <Pressable accessibilityRole="radio" accessibilityState={{ checked: option === selected }} key={String(option)} onPress={() => onSelect(option)} style={[styles.chip, option === selected && styles.chipOn]}>
+          <Text style={[styles.chipText, option === selected && styles.chipTextOn]}>{format(option)}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
 
-  const rise = (delay: number) => (reduced ? undefined : FadeInDown.delay(delay).duration(380));
+function StartForm({ teamId }: { teamId: string }) {
+  const [venue, setVenue] = useState('Practice field');
+  // Pre-filled from team setup when the coach chose a class there.
+  const [uilClass, setUilClass] = useState<UilClass | null>(useTeamDraft().uilClass);
+  const [recheck, setRecheck] = useState<number>(30);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const start = async () => {
+    if (!uilClass || !venue.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await startSession(teamId, { venue, uilClass, recheckMinutes: recheck });
+    } catch {
+      setError('Couldn’t start the session. Check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <>
-      <View style={styles.steps}>
-        {STEPS.map((step, index) => {
-          const state = index < done ? 'done' : index === done ? 'active' : 'waiting';
-          return (
-            <View accessibilityLabel={`${step}, ${state === 'done' ? 'checked' : state === 'active' ? 'checking' : 'waiting'}`} accessible key={step} style={styles.step}>
-              <View style={styles.stepMark}>
-                {state === 'done' ? <HeatIcon name={check} size={20} tintColor={Palette.safe} /> : state === 'active' ? <ActivityIndicator color={Palette.inkMuted} size="small" /> : <View style={styles.stepIdle} />}
-              </View>
-              <Text style={[styles.stepText, state === 'waiting' && styles.stepWaiting]}>{step}</Text>
-            </View>
-          );
-        })}
-      </View>
-
-      {done >= STEPS.length ? (
-        <>
-          <Animated.View entering={rise(0)} style={styles.reading}>
-            <Text style={styles.eyebrow}>Sample reading · just now</Text>
-            <View style={styles.readingRow}>
-              <Text style={styles.readingValue}>{temp.value(TODAY.wbgtF)}</Text>
-              <Text style={styles.readingUnit}>{temp.unit} WBGT</Text>
-            </View>
-            <View style={[styles.zoneChip, { borderColor: zone.color }]}>
-              <View style={[styles.liveDot, { backgroundColor: zone.color }]} />
-              <Text style={[styles.zoneChipText, { color: zone.text }]}>{zone.label}</Text>
-            </View>
-          </Animated.View>
-          <Animated.View entering={rise(120)}>
-            <Text style={styles.planTitle}>Today’s plan · {plan.name}</Text>
-            <Group>
-              <Row title="Work / rest" value={`${plan.workMinutes} / ${plan.restMinutes} min`} />
-              <Row title="Breaks" value={String(buildSchedule(plan).filter((block) => block.kind === 'rest').length)} />
-              <Row title="Water" value={`Every ${plan.waterEveryMinutes} min`} />
-              <Row title="Equipment" value={EQUIPMENT_LABEL[plan.equipment]} />
-              <Row title="Practice length" value={`${plan.lengthMinutes} min`} />
-            </Group>
-          </Animated.View>
-          <Animated.View entering={rise(240)}>
-            <Pressable accessibilityHint="Starts the practice clock and shows it on the Dynamic Island" accessibilityRole="button" onPress={startPractice} style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
-              <Text style={styles.primaryText}>Start practice</Text>
-            </Pressable>
-            <Text style={styles.note}>HeatSense isn’t connected to a field sensor yet, so this check uses a sample reading.</Text>
-          </Animated.View>
-        </>
-      ) : null}
+      <Field label="Where is practice?">
+        <TextInput accessibilityLabel="Practice location" maxLength={80} onChangeText={setVenue} placeholderTextColor={Palette.inkFaint} style={styles.input} value={venue} />
+      </Field>
+      <Field label="Your school’s UIL heat class">
+        <Chips<UilClass> format={(c) => `Class ${c}`} label="UIL heat class" onSelect={setUilClass} options={[2, 3]} selected={uilClass ?? (0 as UilClass)} />
+        <Text style={styles.help}>UIL assigns each region a class. Zone thresholds differ between them, so pick the one your athletic department uses.</Text>
+        <TextLink label="View the UIL WBGT chart" onPress={() => Linking.openURL(UIL_SOURCE_URL)} />
+      </Field>
+      <Field label="Recheck WBGT every">
+        <Chips format={(m) => `${m} min`} label="Recheck interval" onSelect={setRecheck} options={RECHECK_CHOICES} selected={recheck as (typeof RECHECK_CHOICES)[number]} />
+        <Text style={styles.help}>Use the interval in your school’s heat plan. HeatSense tells you when a reading is due.</Text>
+      </Field>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Pressable accessibilityRole="button" accessibilityState={{ disabled: !uilClass || busy }} disabled={!uilClass || busy} onPress={start} style={({ pressed }) => [styles.primary, (!uilClass || busy) && styles.disabled, pressed && styles.pressed]}>
+        <Text style={styles.primaryText}>{busy ? 'Starting…' : 'Start practice session'}</Text>
+      </Pressable>
     </>
   );
 }
 
-/** Time left, a bar for how far in, the next water break and the reading. Ticks every second. */
-function PracticeClock({ startedAt }: { startedAt: number }) {
+function Field({ children, label }: { children: React.ReactNode; label: string }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {children}
+    </View>
+  );
+}
+
+function SessionView({ session }: { session: PracticeSession }) {
   const reduced = useReducedMotion();
   const temp = useTemperature();
-  const { active: plan } = usePracticePlans();
+  const [readings, setReadings] = useState<FieldReading[]>([]);
+  const [listenError, setListenError] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const zone = ZONES[TODAY.zone];
 
+  useEffect(() => watchReadings(session, (next) => { setReadings(next); setListenError(false); }, () => setListenError(true)), [session]);
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
   }, []);
 
-  const length = plan.lengthMinutes * 60_000;
-  const elapsed = Math.min(length, Math.max(0, now - startedAt));
-  const breakMs = plan.waterEveryMinutes * 60_000;
-  const nextBreak = startedAt + Math.max(1, Math.ceil(elapsed / breakMs)) * breakMs;
+  const latest = readings.at(-1) ?? null;
+  const recheck = recheckStatus(session, latest, now);
+  const rise = (delay: number) => (reduced ? undefined : FadeInDown.delay(delay).duration(320));
+
   return (
-    <Animated.View entering={reduced ? undefined : FadeIn.duration(300)}>
-      <View style={styles.eyebrowRow}>
-        <View style={[styles.liveDot, { backgroundColor: zone.color }]} />
-        <Text style={styles.eyebrow}>Practice in progress · {zone.label}</Text>
+    <>
+      <Text style={styles.meta}>{session.venue} · UIL Class {session.uilClass} · started {time(session.startedAt)}</Text>
+
+      {latest ? <LatestReading latest={latest} now={now} session={session} temp={temp} /> : (
+        <Text style={styles.note}>No reading yet. Take a WBGT reading on the field before athletes start.</Text>
+      )}
+
+      <View accessibilityLiveRegion="polite" style={[styles.recheck, recheck.overdue && styles.recheckLate]}>
+        <Text style={styles.recheckLabel}>{recheck.overdue ? 'Reading overdue' : latest ? 'Next reading due' : 'First reading due'}</Text>
+        <Text style={[styles.recheckValue, recheck.overdue && { color: Palette.emergency }]}>
+          {recheck.overdue ? `${clock(-recheck.msLeft)} late` : `in ${clock(recheck.msLeft)}`}
+        </Text>
+        <Text style={styles.help}>at {time(new Date(recheck.dueAt))} · every {session.recheckMinutes} min</Text>
       </View>
-      <Text accessibilityLabel={`${clock(length - elapsed)} left in practice`} style={styles.countdown}>{clock(length - elapsed)}</Text>
-      <Text style={styles.countdownLabel}>Left in practice</Text>
-      <View style={styles.track}>
-        <View style={[styles.fill, { backgroundColor: zone.color, width: `${(elapsed / length) * 100}%` }]} />
-      </View>
-      <View style={styles.split}>
-        <View>
-          <Text style={styles.splitValue}>{clock(nextBreak - now)}</Text>
-          <Text style={styles.splitLabel}>Next water break</Text>
-        </View>
-        <View style={styles.splitEnd}>
-          <Text style={styles.splitValue}>{temp.value(TODAY.wbgtF)}{temp.unit}</Text>
-          <Text style={styles.splitLabel}>WBGT</Text>
-        </View>
-      </View>
-      <Text style={styles.hint}>Go to the Home Screen or lock the phone to follow the clock on the Dynamic Island.</Text>
-      <Pressable accessibilityRole="button" onPress={endPractice} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
-        <Text style={styles.secondaryText}>End practice</Text>
+
+      <Animated.View entering={rise(0)}>
+        <ReadingForm session={session} />
+      </Animated.View>
+
+      {listenError ? <Text style={styles.error}>Couldn’t load readings. Check your connection.</Text> : null}
+      {readings.length > 0 ? <History readings={readings} temp={temp} /> : null}
+
+      <Pressable accessibilityRole="button" onPress={() => Share.share({ message: sessionReport(session, readings) })} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
+        <Text style={styles.secondaryText}>Share practice record</Text>
       </Pressable>
-    </Animated.View>
+      <Pressable accessibilityRole="button" onPress={() => endSession(session).catch(() => {})} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
+        <Text style={[styles.secondaryText, { color: Palette.emergency }]}>End practice</Text>
+      </Pressable>
+    </>
+  );
+}
+
+type Temp = ReturnType<typeof useTemperature>;
+
+function LatestReading({ latest, now, session, temp }: { latest: FieldReading; now: number; session: PracticeSession; temp: Temp }) {
+  const zone = ZONES[latest.zone];
+  const guidance = UIL_GUIDANCE[latest.zone];
+  const [acking, setAcking] = useState(false);
+  const minutesAgo = Math.max(0, Math.round((now - latest.measuredAt.getTime()) / 60_000));
+
+  return (
+    <View style={styles.reading}>
+      <Text style={styles.eyebrow}>Measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`} · {SOURCE_LABEL[latest.source]}</Text>
+      <View style={styles.readingRow}>
+        <Text style={styles.readingValue}>{temp.value(latest.wbgtF)}</Text>
+        <Text style={styles.readingUnit}>{temp.unit} WBGT</Text>
+      </View>
+      <View style={[styles.zoneChip, { borderColor: zone.color }]}>
+        <View style={[styles.liveDot, { backgroundColor: zone.color }]} />
+        <Text style={[styles.zoneChipText, { color: zone.text }]}>{zone.label} · {zoneRange(latest.zone, session.uilClass)}</Text>
+      </View>
+
+      <Text style={styles.planTitle}>What UIL requires</Text>
+      <Group>
+        <Row title={guidance.summary} />
+        {guidance.breaksPerHour ? <Row title="Rest breaks" value={`${guidance.breaksPerHour}+ per hour, ${guidance.breakMinutes}+ min each`} /> : null}
+        {guidance.restMinutesPerHour ? <Row title="Rest" value={`${guidance.restMinutesPerHour} min per hour`} /> : null}
+        {guidance.maxPracticeMinutes ? <Row title="Max practice" value={`${guidance.maxPracticeMinutes / 60} hr`} /> : null}
+        {guidance.football ? <Row title={`Football: ${guidance.football}`} /> : null}
+        {guidance.coolingZoneRequired ? <Row title="Rapid cooling zone on site (tub or tarp)" value="Required" /> : null}
+      </Group>
+      <Text style={styles.help}>Source: UIL WBGT activity guidelines {UIL_VERSION}, Class {session.uilClass}. Your school’s plan may be stricter.</Text>
+
+      {latest.acknowledgedAt ? (
+        <Text style={styles.acked}>✓ Acknowledged at {time(latest.acknowledgedAt)}</Text>
+      ) : (
+        <Pressable
+          accessibilityHint="Records that you've read the guidance for this reading"
+          accessibilityRole="button"
+          disabled={acking}
+          onPress={() => { setAcking(true); acknowledgeReading(session, latest).catch(() => {}).finally(() => setAcking(false)); }}
+          style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
+          <Text style={styles.primaryText}>{acking ? 'Saving…' : 'I’ve applied this guidance'}</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+function ReadingForm({ session }: { session: PracticeSession }) {
+  const [value, setValue] = useState('');
+  const [unit, setUnit] = useState<'F' | 'C'>('F');
+  const [source, setSource] = useState<ReadingSource>('handheld');
+  const [minutesAgo, setMinutesAgo] = useState<number>(0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = async () => {
+    const number = Number(value.replace(',', '.'));
+    if (!value.trim() || !Number.isFinite(number)) return setError('Enter the WBGT number from your meter.');
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await addReading(session, { value: number, unit, source, measuredAt: new Date(Date.now() - minutesAgo * 60_000) });
+      if ('error' in result) setError(result.error ?? null);
+      else { setValue(''); setMinutesAgo(0); }
+    } catch {
+      setError('Couldn’t save the reading. Check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={styles.form}>
+      <Text style={styles.planTitle}>Add a field reading</Text>
+      <View style={styles.inputRow}>
+        <TextInput accessibilityLabel={`WBGT in degrees ${unit === 'F' ? 'Fahrenheit' : 'Celsius'}`} inputMode="decimal" keyboardType="decimal-pad" maxLength={5} onChangeText={setValue} onSubmitEditing={save} placeholder="WBGT" placeholderTextColor={Palette.inkFaint} style={[styles.input, styles.inputGrow]} value={value} />
+        <Chips<'F' | 'C'> format={(u) => `°${u}`} label="Unit" onSelect={setUnit} options={['F', 'C']} selected={unit} />
+      </View>
+      <Chips<ReadingSource> format={(s) => SOURCE_LABEL[s]} label="Where the reading came from" onSelect={setSource} options={['handheld', 'station', 'other']} selected={source} />
+      <Chips format={(m) => (m === 0 ? 'Measured now' : `${m} min ago`)} label="When it was measured" onSelect={setMinutesAgo} options={MEASURED_CHOICES} selected={minutesAgo as (typeof MEASURED_CHOICES)[number]} />
+      {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
+      <Pressable accessibilityRole="button" disabled={busy} onPress={save} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
+        <Text style={styles.secondaryText}>{busy ? 'Saving…' : 'Save reading'}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/** Newest first. Each row says what changed since the reading before it; nothing is ever overwritten. */
+function History({ readings, temp }: { readings: FieldReading[]; temp: Temp }) {
+  const rows = readings.map((reading, index) => ({ reading, previous: readings[index - 1] ?? null })).reverse();
+  return (
+    <View>
+      <Text style={styles.planTitle}>Today’s readings</Text>
+      <Group>
+        {rows.map(({ reading, previous }) => {
+          const delta = previous ? reading.wbgtF - previous.wbgtF : null;
+          const zoneChange = previous && previous.zone !== reading.zone ? ` · ${ZONES[previous.zone].label.replace(' zone', '')} → ${ZONES[reading.zone].label.replace(' zone', '')}` : '';
+          const change = delta === null ? 'First reading' : `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} °F${zoneChange}`;
+          return (
+            <Row
+              key={reading.id}
+              title={`${time(reading.measuredAt)} · ${temp.value(reading.wbgtF)}${temp.unit} · ${ZONES[reading.zone].label}`}
+              value={`${change}${reading.acknowledgedAt ? '' : ' · not acknowledged'}`}
+            />
+          );
+        })}
+      </Group>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
+  disabled: { opacity: 0.4 },
+  loading: { marginTop: Spacing.eight },
   sheet: { backgroundColor: '#101214', flex: 1 },
   bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.three, paddingHorizontal: Spacing.five, paddingTop: Spacing.five },
   title: { color: Palette.ink, ...Type.title2, fontWeight: '700' },
   content: { gap: Spacing.five, paddingBottom: Spacing.eight, paddingHorizontal: Spacing.five, paddingTop: Spacing.two },
-  steps: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: Spacing.four, paddingVertical: Spacing.two },
-  step: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 44 },
-  stepMark: { alignItems: 'center', height: 22, justifyContent: 'center', width: 22 },
-  stepIdle: { borderColor: Palette.inkFaint, borderRadius: 9, borderWidth: 1.5, height: 18, width: 18 },
-  stepText: { color: Palette.ink, ...Type.callout },
-  stepWaiting: { color: Palette.inkFaint },
-  reading: { gap: Spacing.one },
-  eyebrowRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  meta: { color: Palette.inkMuted, ...Type.footnote },
+  field: { gap: Spacing.two },
+  fieldLabel: { color: Palette.ink, ...Type.headline },
+  help: { color: Palette.inkMuted, ...Type.footnote },
+  error: { color: Palette.emergency, ...Type.footnote },
+  input: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, color: Palette.ink, ...Type.callout, minHeight: 48, paddingHorizontal: Spacing.four },
+  inputRow: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three },
+  inputGrow: { flex: 1, fontSize: 22 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  chip: { backgroundColor: Palette.fill, borderRadius: 10, minHeight: 40, justifyContent: 'center', paddingHorizontal: 12 },
+  chipOn: { backgroundColor: Palette.coral },
+  chipText: { color: Palette.ink, ...Type.label, fontSize: 14 },
+  chipTextOn: { color: '#1A0E07' },
+  form: { gap: Spacing.three },
+  reading: { gap: Spacing.two },
   eyebrow: { color: Palette.inkMuted, ...Type.label, fontSize: 13 },
   readingRow: { alignItems: 'baseline', flexDirection: 'row', gap: 6 },
   readingValue: { color: Palette.ink, ...Type.figure, fontSize: 84, lineHeight: 86 },
@@ -177,19 +345,15 @@ const styles = StyleSheet.create({
   zoneChip: { alignItems: 'center', alignSelf: 'flex-start', borderRadius: 8, borderWidth: 1, flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingVertical: 5 },
   zoneChipText: { ...Type.label, fontSize: 14 },
   liveDot: { borderRadius: 4, height: 8, width: 8 },
-  planTitle: { color: Palette.ink, ...Type.headline, marginBottom: Spacing.two },
-  primary: { alignItems: 'center', backgroundColor: Palette.coral, borderCurve: 'continuous', borderRadius: 14, justifyContent: 'center', minHeight: 54 },
+  planTitle: { color: Palette.ink, ...Type.headline, marginBottom: Spacing.two, marginTop: Spacing.three },
+  acked: { color: Palette.safe, ...Type.headline, marginTop: Spacing.two },
+  recheck: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, gap: 2, padding: Spacing.four },
+  recheckLate: { borderColor: Palette.emergency, borderWidth: 1 },
+  recheckLabel: { color: Palette.inkMuted, ...Type.label, fontSize: 13 },
+  recheckValue: { color: Palette.ink, ...Type.figure, fontSize: 34, lineHeight: 38 },
+  primary: { alignItems: 'center', backgroundColor: Palette.coral, borderCurve: 'continuous', borderRadius: 14, justifyContent: 'center', marginTop: Spacing.three, minHeight: 54 },
   primaryText: { color: '#1A0E07', ...Type.label, fontSize: 17 },
-  note: { color: Palette.inkMuted, ...Type.footnote, marginTop: Spacing.three, textAlign: 'center' },
-  countdown: { color: Palette.ink, ...Type.figure, fontSize: 92, lineHeight: 96, marginTop: Spacing.three },
-  countdownLabel: { color: Palette.inkMuted, ...Type.label, fontSize: 14 },
-  track: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, height: 6, marginTop: Spacing.five, overflow: 'hidden' },
-  fill: { borderRadius: 3, height: 6 },
-  split: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.five },
-  splitEnd: { alignItems: 'flex-end' },
-  splitValue: { color: Palette.ink, ...Type.figure, fontSize: 34, lineHeight: 38 },
-  splitLabel: { color: Palette.inkMuted, ...Type.labelSmall },
-  hint: { color: Palette.inkMuted, ...Type.footnote, marginTop: Spacing.six },
-  secondary: { alignItems: 'center', backgroundColor: Palette.fill, borderCurve: 'continuous', borderRadius: 14, justifyContent: 'center', marginTop: Spacing.four, minHeight: 50 },
+  note: { color: Palette.inkMuted, ...Type.callout, marginTop: Spacing.three },
+  secondary: { alignItems: 'center', backgroundColor: Palette.fill, borderCurve: 'continuous', borderRadius: 14, justifyContent: 'center', minHeight: 50 },
   secondaryText: { color: Palette.ink, ...Type.headline },
 });

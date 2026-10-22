@@ -8,7 +8,7 @@ import { isKeyboardFocus } from '@/components/entry-ui';
 import { FramedModalContent } from '@/components/mobile-viewport';
 import { Color, Motion, Radius, Space, TOUCH, Type } from '@/constants/design-system';
 
-// Shared building blocks for screens on the HeatSense design system (docs/design-system.md).
+// Shared building blocks for screens on the HeatSense design system (docs/design/design-system.md).
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 

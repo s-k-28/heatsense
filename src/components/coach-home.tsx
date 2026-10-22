@@ -18,7 +18,7 @@ import { useTemperature } from '@/state/preferences';
 
 // Coach Home is built around one question: is the team ready for practice? The photo hero owns the
 // first screen and carries the single primary action. Everything below is quieter on purpose: the
-// day's plan, anything that needs the coach, then team housekeeping. Rules: docs/design-system.md.
+// day's plan, anything that needs the coach, then team housekeeping. Rules: docs/design/design-system.md.
 //
 // Real data only. Team, code, and join requests come from Firebase. There is no WBGT feed yet, so the
 // hero asks the coach to check conditions. `?sample=1` shows the built-in sample reading and plan,

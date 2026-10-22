@@ -47,3 +47,9 @@ example
 
 # Firebase emulator logs
 *-debug.log
+
+# Local agent/plugin tooling state
+.claude-flow/
+.impeccable/
+.claude/proven-config*.json
+.claude/.proven-config-version
