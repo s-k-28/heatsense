@@ -266,13 +266,13 @@ const styles = StyleSheet.create({
   form: { gap: 16 },
   // Keep an open dropdown above the fields that follow it.
   select: { zIndex: 1 },
-  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
+  label: { color: Entry.ink, fontWeight: '500', fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
   // Set by the team: shown, not editable, so it reads as information rather than a field.
   readOnly: { height: 60, borderRadius: 16, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.canvas, justifyContent: 'center', paddingHorizontal: 18 },
-  readOnlyText: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 16, letterSpacing: -0.1 },
-  hint: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
+  readOnlyText: { color: Entry.ink, fontWeight: '500', fontSize: 16, letterSpacing: -0.1 },
+  hint: { color: Entry.subtle, fontWeight: '400', fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
   spacer: { flexGrow: 1, minHeight: 28 },
   actions: { gap: 12 },
   wheels: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
-  saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  saveError: { color: ATHLETE_ERROR, fontWeight: '400', fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

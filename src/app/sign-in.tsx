@@ -56,8 +56,8 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   actions: { gap: 14 },
-  privacyText: { color: Entry.muted, fontFamily: Entry.body, fontSize: 12, lineHeight: 18, textAlign: 'center' },
+  privacyText: { color: Entry.muted, fontWeight: '400', fontSize: 12, lineHeight: 18, textAlign: 'center' },
   errorPanel: { backgroundColor: '#34241E', borderRadius: 14, gap: 6, padding: 14 },
-  errorTitle: { color: '#FFD0B5', fontFamily: Entry.strong, fontSize: 14 },
-  error: { color: '#FFD0B5', fontFamily: Entry.body, fontSize: 13, lineHeight: 20 },
+  errorTitle: { color: '#FFD0B5', fontWeight: '600', fontSize: 14 },
+  error: { color: '#FFD0B5', fontWeight: '400', fontSize: 13, lineHeight: 20 },
 });

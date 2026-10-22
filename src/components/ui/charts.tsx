@@ -2,7 +2,7 @@ import { Fragment, useId, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
 
-import { Face, Palette, Type } from '@/constants/theme';
+import { Palette, Type } from '@/constants/theme';
 
 /** Bars like Health's day/hour charts: one color, the current bar at full strength. */
 export function BarChart({
@@ -115,7 +115,7 @@ export function LineChart({
             {grid.map((value, index) => (
               <Fragment key={index}>
                 <Line stroke="rgba(255,255,255,0.08)" strokeDasharray={index === 2 ? undefined : '2 4'} strokeWidth={1} x1={0} x2={width - gutter} y1={y(value)} y2={y(value)} />
-                <SvgText fill="rgba(235,235,245,0.5)" fontFamily={Face.label} fontSize={11} textAnchor="end" x={width} y={y(value) + 4}>{format(value)}</SvgText>
+                <SvgText fill="rgba(235,235,245,0.5)" fontWeight="600" fontSize={11} textAnchor="end" x={width} y={y(value) + 4}>{format(value)}</SvgText>
               </Fragment>
             ))}
             <Path d={`${line} L${last.x},${height - bottom} L${points[0].x},${height - bottom} Z`} fill={`url(#${id})`} />

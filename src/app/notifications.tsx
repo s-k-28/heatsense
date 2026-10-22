@@ -41,6 +41,6 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   stack: { gap: 8 },
   card: { backgroundColor: Entry.raised, borderRadius: 16, gap: 4, padding: 14 },
-  app: { color: Entry.muted, fontFamily: Entry.strong, fontSize: 11, letterSpacing: 1 },
-  text: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 15 },
+  app: { color: Entry.muted, fontWeight: '600', fontSize: 11, letterSpacing: 1 },
+  text: { color: Entry.ink, fontWeight: '500', fontSize: 15 },
 });

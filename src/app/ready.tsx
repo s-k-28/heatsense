@@ -102,13 +102,13 @@ export default function ReadyScreen() {
 
 const styles = StyleSheet.create({
   ring: { alignSelf: 'center', height: SIZE, width: SIZE },
-  ringNumber: { fontFamily: Entry.strong, fontSize: 13, position: 'absolute', textAlign: 'center', width: 28 },
+  ringNumber: { fontWeight: '600', fontSize: 13, position: 'absolute', textAlign: 'center', width: 28 },
   ringCenter: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
-  ringBig: { color: Entry.ink, fontFamily: Entry.display, fontSize: 56, lineHeight: 58 },
+  ringBig: { color: Entry.ink, fontWeight: '700', fontSize: 56, lineHeight: 58 },
   list: { gap: 18 },
   item: { flexDirection: 'row', gap: 14 },
-  index: { color: Entry.muted, fontFamily: Entry.strong, fontSize: 15, width: 18 },
+  index: { color: Entry.muted, fontWeight: '600', fontSize: 15, width: 18 },
   copy: { flex: 1, gap: 3 },
-  itemTitle: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16 },
-  itemDetail: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
+  itemTitle: { color: Entry.ink, fontWeight: '600', fontSize: 16 },
+  itemDetail: { color: Entry.muted, fontWeight: '400', fontSize: 14, lineHeight: 20 },
 });

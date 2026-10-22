@@ -251,12 +251,12 @@ const styles = StyleSheet.create({
   placeholder: { backgroundColor: Color.surface, borderRadius: Radius.surface, height: 120, opacity: 0.6 },
 
   stats: { alignItems: 'flex-end', flexDirection: 'row', gap: Space.xxl, marginBottom: Space.xl },
-  statValue: { color: Color.ink, fontFamily: Type.data.fontFamily, fontSize: 52, lineHeight: 54 },
+  statValue: { color: Color.ink, fontWeight: Type.data.fontWeight, fontSize: 52, lineHeight: 54 },
   statStack: { flex: 1, alignItems: 'flex-end', paddingBottom: Space.s },
 
   codeStrip: { backgroundColor: Color.surface, borderCurve: 'continuous', borderRadius: Radius.surface, padding: Space.l + 4 },
   codeTop: { alignItems: 'flex-start', flexDirection: 'row', gap: Space.m },
-  code: { color: Color.ink, fontFamily: Type.data.fontFamily, fontSize: 40, letterSpacing: 5, lineHeight: 44 },
+  code: { color: Color.ink, fontWeight: Type.data.fontWeight, fontSize: 40, letterSpacing: 5, lineHeight: 44 },
   codeActions: { alignItems: 'center', flexDirection: 'row', gap: Space.l, marginTop: Space.l },
   shareButton: { minHeight: 46 },
   iconButton: { alignItems: 'center', backgroundColor: Color.control, height: TOUCH + 2, justifyContent: 'center', width: TOUCH + 2 },
@@ -275,10 +275,10 @@ const styles = StyleSheet.create({
   choiceText: { ...Type.button, fontSize: 15 },
 
   rosterRow: { alignItems: 'center', flexDirection: 'row', gap: Space.m, marginHorizontal: -Space.s, minHeight: 64, paddingHorizontal: Space.s, paddingVertical: Space.s },
-  jersey: { color: Color.inkMuted, fontFamily: Type.data.fontFamily, fontSize: 24, lineHeight: 26 },
+  jersey: { color: Color.inkMuted, fontWeight: Type.data.fontWeight, fontSize: 24, lineHeight: 26 },
 
   facts: { flexDirection: 'row', gap: Space.xl, marginTop: Space.l },
   fact: { minWidth: 64 },
-  factValue: { color: Color.ink, fontFamily: Type.data.fontFamily, fontSize: 30, lineHeight: 32 },
+  factValue: { color: Color.ink, fontWeight: Type.data.fontWeight, fontSize: 30, lineHeight: 32 },
   privacy: { alignItems: 'center', flexDirection: 'row', gap: Space.s, marginTop: Space.xl },
 });

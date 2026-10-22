@@ -161,8 +161,8 @@ function StepContinue({ onPress }: { onPress: () => void }) {
 const styles = StyleSheet.create({
   shot: { alignSelf: 'center' },
   led: { backgroundColor: Entry.peach, borderRadius: 6, height: 12, position: 'absolute', shadowColor: Entry.peach, shadowOpacity: 1, shadowRadius: 10, width: 12 },
-  demo: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12, lineHeight: 17 },
-  help: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
+  demo: { color: Entry.subtle, fontWeight: '400', fontSize: 12, lineHeight: 17 },
+  help: { color: Entry.muted, fontWeight: '400', fontSize: 14, lineHeight: 20 },
   helpList: { gap: 8 },
   device: { alignItems: 'center', backgroundColor: Entry.raised, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', minHeight: 58, paddingHorizontal: 18 },
   searching: { color: Entry.muted, paddingVertical: 20, textAlign: 'center' },

@@ -1,11 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-
-const fontFamily = Platform.select({
-  ios: 'Helvetica Neue',
-  android: 'sans-serif',
-  default: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-});
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 type DepthButtonProps = {
   label: string;
@@ -30,7 +24,7 @@ export function DepthButton({ label, onPress }: DepthButtonProps) {
             end={{ x: 0.12, y: 1 }}
             style={styles.gradient}
           />
-          <Text style={[styles.label, { fontFamily }]}>{label.toUpperCase()}</Text>
+          <Text style={styles.label}>{label.toUpperCase()}</Text>
         </>}
       </Pressable>
     </View>

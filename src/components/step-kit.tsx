@@ -16,7 +16,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const ease = Easing.out(Easing.cubic);
 
 /** Small caps label used for field names, buttons and section heads. */
-export const caps = { fontFamily: Entry.strong, fontSize: 13, letterSpacing: 1.4, textTransform: 'uppercase' } as const;
+export const caps = { fontWeight: '600', fontSize: 13, letterSpacing: 1.4, textTransform: 'uppercase' } as const;
 
 type Next = { label?: string; onPress: () => void; enabled: boolean; loading?: boolean };
 
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   tightSpace: { height: 8 },
   body: {},
   icon: { marginBottom: 24 },
-  title: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 32, letterSpacing: -0.8, lineHeight: 38, marginTop: 8 },
+  title: { color: Entry.ink, fontWeight: '600', fontSize: 32, letterSpacing: -0.8, lineHeight: 38, marginTop: 8 },
   children: { gap: 22, marginTop: 36 },
   footer: { marginTop: 'auto', paddingTop: 28 },
   link: { alignSelf: 'flex-start', paddingVertical: 4 },
@@ -281,19 +281,19 @@ const styles = StyleSheet.create({
   choice: { alignItems: 'center', backgroundColor: Entry.raised, borderRadius: 14, justifyContent: 'center', minHeight: 66, paddingHorizontal: 18, paddingVertical: 14 },
   choiceOn: { backgroundColor: Entry.ink },
   choiceText: { color: Entry.ink, fontSize: 15, textAlign: 'center' },
-  choiceDetail: { color: Entry.muted, fontFamily: Entry.body, fontSize: 15, lineHeight: 20, marginTop: 5, textAlign: 'center' },
+  choiceDetail: { color: Entry.muted, fontWeight: '400', fontSize: 15, lineHeight: 20, marginTop: 5, textAlign: 'center' },
   field: { gap: 10 },
   fieldLabel: { color: Entry.muted, fontSize: 12 },
-  input: { backgroundColor: Entry.surface, borderColor: Entry.line, borderRadius: 14, borderWidth: 1, color: Entry.ink, fontFamily: Entry.body, fontSize: 18, minHeight: 60, paddingHorizontal: 18 },
+  input: { backgroundColor: Entry.surface, borderColor: Entry.line, borderRadius: 14, borderWidth: 1, color: Entry.ink, fontWeight: '400', fontSize: 18, minHeight: 60, paddingHorizontal: 18 },
   inputFocused: { borderColor: Entry.muted },
   inputError: { borderColor: Entry.error },
-  error: { color: Entry.error, fontFamily: Entry.body, fontSize: 15 },
+  error: { color: Entry.error, fontWeight: '400', fontSize: 15 },
   segmented: { backgroundColor: Entry.surface, borderRadius: 12, flexDirection: 'row', padding: 4 },
   segment: { alignItems: 'center', borderRadius: 10, flex: 1, justifyContent: 'center', minHeight: 48 },
   segmentOn: { backgroundColor: Entry.raised },
   wheel: { height: ITEM * VISIBLE, overflow: 'hidden' },
   wheelBand: { backgroundColor: Entry.raised, borderRadius: 10, height: ITEM, left: 0, position: 'absolute', right: 0, top: ITEM * Math.floor(VISIBLE / 2) },
   wheelItem: { alignItems: 'center', height: ITEM, justifyContent: 'center' },
-  wheelText: { color: Entry.muted, fontFamily: Entry.medium, fontSize: 20, fontVariant: ['tabular-nums'] },
-  wheelTextOn: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 24 },
+  wheelText: { color: Entry.muted, fontWeight: '500', fontSize: 20, fontVariant: ['tabular-nums'] },
+  wheelTextOn: { color: Entry.ink, fontWeight: '600', fontSize: 24 },
 });

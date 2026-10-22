@@ -102,6 +102,6 @@ const styles = StyleSheet.create({
   reason: { color: Palette.emergency, ...Type.labelSmall, fontSize: 12 },
   athlete: { color: Palette.ink, ...Type.headline },
   reading: { alignItems: 'flex-end' },
-  bpm: { color: Palette.emergency, fontFamily: Face.figure, fontSize: 32, lineHeight: 34 },
+  bpm: { color: Palette.emergency, fontWeight: '700', fontSize: 32, lineHeight: 34 },
   unit: { color: Palette.inkMuted, ...Type.labelSmall, fontSize: 11 },
 });

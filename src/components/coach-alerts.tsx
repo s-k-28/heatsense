@@ -118,12 +118,12 @@ const styles = StyleSheet.create({
   gapS: { marginTop: Space.s },
 
   empty: { paddingVertical: Space.s },
-  emptyTitle: { color: Color.ink, fontFamily: Type.section.fontFamily, fontSize: 30, lineHeight: 34 },
+  emptyTitle: { color: Color.ink, fontWeight: Type.section.fontWeight, fontSize: 30, lineHeight: 34 },
 
   urgent: { backgroundColor: Color.surface, borderColor: URGENT, borderCurve: 'continuous', borderWidth: 1.5, gap: Space.xs, overflow: 'hidden', padding: Space.l + 4 },
   urgentHead: { alignItems: 'center', flexDirection: 'row', gap: Space.s, marginBottom: Space.s },
   urgentLabel: { ...Type.bodyStrong, color: URGENT, flex: 1 },
-  urgentName: { color: Color.ink, fontFamily: Type.section.fontFamily, fontSize: 30, lineHeight: 32 },
+  urgentName: { color: Color.ink, fontWeight: Type.section.fontWeight, fontSize: 30, lineHeight: 32 },
   urgentFoot: { alignItems: 'center', flexDirection: 'row', gap: 6, marginTop: Space.m },
   review: { ...Type.button, color: Color.accent, fontSize: 15, marginLeft: 'auto' },
 

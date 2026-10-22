@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   },
   brandName: {
     color: Palette.ink,
-    fontFamily: Fonts.uiExtrabold,
+    fontWeight: '800',
     fontSize: 18,
     letterSpacing: -0.6,
   },
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   },
   skipText: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.uiSemibold,
+    fontWeight: '600',
     fontSize: 13,
   },
   progressRow: {
@@ -372,14 +372,14 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: Palette.coralDark,
-    fontFamily: Fonts.uiBold,
+    fontWeight: '700',
     fontSize: 12,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
   title: {
     color: Palette.ink,
-    fontFamily: Fonts.uiExtrabold,
+    fontWeight: '800',
     fontSize: 29,
     letterSpacing: -1.1,
     lineHeight: 34,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     maxWidth: 410,
   },
   heroTitle: {
-    fontFamily: Fonts.ctaItalicSemibold,
+    fontWeight: '600', fontStyle: 'italic',
     fontSize: 34,
     letterSpacing: 0,
     lineHeight: 39,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   },
   description: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.uiMedium,
+    fontWeight: '500',
     fontSize: 14,
     lineHeight: 20,
     marginTop: Spacing.two,
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   },
   rolePrompt: {
     color: Palette.ink,
-    fontFamily: Fonts.uiBold,
+    fontWeight: '700',
     fontSize: 12,
   },
   roleRow: {
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.uiSemibold,
+    fontWeight: '600',
     fontSize: 13,
     textAlign: 'center',
   },
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: Palette.surface,
-    fontFamily: Fonts.uiBold,
+    fontWeight: '700',
     fontSize: 16,
     textAlign: 'center',
   },

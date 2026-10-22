@@ -13,7 +13,7 @@ export function HeatIcon({ fallback = '•', size = 22, tintColor = Palette.ink,
     <SymbolView
       {...props}
       fallback={
-        <Text style={{ color: tintColor, fontFamily: Fonts.bold, fontSize: size }}>
+        <Text style={{ color: tintColor, fontWeight: '700', fontSize: size }}>
           {fallback}
         </Text>
       }
