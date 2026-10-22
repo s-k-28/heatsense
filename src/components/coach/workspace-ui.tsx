@@ -28,7 +28,7 @@ export function WorkspaceProgress({ value, label, segments }: { value: number; l
 const styles = StyleSheet.create({
   heading: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
   marker: { backgroundColor: C.accent, width: 3, height: 20, borderRadius: 2 },
-  title: { color: C.text, fontFamily: F.display, fontSize: 25, lineHeight: 29, flexShrink: 1 },
+  title: { color: C.text, fontWeight: '700', fontSize: 25, lineHeight: 29, flexShrink: 1 },
   track: { height: 12, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)', width: '100%' },
   fillRow: { height: '100%', flexDirection: 'row', gap: 5 },
   fill: { height: '100%', backgroundColor: '#FAFCFF', borderRadius: 999, boxShadow: '0 0 9px rgba(255,255,255,0.25)' },

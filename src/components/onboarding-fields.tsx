@@ -243,16 +243,16 @@ function MenuOption({ label, selected, onPress }: { label: string; selected: boo
 }
 
 const styles = StyleSheet.create({
-  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 2 },
-  error: { color: ERROR, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 2 },
+  label: { color: Entry.ink, fontWeight: '500', fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 2 },
+  error: { color: ERROR, fontWeight: '400', fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 2 },
   fill: { backgroundColor: Entry.surface },
   lift: { backgroundColor: 'rgba(255,255,255,0.025)' },
   outline: { borderWidth: 1.5 },
   focusRing: { borderWidth: 1.5, borderColor: Entry.blue },
   errorRing: { borderWidth: 1.5, borderColor: ERROR },
-  input: { flex: 1, paddingHorizontal: 18, color: Entry.ink, fontFamily: Entry.body, fontSize: 16, letterSpacing: -0.1 },
-  inputText: { color: Entry.ink, fontFamily: Entry.body },
-  placeholder: { color: Entry.placeholder, fontFamily: Entry.body },
+  input: { flex: 1, paddingHorizontal: 18, color: Entry.ink, fontWeight: '400', fontSize: 16, letterSpacing: -0.1 },
+  inputText: { color: Entry.ink, fontWeight: '400' },
+  placeholder: { color: Entry.placeholder, fontWeight: '400' },
   selectRow: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingLeft: 18, paddingRight: 16, gap: 12 },
   selectText: { flex: 1, fontSize: 16, letterSpacing: -0.1 },
   menuClip: { overflow: 'hidden' },
@@ -261,6 +261,6 @@ const styles = StyleSheet.create({
   option: { height: ROW_HEIGHT, borderRadius: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   optionHover: { backgroundColor: 'rgba(255,255,255,0.05)' },
   optionPressed: { backgroundColor: 'rgba(255,255,255,0.09)' },
-  optionText: { color: Entry.muted, fontFamily: Entry.body, fontSize: 15.5 },
-  optionTextSelected: { color: Entry.ink, fontFamily: Entry.strong },
+  optionText: { color: Entry.muted, fontWeight: '400', fontSize: 15.5 },
+  optionTextSelected: { color: Entry.ink, fontWeight: '600' },
 });

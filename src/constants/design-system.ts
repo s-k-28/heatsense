@@ -36,21 +36,21 @@ export const Font = {
 
 export const Type = {
   /** Hero headline. One per screen. */
-  hero: { fontFamily: Font.display, fontSize: 52, lineHeight: 50, letterSpacing: 0.2 },
-  heroCompact: { fontFamily: Font.display, fontSize: 44, lineHeight: 43, letterSpacing: 0.2 },
+  hero: { fontWeight: '700', fontSize: 52, lineHeight: 50, letterSpacing: 0.2 },
+  heroCompact: { fontWeight: '700', fontSize: 44, lineHeight: 43, letterSpacing: 0.2 },
   /** Section headings. */
-  section: { fontFamily: Font.display, fontSize: 26, lineHeight: 30, letterSpacing: 0.3 },
+  section: { fontWeight: '700', fontSize: 26, lineHeight: 30, letterSpacing: 0.3 },
   /** Page title on tabs without a photo hero (Team, Alerts, Profile). */
-  page: { fontFamily: Font.display, fontSize: 38, lineHeight: 40, letterSpacing: 0.3 },
+  page: { fontWeight: '700', fontSize: 38, lineHeight: 40, letterSpacing: 0.3 },
   /** Large values: a reading, a team code, a work/rest interval. */
-  data: { fontFamily: Font.display, fontSize: 38, lineHeight: 40, letterSpacing: 0.3 },
+  data: { fontWeight: '700', fontSize: 38, lineHeight: 40, letterSpacing: 0.3 },
   /** Greeting and other one-line titles in body type. */
-  title: { fontFamily: Font.strong, fontSize: 20, lineHeight: 26, letterSpacing: -0.3 },
-  body: { fontFamily: Font.body, fontSize: 16, lineHeight: 23, letterSpacing: -0.15 },
-  bodyStrong: { fontFamily: Font.strong, fontSize: 16, lineHeight: 22, letterSpacing: -0.2 },
-  support: { fontFamily: Font.body, fontSize: 14, lineHeight: 20, letterSpacing: -0.1 },
-  meta: { fontFamily: Font.body, fontSize: 13, lineHeight: 18 },
-  button: { fontFamily: Font.strong, fontSize: 16, lineHeight: 20, letterSpacing: -0.2 },
+  title: { fontWeight: '600', fontSize: 20, lineHeight: 26, letterSpacing: -0.3 },
+  body: { fontWeight: '400', fontSize: 16, lineHeight: 23, letterSpacing: -0.15 },
+  bodyStrong: { fontWeight: '600', fontSize: 16, lineHeight: 22, letterSpacing: -0.2 },
+  support: { fontWeight: '400', fontSize: 14, lineHeight: 20, letterSpacing: -0.1 },
+  meta: { fontWeight: '400', fontSize: 13, lineHeight: 18 },
+  button: { fontWeight: '600', fontSize: 16, lineHeight: 20, letterSpacing: -0.2 },
 } as const;
 
 export const Space = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32, section: 44 } as const;

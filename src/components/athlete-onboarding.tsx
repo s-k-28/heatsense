@@ -132,14 +132,14 @@ export function AthleteTextLink({ label, onPress, disabled }: { label: string; o
 }
 
 const choiceStyles = StyleSheet.create({
-  section: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 14, letterSpacing: -0.1 },
+  section: { color: Entry.ink, fontWeight: '600', fontSize: 14, letterSpacing: -0.1 },
   group: { gap: 10 },
-  question: { color: Entry.ink, fontFamily: Entry.body, fontSize: 15.5, lineHeight: 22, marginBottom: 2 },
+  question: { color: Entry.ink, fontWeight: '400', fontSize: 15.5, lineHeight: 22, marginBottom: 2 },
   row: { minHeight: 54, borderRadius: 16, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.surface, flexDirection: 'row', alignItems: 'center', gap: 14, paddingLeft: 18, paddingRight: 16, paddingVertical: 13 },
   rowHover: { borderColor: Entry.lineStrong },
   rowOn: { borderColor: Entry.peach, backgroundColor: Entry.selected },
-  rowText: { flex: 1, color: Entry.muted, fontFamily: Entry.body, fontSize: 15.5, lineHeight: 21 },
-  rowTextOn: { color: Entry.ink, fontFamily: Entry.medium },
+  rowText: { flex: 1, color: Entry.muted, fontWeight: '400', fontSize: 15.5, lineHeight: 21 },
+  rowTextOn: { color: Entry.ink, fontWeight: '500' },
   box: { width: 22, height: 22, borderRadius: 7, borderWidth: 1, borderColor: Entry.muted, alignItems: 'center', justifyContent: 'center' },
   boxOn: { backgroundColor: Entry.peach, borderColor: Entry.peach },
 });

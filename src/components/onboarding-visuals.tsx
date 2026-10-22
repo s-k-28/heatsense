@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
   },
   liveText: {
     color: Palette.coralDark,
-    fontFamily: Fonts.semibold,
+    fontWeight: '600',
     fontSize: 12,
   },
   heartReadout: {
@@ -708,14 +708,14 @@ const styles = StyleSheet.create({
   },
   readoutValue: {
     color: Palette.ink,
-    fontFamily: Fonts.extrabold,
+    fontWeight: '800',
     fontSize: 34,
     fontVariant: ['tabular-nums'],
     letterSpacing: -1.5,
   },
   readoutUnit: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.semibold,
+    fontWeight: '600',
     fontSize: 12,
   },
   signalCanvas: {
@@ -747,12 +747,12 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 12,
   },
   footerValue: {
     color: Palette.ink,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 13,
   },
   wbgtCard: {
@@ -766,12 +766,12 @@ const styles = StyleSheet.create({
   },
   miniLabel: {
     color: Palette.ink,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 13,
   },
   updatedText: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 11,
     marginTop: 2,
   },
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
   },
   wbgtNumber: {
     color: Palette.ink,
-    fontFamily: Fonts.extrabold,
+    fontWeight: '800',
     fontSize: 84,
     fontVariant: ['tabular-nums'],
     letterSpacing: -5,
@@ -798,18 +798,18 @@ const styles = StyleSheet.create({
   },
   degree: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 13,
   },
   wbgtZoneTitle: {
     color: Palette.ink,
-    fontFamily: Fonts.extrabold,
+    fontWeight: '800',
     fontSize: 25,
     letterSpacing: -0.8,
   },
   wbgtMessage: {
     color: Palette.ink,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 13,
     lineHeight: 18,
     marginTop: 3,
@@ -824,13 +824,13 @@ const styles = StyleSheet.create({
   },
   wbgtTimingValue: {
     color: Palette.ink,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 16,
     fontVariant: ['tabular-nums'],
   },
   wbgtTimingLabel: {
     color: 'rgba(27,28,25,0.62)',
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 11,
     marginTop: 2,
   },
@@ -876,12 +876,12 @@ const styles = StyleSheet.create({
   },
   planRowLabel: {
     color: Palette.ink,
-    fontFamily: Fonts.semibold,
+    fontWeight: '600',
     fontSize: 12,
   },
   planRowDetail: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 12,
     marginTop: 3,
   },
@@ -892,12 +892,12 @@ const styles = StyleSheet.create({
   },
   planFooterTitle: {
     color: Palette.ink,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 11,
   },
   planFooterBody: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 12,
     lineHeight: 15,
     marginTop: 3,
@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
   },
   vitalLabel: {
     color: Palette.ink,
-    fontFamily: Fonts.semibold,
+    fontWeight: '600',
     fontSize: 12,
   },
   interactionDot: {
@@ -948,14 +948,14 @@ const styles = StyleSheet.create({
   },
   vitalValue: {
     color: Palette.ink,
-    fontFamily: Fonts.extrabold,
+    fontWeight: '800',
     fontSize: 25,
     fontVariant: ['tabular-nums'],
     letterSpacing: -1,
   },
   vitalUnit: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 11,
   },
   miniChartClip: {
@@ -973,12 +973,12 @@ const styles = StyleSheet.create({
   },
   signalFootnoteTitle: {
     color: Palette.ink,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 11,
   },
   signalFootnoteBody: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 12,
     lineHeight: 15,
     marginTop: 3,
@@ -993,14 +993,14 @@ const styles = StyleSheet.create({
   },
   contextNumber: {
     color: Palette.ink,
-    fontFamily: Fonts.extrabold,
+    fontWeight: '800',
     fontSize: 44,
     fontVariant: ['tabular-nums'],
     letterSpacing: -2,
   },
   contextUnit: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.semibold,
+    fontWeight: '600',
     fontSize: 11,
   },
   contextScenarios: {
@@ -1028,14 +1028,14 @@ const styles = StyleSheet.create({
   },
   contextScenarioLabel: {
     color: Palette.ink,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 12,
     lineHeight: 16,
     marginTop: Spacing.three,
   },
   contextScenarioDetail: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 12,
     marginTop: 3,
   },
@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   contextResultText: {
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 11,
     lineHeight: 12,
   },
@@ -1063,12 +1063,12 @@ const styles = StyleSheet.create({
   },
   contextFooterTitle: {
     color: Palette.ink,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 11,
   },
   contextFooterBody: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 12,
     marginTop: 3,
   },
@@ -1103,19 +1103,19 @@ const styles = StyleSheet.create({
     width: 96,
   },
   alertLevel: {
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 12,
   },
   alertMessage: {
     color: Palette.ink,
-    fontFamily: Fonts.semibold,
+    fontWeight: '600',
     fontSize: 11,
     marginTop: 2,
   },
   alertDetail: {
     color: Palette.inkMuted,
     flex: 1,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 11,
     lineHeight: 13,
     textAlign: 'right',
@@ -1131,7 +1131,7 @@ const styles = StyleSheet.create({
   alertFooterText: {
     color: Palette.emergency,
     flex: 1,
-    fontFamily: Fonts.semibold,
+    fontWeight: '600',
     fontSize: 12,
     lineHeight: 14,
   },
@@ -1154,12 +1154,12 @@ const styles = StyleSheet.create({
   },
   teamTitle: {
     color: Palette.ink,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 14,
   },
   teamSubtitle: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 11,
     marginTop: 3,
   },
@@ -1171,7 +1171,7 @@ const styles = StyleSheet.create({
   },
   safeText: {
     color: Palette.safe,
-    fontFamily: Fonts.bold,
+    fontWeight: '700',
     fontSize: 12,
   },
   teamDivider: {
@@ -1196,12 +1196,12 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     color: Palette.ink,
-    fontFamily: Fonts.semibold,
+    fontWeight: '600',
     fontSize: 12,
   },
   rowDetail: {
     color: Palette.inkMuted,
-    fontFamily: Fonts.medium,
+    fontWeight: '500',
     fontSize: 12,
     marginTop: 3,
   },

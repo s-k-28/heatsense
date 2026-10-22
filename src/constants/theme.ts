@@ -45,9 +45,9 @@ export const Face = {
 } as const;
 
 export const Type = {
-  label: { fontFamily: Face.label, fontSize: 15, lineHeight: 18, letterSpacing: 1.3, textTransform: 'uppercase' },
-  labelSmall: { fontFamily: Face.label, fontSize: 12, lineHeight: 15, letterSpacing: 1.1, textTransform: 'uppercase' },
-  figure: { fontFamily: Face.figure, fontSize: 30, lineHeight: 33, letterSpacing: 0.2 },
+  label: { fontWeight: '600', fontSize: 15, lineHeight: 18, letterSpacing: 1.3, textTransform: 'uppercase' },
+  labelSmall: { fontWeight: '600', fontSize: 12, lineHeight: 15, letterSpacing: 1.1, textTransform: 'uppercase' },
+  figure: { fontWeight: '700', fontSize: 30, lineHeight: 33, letterSpacing: 0.2 },
   largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: '700', letterSpacing: 0.37 },
   title2: { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: 0.35 },
   title3: { fontSize: 20, lineHeight: 25, fontWeight: '600', letterSpacing: 0.38 },
@@ -85,7 +85,8 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 // Helvetica Neue, like the onboarding screens. Weights are separate PostScript
 // faces on iOS; the onboarding headline weight (500) is the heaviest we use.
 const face = Platform.select({
-  ios: { light: 'HelveticaNeue-Light', regular: 'HelveticaNeue', medium: 'HelveticaNeue-Medium', bold: 'HelveticaNeue-Bold' },
+  // SF Pro everywhere on iOS: the system font. Weights come from fontWeight on each style.
+  ios: { light: 'System', regular: 'System', medium: 'System', bold: 'System' },
   android: { light: 'sans-serif-light', regular: 'sans-serif', medium: 'sans-serif-medium', bold: 'sans-serif-medium' },
   default: {
     light: '"Helvetica Neue", Helvetica, Arial, sans-serif',

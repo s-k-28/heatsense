@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   accent: { color: Color.accent },
 
   identity: { alignItems: 'center', gap: 4, paddingBottom: Space.xl, paddingTop: Space.l },
-  name: { color: Color.ink, fontFamily: Type.page.fontFamily, fontSize: 34, letterSpacing: 0.3, lineHeight: 38, marginTop: Space.m },
+  name: { color: Color.ink, fontWeight: Type.page.fontWeight, fontSize: 34, letterSpacing: 0.3, lineHeight: 38, marginTop: Space.m },
 
   groups: { gap: Space.xl },
   signedIn: { marginTop: Space.xxl, textAlign: 'center' },

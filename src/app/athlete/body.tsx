@@ -232,6 +232,6 @@ const POUNDS = Array.from({ length: 291 }, (_, i) => 60 + i);
 
 const styles = StyleSheet.create({
   wheels: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
-  note: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13, lineHeight: 18, textAlign: 'center' },
-  saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  note: { color: Entry.subtle, fontWeight: '400', fontSize: 13, lineHeight: 18, textAlign: 'center' },
+  saveError: { color: ATHLETE_ERROR, fontWeight: '400', fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

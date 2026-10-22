@@ -7,7 +7,6 @@ import { HeatOrb } from '@/components/heat-orb';
 import { Ring } from '@/components/ui/visuals';
 import { Palette } from '@/constants/theme';
 import { SAMPLE_READING, ZONES, type Zone } from '@/lib/practice';
-import { UIL_GUIDANCE } from '@/lib/uil-wbgt';
 import { recheckStatus, SOURCE_LABEL, type FieldReading, type PracticeSession } from '@/services/practice-sessions';
 import { firestore } from '@/services/firebase';
 import { useTemperature } from '@/state/preferences';
@@ -80,7 +79,6 @@ export function CoachToday({ onInvite }: { onInvite: () => void }) {
             <>
               <Text style={styles.orbValue}>{temp.value(latest.wbgtF)}<Text style={styles.orbUnit}>{temp.unit}</Text></Text>
               <Text style={[styles.orbZone, { color: ZONES[latest.zone].text }]}>{ZONES[latest.zone].label.toUpperCase()}</Text>
-              <Text style={styles.orbMeta}>WBGT · {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text>
             </>
           ) : (
             <>
@@ -92,7 +90,7 @@ export function CoachToday({ onInvite }: { onInvite: () => void }) {
         <Pressable accessibilityRole="button" onPress={() => setSheet(true)} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
           <Text style={styles.ctaText}>{action.toUpperCase()}</Text>
         </Pressable>
-        {latest ? <Text style={styles.guidance}>{UIL_GUIDANCE[latest.zone].summary}</Text> : null}
+        {latest ? <Text style={styles.measured}>WBGT measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text> : null}
       </View>
 
       <View style={styles.rings}>
@@ -204,7 +202,7 @@ const styles = StyleSheet.create({
   orbEmpty: { color: Palette.inkMuted, fontSize: 52, fontWeight: '600' },
   cta: { backgroundColor: Palette.coral, borderRadius: 999, marginTop: 14, minHeight: 50, justifyContent: 'center', paddingHorizontal: 28 },
   ctaText: { color: '#1A0E07', fontSize: 14, fontWeight: '800', letterSpacing: 1.4 },
-  guidance: { color: Palette.ink, fontSize: 16, lineHeight: 22, marginTop: 14, maxWidth: 320, textAlign: 'center' },
+  measured: { color: Palette.inkMuted, fontSize: 15, marginTop: 12 },
   rings: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 28, paddingHorizontal: 4 },
   metric: { alignItems: 'center', gap: 4, width: '32%' },
   ringValue: { color: Palette.ink, fontSize: 20, fontVariant: ['tabular-nums'], fontWeight: '700' },

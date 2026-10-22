@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Line, Path, Polyline, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
-import { Face, Palette, Spacing, Type } from '@/constants/theme';
+import { Palette, Spacing, Type } from '@/constants/theme';
 
 /** A ring made of segments. The centre holds whatever you pass as children. */
 export function Ring({
@@ -28,15 +28,15 @@ export function Ring({
   const c = 2 * Math.PI * r;
   const total = max ?? (segments.reduce((sum, segment) => sum + segment.value, 0) || 1);
   const gap = segments.filter((segment) => segment.value > 0).length > 1 ? 4 : 0;
-  let offset = 0;
+  // Where each segment starts along the ring, worked out before rendering.
+  const starts = segments.map((_, i) => segments.slice(0, i).reduce((sum, segment) => sum + (segment.value / total) * c, 0));
   return (
     <View accessible accessibilityLabel={summary} style={{ height: size, width: size }}>
       <Svg height={size} width={size}>
         <Circle cx={size / 2} cy={size / 2} fill="none" r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
         {segments.map((segment, index) => {
           const length = Math.max(0, (segment.value / total) * c - gap);
-          const start = offset;
-          offset += (segment.value / total) * c;
+          const start = starts[index];
           if (segment.value <= 0) return null;
           return (
             <Circle
@@ -212,7 +212,7 @@ export function BaselineChart({
           <>
             <Rect fill="rgba(48,209,88,0.16)" height={y(band[0]) - y(band[1])} rx={6} width={width} x={0} y={y(band[1])} />
             <Line stroke="rgba(48,209,88,0.55)" strokeDasharray="4 4" strokeWidth={1} x1={0} x2={width} y1={y(band[1])} y2={y(band[1])} />
-            <SvgText fill="rgba(48,209,88,0.95)" fontFamily={Face.label} fontSize={12} letterSpacing={1} textAnchor="end" x={width - 8} y={y(band[1]) + 15}>HER USUAL RANGE</SvgText>
+            <SvgText fill="rgba(48,209,88,0.95)" fontWeight="600" fontSize={12} letterSpacing={1} textAnchor="end" x={width - 8} y={y(band[1]) + 15}>HER USUAL RANGE</SvgText>
             <Path d={`M${x(0)},${height - padBottom} L${points.split(' ').join(' L')} L${last.x},${height - padBottom} Z`} fill="url(#baseline-fill)" />
             <Polyline fill="none" points={points} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} />
             <Circle cx={last.x} cy={last.y} fill="#000000" r={6} stroke={color} strokeWidth={3} />
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   axisText: { color: Palette.inkMuted, ...Type.labelSmall, letterSpacing: 0.6, textTransform: 'none' },
   ringCenter: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
   avatar: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderWidth: 2, justifyContent: 'center' },
-  avatarText: { color: Palette.ink, fontFamily: Face.label, letterSpacing: 0.5 },
+  avatarText: { color: Palette.ink, fontWeight: '600', letterSpacing: 0.5 },
   strip: { flexDirection: 'row' },
   stripItem: { alignItems: 'center', flex: 1, gap: 2, paddingVertical: Spacing.one },
   stripDivider: { borderLeftColor: Palette.border, borderLeftWidth: StyleSheet.hairlineWidth },
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   tlTime: { color: Palette.inkMuted, ...Type.labelSmall, fontSize: 14, lineHeight: 18, paddingTop: 2, width: 64 },
   tlTrack: { alignItems: 'center', width: 24 },
   tlDot: { alignItems: 'center', borderRadius: 11, height: 22, justifyContent: 'center', width: 22 },
-  tlMark: { color: '#1A0E07', fontFamily: Face.figure, fontSize: 14 },
+  tlMark: { color: '#1A0E07', fontWeight: '700', fontSize: 14 },
   tlLine: { backgroundColor: Palette.border, flex: 1, marginVertical: 3, width: 2 },
   tlCopy: { flex: 1, gap: 1, paddingBottom: Spacing.four, paddingLeft: Spacing.three },
   tlTitle: { color: Palette.ink, ...Type.body, fontWeight: '500' },
@@ -257,6 +257,6 @@ const styles = StyleSheet.create({
   photoTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: '600', letterSpacing: 0.3 },
   photoSub: { color: 'rgba(255,255,255,0.82)', ...Type.subhead, marginTop: 1 },
   dateTile: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)', borderCurve: 'continuous', borderRadius: 10, height: 46, justifyContent: 'center', width: 46 },
-  dateMonth: { color: Palette.coral, fontFamily: Face.label, fontSize: 11, letterSpacing: 1, lineHeight: 13 },
-  dateDay: { color: Palette.ink, fontFamily: Face.figure, fontSize: 22, lineHeight: 24 },
+  dateMonth: { color: Palette.coral, fontWeight: '600', fontSize: 11, letterSpacing: 1, lineHeight: 13 },
+  dateDay: { color: Palette.ink, fontWeight: '700', fontSize: 22, lineHeight: 24 },
 });
