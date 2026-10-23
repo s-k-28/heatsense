@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import Svg, { Circle, Path } from 'react-native-svg';
 import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
@@ -10,7 +11,7 @@ import { HeatIcon } from '@/components/heat-icon';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { TextLink } from '@/components/ui/list';
 import { PersonGlyph } from '@/components/whoop-ui';
-import { Palette, Spacing, Type } from '@/constants/theme';
+import { Face, Palette, Spacing, Type } from '@/constants/theme';
 import { markNotificationsRead, usePreferences } from '@/state/preferences';
 
 export type DashboardRole = 'coach' | 'trainer' | 'athlete';
@@ -42,13 +43,30 @@ function initialsOf(name: string) {
  * Fixed top row: brand mark on the left, notifications and the account button on the right.
  * Once the large title scrolls away, the bar picks up a backdrop and a small centered title.
  */
+export type HeaderBand = { label: string; tone: string; accessibilityLabel: string; onPress: () => void };
+
+/** The band, always in the corner like WHOOP's strap: battery for an athlete, bands live for staff. */
+function BandChip({ band }: { band: HeaderBand }) {
+  return (
+    <Pressable accessibilityLabel={band.accessibilityLabel} accessibilityRole="button" hitSlop={4} onPress={band.onPress} style={({ pressed }) => [styles.bandChip, pressed && styles.pressed]}>
+      <Svg fill="none" height={16} stroke={Palette.ink} strokeLinejoin="round" strokeWidth={1.8} viewBox="0 0 24 24" width={16}>
+        <Path d="M8 2.5h8l.8 4.5v10l-.8 4.5H8l-.8-4.5V7z" />
+        <Circle cx={12} cy={12} fill={band.tone} r={2.6} stroke="none" />
+      </Svg>
+      <Text style={styles.bandChipText}>{band.label}</Text>
+    </Pressable>
+  );
+}
+
 export function DashboardHeader({
+  band,
   name,
   onAlerts,
   onProfile,
   scrollY,
   title,
 }: {
+  band?: HeaderBand;
   name: string;
   /** Opens the role's real alerts; no bell when the role has none. */
   onAlerts?: () => void;
@@ -74,6 +92,7 @@ export function DashboardHeader({
     <View style={styles.header}>
       <HeatSenseLogo height={28} />
       <View style={styles.headerActions}>
+        {band ? <BandChip band={band} /> : null}
         {onAlerts ? (
           <Pressable accessibilityLabel={unreadNotifications > 0 ? `Alerts, ${unreadNotifications} new` : 'Alerts'} accessibilityRole="button" hitSlop={4} onPress={openAlerts} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
             <HeatIcon name={bell} size={20} tintColor={Palette.ink} />
@@ -192,6 +211,8 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', flexDirection: 'row', height: HEADER_ROW, justifyContent: 'space-between', paddingHorizontal: Spacing.four },
   headerActions: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
+  bandChip: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, flexDirection: 'row', gap: 4, height: 36, paddingHorizontal: 10 },
+  bandChipText: { color: Palette.ink, fontFamily: Face.label, fontSize: 15 },
   badge: { backgroundColor: Palette.emergency, borderColor: Palette.canvas, borderRadius: 5, borderWidth: 1.5, height: 10, position: 'absolute', right: 10, top: 9, width: 10 },
   avatar: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, overflow: 'hidden', height: 36, justifyContent: 'center', width: 36 },
   avatarText: { color: Palette.ink, ...Type.footnote, fontWeight: '600' },

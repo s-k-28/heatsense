@@ -6,9 +6,12 @@ import { ZoneRules } from '@/components/coach-tabs';
 import { CoachToday } from '@/components/coach-today';
 import { Card, Facts, ListRow, Rows, SampleTag, SectionTitle, StatRow } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
+import { ACCLIMATIZATION_DAYS } from '@/lib/acclimatization';
 import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
 import { usePreferences, useTemperature } from '@/state/preferences';
+import { AcclimatizationCard } from '@/components/acclimatization-card';
+import { BodyStrip } from '@/components/body-strip';
 import { VitalsDetail } from '@/components/vitals';
 import { useDemoTeam, useOwnBand } from '@/state/demo-team';
 import { usePastSessions } from '@/state/past-sessions';
@@ -25,10 +28,26 @@ const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2
 
 /* ─────────────────────────────── Athlete ─────────────────────────────── */
 
-export function AthleteHome() {
+/** The athlete's band signals: the demo athlete in sample mode, otherwise their own paired band. */
+function useMyBand() {
+  const { bandConnected } = usePreferences();
+  const data = useCoachData('athlete');
+  const zone = data?.readings.at(-1)?.zone ?? 'yellow';
+  const demo = useDemoTeam(zone);
+  const own = useOwnBand(!demo.enabled && bandConnected, zone);
+  return demo.members[0] ?? own;
+}
+
+export function AthleteHome({ onOpenBand }: { onOpenBand: () => void }) {
   const data = useCoachData('athlete');
   const membership = useMembership();
+  const band = useMyBand();
+  const past = usePastSessions(data?.teamId ?? null, Boolean(data?.sample), 20);
   const latest = data?.readings.at(-1) ?? null;
+  // Sample mode follows the demo athlete; a real athlete counts the team's practice days so far.
+  // ponytail: counts days before they joined too; use the membership's join date once athletes can read it.
+  const practiceDays = new Set([...(past ?? []).map((p) => p.session.startedAt.toDateString()), ...(data?.session ? [data.session.startedAt.toDateString()] : [])]).size;
+  const acclimatization = data?.sample && band ? band.athlete.acclimatizationDay : Math.min(ACCLIMATIZATION_DAYS, practiceDays);
   // Until the coach approves them, an athlete can't see the team's practice, so say why.
   const waiting = !data?.sample && membership?.status === 'pending';
   const noTeam = !data?.sample && (membership === null || membership?.status === 'declined');
@@ -40,6 +59,13 @@ export function AthleteHome() {
         <Card message={membership?.status === 'declined' ? 'Your coach declined the request. Check the code with them and try again.' : 'Enter the six-digit code from your coach.'} onPress={() => router.push('/setup/athlete')} title="Join your team" />
       ) : null}
       <CoachToday readOnly role="athlete" />
+      {band ? (
+        <>
+          <SectionTitle title="Your body" />
+          <BodyStrip member={band} onPress={onOpenBand} />
+        </>
+      ) : null}
+      {data?.teamId || data?.sample ? <View style={styles.gapTop}><AcclimatizationCard day={acclimatization} title="Your heat acclimatization" /></View> : null}
       {latest ? (
         <>
           <SectionTitle title="What changes today" />
@@ -77,11 +103,8 @@ function SpeakUp() {
 /** The athlete's own band: their vitals in depth. The app centres on them, not the team. */
 export function AthleteBand() {
   const { bandConnected } = usePreferences();
-  const data = useCoachData('athlete');
-  const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
   // Sample athletes on: the demo athlete stands in. Otherwise a paired band shows the athlete's own signals.
-  const own = useOwnBand(!demo.enabled && bandConnected, data?.readings.at(-1)?.zone ?? 'yellow');
-  const me = demo.members[0] ?? own;
+  const me = useMyBand();
   if (me) {
     return (
       <>
