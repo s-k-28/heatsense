@@ -91,13 +91,33 @@ export function useCoachData(role: SessionRole = 'coach'): CoachData | null {
   return null;
 }
 
+// Firestore keeps only each athlete's latest sample. Every sample this phone sees is kept here too,
+// so a coach or trainer watching practice gets a trend. ponytail: in memory, since the app opened;
+// 60 samples is 30 minutes at the band's 30-second cadence.
+const HISTORY_LIMIT = 60;
+const history = new Map<string, VitalsRecord[]>();
+
+function remember(sessionId: string, records: VitalsRecord[]) {
+  for (const r of records) {
+    const key = `${sessionId}:${r.athleteUid}`;
+    const list = history.get(key) ?? [];
+    if (list.at(-1)?.sampledAt.getTime() === r.sampledAt.getTime()) continue;
+    history.set(key, [...list, r].slice(-HISTORY_LIMIT));
+  }
+}
+
+/** The samples this phone has seen for one athlete in a practice, oldest first. */
+export function vitalsHistory(sessionId: string, athleteUid: string) {
+  return history.get(`${sessionId}:${athleteUid}`) ?? [];
+}
+
 /** Coach and trainers: every athlete's latest band sample in the open practice, live. Empty without one. */
 export function useTeamVitals(session: PracticeSession | null) {
   const [records, setRecords] = useState<VitalsRecord[]>([]);
   const open = session && !session.endedAt ? session : null;
   useEffect(() => {
     if (!open || !firestore) return;
-    return watchTeamVitals(open, setRecords, () => setRecords([]));
+    return watchTeamVitals(open, (next) => { remember(open.id, next); setRecords(next); }, () => setRecords([]));
   }, [open]);
   return open ? records : [];
 }
