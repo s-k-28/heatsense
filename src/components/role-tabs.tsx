@@ -1,9 +1,11 @@
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ZoneRules } from '@/components/coach-tabs';
+import { FieldHero } from '@/components/field-hero';
+import { PracticeCard, TodaysReadings } from '@/components/coach-home';
 import { CoachToday } from '@/components/coach-today';
 import { TrainerHomeOverview } from '@/components/trainer-home-overview';
 import { Card, ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
@@ -48,17 +50,9 @@ export function AthleteHome({ onOpenBand }: { onOpenBand: () => void }) {
   const data = team.data;
   const membership = useMembership();
   const band = useMyBand();
-  const history = usePastSessionsState(data?.teamId ?? null, Boolean(data?.sample), 20);
-  const past = history.data;
   const latest = data?.readings.at(-1) ?? null;
   const guidance = latest ? UIL_GUIDANCE[latest.zone] : null;
   const [rulesOpen, setRulesOpen] = useState(false);
-  const breakRule = guidance?.breaksPerHour && guidance.breakMinutes
-    ? `${guidance.breaksPerHour}+ rest breaks each hour, at least ${guidance.breakMinutes} minutes each.`
-    : guidance?.restMinutesPerHour ? `${guidance.restMinutesPerHour} minutes of rest each hour.` : null;
-  // Available team dates are a record count, not verified attendance or protocol completion.
-  const practiceDays = new Set([...(past ?? []).map((p) => p.session.startedAt.toDateString()), ...(data?.session ? [data.session.startedAt.toDateString()] : [])]).size;
-  const availablePracticeDays = !data || history.status !== 'ready' ? undefined : practiceDays;
   // Until the coach approves them, an athlete can't see the team's practice, so say why.
   const waiting = !data?.sample && membership?.status === 'pending';
   const noTeam = !data?.sample && team.status === 'no-team' && (membership === null || membership?.status === 'declined');
@@ -69,23 +63,27 @@ export function AthleteHome({ onOpenBand }: { onOpenBand: () => void }) {
       ) : noTeam ? (
         <Card message={membership?.status === 'declined' ? 'Your coach declined the request. Check the code with them and try again.' : 'Enter the six-digit code from your coach.'} onPress={() => router.push('/setup/athlete')} title="Join your team" />
       ) : null}
-      {!waiting && !noTeam ? <CoachToday teamPracticeDays={availablePracticeDays} readOnly role="athlete" /> : null}
-      {history.status === 'error' ? <Card title="Practice history unavailable"><ActionButton label="Try again" onPress={history.retry} variant="secondary" /></Card> : null}
-      {latest && guidance && !waiting && !noTeam ? (
-        <View style={styles.homeGuidance}>
+      {!waiting && !noTeam ? team.status === 'error' ? (
+        <Card title="Practice data unavailable"><ActionButton label="Try again" onPress={team.retry} variant="secondary" /></Card>
+      ) : <>
+        <FieldHero data={data} onAction={() => setRulesOpen(true)} readOnly />
+        <PracticeCard data={data} onOpenPlan={() => setRulesOpen(true)} readOnly />
+        <TodaysReadings data={data} />
+      </> : null}
+      <Modal animationType="slide" onRequestClose={() => setRulesOpen(false)} presentationStyle="pageSheet" visible={rulesOpen}>
+        <View style={styles.guidanceSheet}>
           <View style={styles.homeModuleHead}>
-            <Text accessibilityRole="header" style={styles.homeModuleTitle}>At practice today</Text>
-            <Pressable accessibilityLabel={rulesOpen ? 'Hide full UIL guidance' : 'Show full UIL guidance'} accessibilityRole="button" accessibilityState={{ expanded: rulesOpen }} onPress={() => setRulesOpen(!rulesOpen)} style={({ pressed }) => [styles.homeDisclosure, pressed && styles.homePressed]}>
-              <Text style={styles.homeDisclosureText}>{rulesOpen ? 'Less' : 'UIL details'}</Text>
-            </Pressable>
+            <Text accessibilityRole="header" style={styles.homeModuleTitle}>Practice guidance</Text>
+            <ActionButton label="Done" onPress={() => setRulesOpen(false)} variant="secondary" />
           </View>
-          <Text style={styles.homeGuidanceSummary}>{guidance.summary}</Text>
-          {breakRule ? <Text style={styles.homeGuidanceRule}>{breakRule}</Text> : null}
-          {guidance.coolingZoneRequired ? <Text style={styles.homeGuidanceRule}>A rapid cooling zone must be on site.</Text> : null}
-          {guidance.football ? <Text style={styles.homeGuidanceRule}>Football: {guidance.football}</Text> : null}
-          {rulesOpen ? <ZoneRules hideSummary latest={latest} uilClass={data?.session?.uilClass ?? 3} /> : null}
+          <ScrollView contentContainerStyle={styles.guidanceSheetContent}>
+            {latest && guidance ? <>
+              <Text style={styles.homeGuidanceSummary}>{guidance.summary}</Text>
+              <ZoneRules hideSummary latest={latest} uilClass={data?.session?.uilClass ?? 3} />
+            </> : <Text style={styles.homeGuidanceRule}>Your coach’s field readings and current zone guidance will appear when practice starts.</Text>}
+          </ScrollView>
         </View>
-      ) : null}
+      </Modal>
       <View style={styles.homeBandPanel}>
         <View style={styles.homeModuleHead}>
           <PressScale accessibilityLabel="View your band" accessibilityHint="Opens your individual band signals and charts" accessibilityRole="button" onPress={onOpenBand} style={styles.homeBandLink}>
@@ -229,6 +227,8 @@ export function TrainerHome({ onOpenMonitor }: { onOpenMonitor: () => void }) {
 }
 
 const baseStyles = StyleSheet.create({
+  guidanceSheet: { backgroundColor: Palette.canvas, flex: 1, padding: 20 },
+  guidanceSheetContent: { gap: 16, paddingBottom: 32, paddingTop: 20 },
   homeBandLink: { alignItems: 'center', flexDirection: 'row', gap: 16, minHeight: 84, flexShrink: 1 },
   homeBandCopy: { gap: 8, flexShrink: 1 },
   homePressed: { opacity: 0.7 },
