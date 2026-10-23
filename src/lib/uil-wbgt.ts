@@ -92,6 +92,11 @@ export function classifyWbgt(wbgtF: number, uilClass: UilClass): Zone | null {
   return 'green';
 }
 
+/** Where each zone above Green starts, in °F, for drawing the zones behind a chart. */
+export function zoneBounds(uilClass: UilClass) {
+  return LOWER_BOUND[uilClass];
+}
+
 /** The chart's range for a zone, written the way UIL prints it. */
 export function zoneRange(zone: Zone, uilClass: UilClass) {
   const b = LOWER_BOUND[uilClass];
