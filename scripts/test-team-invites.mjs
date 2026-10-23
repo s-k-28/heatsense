@@ -7,10 +7,8 @@
 // (coach, athlete, a stranger, a trainer) and the real security rules. Each account's `call()` does
 // exactly what src/services/team-invites.ts does. Admin access is used only to set up edge cases
 // (an expired code) and to inspect what was stored.
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
+import { initializeApp as initAdmin } from 'firebase-admin/app';
+import { getFirestore as getAdminFirestore, Timestamp } from 'firebase-admin/firestore';
 import { deleteApp, initializeApp } from 'firebase/app';
 import { connectAuthEmulator, createUserWithEmailAndPassword, getAuth, updateProfile } from 'firebase/auth';
 import {
@@ -18,11 +16,7 @@ import {
   serverTimestamp, setDoc, Timestamp as ClientTimestamp, updateDoc, where,
 } from 'firebase/firestore';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const projectId = process.env.GCLOUD_PROJECT ?? 'heatsense-aa3c8';
-const requireFromFunctions = createRequire(join(root, 'functions', 'package.json'));
-const { initializeApp: initAdmin } = requireFromFunctions('firebase-admin/app');
-const { getFirestore: getAdminFirestore, Timestamp } = requireFromFunctions('firebase-admin/firestore');
 const admin = getAdminFirestore(initAdmin({ projectId }, 'admin'));
 
 let passed = 0;
