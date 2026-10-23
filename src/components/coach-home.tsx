@@ -144,7 +144,7 @@ function ConditionRings({ acknowledged, latest, loading, onPress, recheckFractio
   const applied = total ? acknowledged / total : 0;
   return (
     <View style={styles.visualSection}>
-      <View style={styles.visualHead}><Text accessibilityRole="header" style={styles.visualTitle}>Field conditions</Text><Text style={styles.visualMeta}>{loading ? 'Loading…' : latest ? ZONES[latest.zone].label : 'Awaiting reading'}</Text></View>
+      <View style={styles.visualHead}><Text accessibilityRole="header" style={styles.visualTitle}>Field conditions</Text></View>
       <Pressable accessibilityLabel={latest ? `${temperature}, ${ZONES[latest.zone].label}. Open practice.` : loading ? 'Practice loading' : 'No field reading. View practice guidance.'} accessibilityRole="button" disabled={loading} onPress={onPress} style={({ pressed }) => [styles.ringDashboard, pressed && styles.pressedScale]}>
         <View style={styles.largeRing}>
           <Svg height={210} width={210}>
