@@ -87,7 +87,7 @@ flowchart LR
 | **What HeatSense does** | Turns one WBGT reading into the zone and the exact UIL rules, times the next recheck, keeps a tamper-proof record, and shows each athlete's recovery so staff can act early. |
 | **Who uses it** | Coaches (run the practice), athletic trainers (watch recovery), athletes (see the zone, wear the band). |
 | **Built with** | Expo / React Native (iOS, Android, web), Firebase Auth + Firestore on the free plan, security rules as the backend, an ESP32 wearable in development. |
-| **By the numbers** | ~13,400 lines of TypeScript, rules and tests · 47 backend tests on the emulator · 2 self-check suites (UIL engine, band simulator) · 3 role-specific apps · 0 servers to run · $0 a month to operate |
+| **By the numbers** | ~13,400 lines of TypeScript, rules and tests · 48 backend tests on the emulator · 3 self-check suites (UIL engine, band simulator, plan check) · 3 role-specific apps · 0 servers to run · $0 a month to operate |
 
 ### A coach's practice day
 
@@ -892,7 +892,7 @@ heatsense/
 | Graphics | React Native SVG, Skia | 15.15, ^2.6 | Charts |
 | iOS extras | expo-widgets | ~57.0 | Practice Live Activity / Dynamic Island |
 | Device | expo-location, expo-maps, expo-crypto | ~57.0 | Practice location; secure random invite codes |
-| Testing | Firebase Emulator Suite, firebase-admin, Node test scripts | firebase-admin ^14.5 | 47 backend tests against the real rules; self-checks for the heat engine and band simulator |
+| Testing | Firebase Emulator Suite, firebase-admin, Node test scripts | firebase-admin ^14.5 | 48 backend tests against the real rules; self-checks for the heat engine, band simulator and plan check |
 | Hardware (planned) | ESP32, C++, Arduino framework, PlatformIO, react-native-ble-plx | n/a | Low-cost BLE microcontroller with standard I2C sensors |
 
 ## Getting started
@@ -964,7 +964,7 @@ npm run test:invites
 
 This starts local Firebase emulators (Auth + Firestore), runs 48 tests against the real security rules, and shuts them down.
 
-✅ The last line reads `47 passed, 0 failed`.
+✅ The last line reads `48 passed, 0 failed`.
 
 ### 6. Deploy the security rules (team leads only)
 
@@ -983,7 +983,7 @@ npm run lint                              # style and React rules → 0 errors
 node scripts/check-uil-wbgt.ts            # heat engine → "all checks passed"
 node scripts/check-band-simulator.ts      # band model → "all checks passed"
 node scripts/check-plan-check.ts          # plan vs UIL → "all checks passed"
-npm run test:invites                      # backend rules → "47 passed, 0 failed"
+npm run test:invites                      # backend rules → "48 passed, 0 failed"
 ```
 
 ### Troubleshooting
