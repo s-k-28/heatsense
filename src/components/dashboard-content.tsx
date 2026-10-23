@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { createContext, useContext } from 'react';
 import { Alert, Share, StyleSheet, Text, View } from 'react-native';
@@ -45,8 +46,9 @@ export async function shareTeamCode(draft: TeamDraft) {
     // A coach who already created a team shares that team's active code; otherwise use the setup draft.
     const existing = await getMyTeamInvite();
     const complete = Boolean(draft.school.trim() && draft.teamName.trim() && draft.sport && draft.level);
+    // No team yet: the code comes from creating one, so go there instead of explaining.
     if (!existing && !complete) {
-      Alert.alert('No team code yet', 'Create your team during setup to get a code athletes can join with.');
+      router.push('/team/create');
       return;
     }
     const teamName = existing ? existing.team.teamName : draft.teamName;

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
 import { Group, Row, TextLink } from '@/components/ui/list';
@@ -92,7 +92,7 @@ export function FieldCheckSheet({ onClose, visible, trainerTeamId }: { onClose: 
           <Text style={styles.title}>{session ? 'Practice' : 'Field conditions'}</Text>
           <TextLink label="Done" onPress={onClose} />
         </View>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">{body}</ScrollView>
+        <ScrollView contentContainerStyle={styles.content} keyboardDismissMode="interactive" keyboardShouldPersistTaps="always">{body}</ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -298,12 +298,13 @@ function ReadingForm({ session }: { session: PracticeSession }) {
         <TextInput accessibilityLabel={`WBGT in degrees ${unit === 'F' ? 'Fahrenheit' : 'Celsius'}`} inputMode="decimal" keyboardType="decimal-pad" maxLength={5} onChangeText={setValue} onSubmitEditing={save} placeholder="WBGT" placeholderTextColor={Palette.inkFaint} style={[styles.input, styles.inputGrow]} value={value} />
         <Chips<'F' | 'C'> format={(u) => `°${u}`} label="Unit" onSelect={setUnit} options={['F', 'C']} selected={unit} />
       </View>
+      {/* Save sits right under the number, above where the number pad opens (the pad has no return key). */}
+      {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
+      <Pressable accessibilityRole="button" disabled={busy} onPress={() => { Keyboard.dismiss(); save(); }} style={({ pressed }) => [styles.primary, styles.saveNow, pressed && styles.pressed]}>
+        <Text style={styles.primaryText}>{busy ? 'Saving…' : 'Save reading'}</Text>
+      </Pressable>
       <Chips<ReadingSource> format={(s) => SOURCE_LABEL[s]} label="Where the reading came from" onSelect={setSource} options={['handheld', 'station', 'other']} selected={source} />
       <Chips format={(m) => (m === 0 ? 'Measured now' : `${m} min ago`)} label="When it was measured" onSelect={setMinutesAgo} options={MEASURED_CHOICES} selected={minutesAgo as (typeof MEASURED_CHOICES)[number]} />
-      {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
-      <Pressable accessibilityRole="button" disabled={busy} onPress={save} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
-        <Text style={styles.secondaryText}>{busy ? 'Saving…' : 'Save reading'}</Text>
-      </Pressable>
     </View>
   );
 }
@@ -333,6 +334,7 @@ function History({ readings, temp }: { readings: FieldReading[]; temp: Temp }) {
 }
 
 const styles = StyleSheet.create({
+  saveNow: { marginTop: 0 },
   pressed: { opacity: 0.6 },
   disabled: { opacity: 0.4 },
   loading: { marginTop: Spacing.eight },
