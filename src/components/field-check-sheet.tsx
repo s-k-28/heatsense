@@ -41,18 +41,22 @@ const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2
  * acknowledge it, and recheck on time. Everything is saved to the team in Firestore, so the clock
  * and history survive a restart and assistant coaches see the same record.
  */
-export function FieldCheckSheet({ onClose, visible }: { onClose: () => void; visible: boolean }) {
-  const [teamId, setTeamId] = useState<string | null | undefined>(undefined);
+export function FieldCheckSheet({ onClose, visible, trainerTeamId }: { onClose: () => void; visible: boolean; trainerTeamId?: string | null }) {
+  // An athletic trainer works on the team they belong to; the coach on the team they made.
+  const trainer = trainerTeamId !== undefined;
+  const [coachTeamId, setTeamId] = useState<string | null | undefined>(undefined);
+  const teamId = trainer ? trainerTeamId : coachTeamId;
   const [session, setSession] = useState<PracticeSession | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    if (trainer) return;
     let live = true;
     getMyTeamInvite()
       .then((mine) => { if (live) setTeamId(mine?.invite.teamId ?? null); })
       .catch(() => { if (live) setTeamId(null); });
     return () => { live = false; };
-  }, []);
+  }, [trainer]);
 
   useEffect(() => {
     if (!teamId) return;
@@ -67,10 +71,10 @@ export function FieldCheckSheet({ onClose, visible }: { onClose: () => void; vis
 
   let body;
   if (teamId === undefined || (teamId && session === undefined && !failed)) body = <ActivityIndicator color={Palette.inkMuted} style={styles.loading} />;
-  else if (!teamId) body = <Notice text="Create your team first. Practice records are saved to the team so every coach sees the same readings." />;
+  else if (!teamId) body = <Notice text={trainer ? 'Join your team first. Your coach approves your request.' : 'Create your team first. Practice records are saved to the team so every coach sees the same readings.'} />;
   else if (failed) body = <Notice text="Couldn’t load practice records. Check your connection and try again." />;
-  else if (!session) body = <StartForm teamId={teamId} />;
-  else body = <SessionView session={session} />;
+  else if (!session) body = trainer ? <Notice text="Practice hasn’t started yet. Once the head coach starts it, you can log readings and confirm guidance here." /> : <StartForm teamId={teamId} />;
+  else body = <SessionView canEnd={!trainer} session={session} />;
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
@@ -153,7 +157,7 @@ function Field({ children, label }: { children: React.ReactNode; label: string }
   );
 }
 
-function SessionView({ session }: { session: PracticeSession }) {
+function SessionView({ session, canEnd = true }: { session: PracticeSession; canEnd?: boolean }) {
   const reduced = useReducedMotion();
   const temp = useTemperature();
   const [readings, setReadings] = useState<FieldReading[]>([]);
@@ -196,9 +200,11 @@ function SessionView({ session }: { session: PracticeSession }) {
       <Pressable accessibilityRole="button" onPress={() => Share.share({ message: sessionReport(session, readings) })} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
         <Text style={styles.secondaryText}>Share practice record</Text>
       </Pressable>
-      <Pressable accessibilityRole="button" onPress={() => endSession(session).catch(() => {})} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
-        <Text style={[styles.secondaryText, { color: Palette.emergency }]}>End practice</Text>
-      </Pressable>
+      {canEnd ? (
+        <Pressable accessibilityRole="button" onPress={() => endSession(session).catch(() => {})} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
+          <Text style={[styles.secondaryText, { color: Palette.emergency }]}>End practice</Text>
+        </Pressable>
+      ) : null}
     </>
   );
 }

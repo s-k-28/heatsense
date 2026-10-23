@@ -39,6 +39,9 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
   const minutesAgo = latest ? Math.max(0, Math.round((now - latest.measuredAt.getTime()) / 60_000)) : 0;
 
   const action = !session ? 'Start practice' : latest ? 'Add a reading' : 'Take first reading';
+  // Trainers log readings once the coach has started practice; athletes only watch.
+  const trainerRecords = role === 'trainer' && Boolean(session) && !data?.sample;
+  const canRecord = !readOnly || trainerRecords;
 
   return (
     <>
@@ -57,11 +60,11 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
             </>
           )}
         </HeatOrb>
-        {readOnly ? null : (
+        {canRecord ? (
           <Pressable accessibilityRole="button" onPress={() => setSheet(true)} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
             <Text style={styles.ctaText}>{action.toUpperCase()}</Text>
           </Pressable>
-        )}
+        ) : null}
         {latest ? <Text style={styles.measured}>WBGT measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text> : null}
       </View>
 
@@ -121,7 +124,7 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
         </>
       ) : null}
 
-      {readOnly ? null : <FieldCheckSheet onClose={() => setSheet(false)} visible={sheet} />}
+      {canRecord ? <FieldCheckSheet onClose={() => setSheet(false)} trainerTeamId={role === 'trainer' ? data?.teamId ?? null : undefined} visible={sheet} /> : null}
     </>
   );
 }
