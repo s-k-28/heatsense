@@ -6,7 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ZoneRules } from '@/components/coach-tabs';
 import { CoachToday } from '@/components/coach-today';
 import { Card, Facts, ListRow, Rows, SampleTag, SectionTitle, StatRow } from '@/components/whoop-ui';
-import { Palette } from '@/constants/theme';
+import { Face, Palette } from '@/constants/theme';
 import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
 import { recentSessions, type SessionSummary } from '@/services/practice-sessions';
@@ -133,6 +133,25 @@ function usePastSessions(teamId: string | null, sample: boolean) {
   });
 }
 
+/** Strava-style week: one bar per day, as tall as that day's peak WBGT and coloured by its zone. */
+function WeekChart({ days, temp }: { days: { date: Date; peak: { wbgtF: number; zone: Zone } | null }[]; temp: { value: (f: number) => number | string } }) {
+  const MIN = 70, MAX = 95, H = 120;
+  return (
+    <View accessibilityLabel={`This week's peak WBGT: ${days.map((d) => (d.peak ? `${d.date.toLocaleDateString([], { weekday: 'long' })} ${temp.value(d.peak.wbgtF)}` : null)).filter(Boolean).join(', ') || 'no practices yet'}`} accessible style={styles.week}>
+      {days.map((d) => {
+        const h = d.peak ? Math.max(14, ((Math.min(MAX, Math.max(MIN, d.peak.wbgtF)) - MIN) / (MAX - MIN)) * H) : 6;
+        return (
+          <View key={d.date.toDateString()} style={styles.weekCol}>
+            <Text style={styles.weekValue}>{d.peak ? temp.value(d.peak.wbgtF) : ''}</Text>
+            <View style={[styles.weekBar, { backgroundColor: d.peak ? dot(d.peak.zone) : Palette.surfaceMuted, height: h }]} />
+            <Text style={styles.weekDay}>{d.date.toLocaleDateString([], { weekday: 'narrow' })}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 const dayLabel = (d: Date) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 
 export function AthleteSessions() {
@@ -141,9 +160,22 @@ export function AthleteSessions() {
   const readings = [...(data?.readings ?? [])].reverse();
   const latest = readings[0] ?? null;
   const past = usePastSessions(data?.teamId ?? null, Boolean(data?.sample));
+  // The last seven days, today last: the hottest reading of each day's practices.
+  const todayPeak = readings.reduce<{ wbgtF: number; zone: Zone } | null>((hot, r) => (!hot || r.wbgtF > hot.wbgtF ? { wbgtF: r.wbgtF, zone: r.zone } : hot), null);
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(); date.setHours(12, 0, 0, 0); date.setDate(date.getDate() - (6 - i));
+    const dayPeaks = (past ?? []).filter((p) => p.peak && p.session.startedAt.toDateString() === date.toDateString()).map((p) => p.peak!);
+    if (i === 6 && todayPeak) dayPeaks.push(todayPeak);
+    const peak = dayPeaks.reduce<{ wbgtF: number; zone: Zone } | null>((hot, p) => (!hot || p.wbgtF > hot.wbgtF ? p : hot), null);
+    return { date, peak };
+  });
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
+      <Card title="This week">
+        <WeekChart days={week} temp={temp} />
+      </Card>
+      <View style={styles.gapTop} />
       {data?.session ? (
         <Card title={`Today · ${data.session.venue}`}>
           <StatRow stats={[
@@ -266,6 +298,11 @@ const styles = StyleSheet.create({
   bandNote: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22, maxWidth: 330, textAlign: 'center' },
   dot: { borderRadius: 6, height: 12, width: 12 },
   gapTop: { marginTop: 12 },
+  week: { alignItems: 'flex-end', flexDirection: 'row', gap: 8, height: 170 },
+  weekCol: { alignItems: 'center', flex: 1, gap: 6, justifyContent: 'flex-end' },
+  weekBar: { borderRadius: 6, width: '100%' },
+  weekValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 18 },
+  weekDay: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
   cards: { gap: 12 },
   empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22 },
 });

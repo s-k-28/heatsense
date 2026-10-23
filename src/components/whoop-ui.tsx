@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { Palette } from '@/constants/theme';
+import { Face, Palette } from '@/constants/theme';
 import { enter, settle } from '@/lib/motion';
 
 // The dashboard's building blocks: one heading per section, rows grouped on one surface with
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   tileSlot: { width: '48.5%' },
   tile: { backgroundColor: Palette.surface, borderRadius: 16, gap: 6, minHeight: 112, padding: 16 },
   tileLabel: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
-  tileValue: { color: Palette.ink, fontSize: 32, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -0.5 },
+  tileValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 42, lineHeight: 46, letterSpacing: 0.2 },
   tileUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
   pill: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   pillDot: { borderRadius: 4, height: 8, width: 8 },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   factTitle: { color: Palette.ink, fontWeight: '600' },
   statRow: { flexDirection: 'row', gap: 12 },
   stat: { flex: 1, gap: 2 },
-  statValue: { color: Palette.ink, fontSize: 26, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -0.4 },
+  statValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 36, lineHeight: 40, letterSpacing: 0.2 },
   statUnit: { color: Palette.inkMuted, fontSize: 16, fontWeight: '500' },
   statLabel: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
   card: { backgroundColor: Palette.surface, borderRadius: 16, gap: 14, padding: 18 },
