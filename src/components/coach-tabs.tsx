@@ -3,10 +3,10 @@ import { signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { CapsLabel, Facts, ListRow, MetricTile, Rows, SampleTag, SectionTitle, Tiles } from '@/components/whoop-ui';
+import { Card, CapsLabel, Facts, ListRow, MetricTile, Rows, SampleTag, SectionTitle, StatRow, Tiles } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
-import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, zoneRange } from '@/lib/uil-wbgt';
+import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION } from '@/lib/uil-wbgt';
 import { firebaseAuth } from '@/services/firebase';
 import type { FieldReading } from '@/services/practice-sessions';
 import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
@@ -60,7 +60,6 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
       <Text style={styles.teamMeta}>{mine ? [mine.team.school, mine.team.sport, mine.team.level].filter(Boolean).join(' · ') : mine === null ? 'Not set up yet.' : ' '}</Text>
 
       {readOnly ? null : <>
-      <CapsLabel>Getting started</CapsLabel>
       <Rows>
         {mine === null ? (
           <ListRow label="Create your team" onPress={() => router.push('/team/create')} />
@@ -144,14 +143,17 @@ export function PlanTab() {
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
-      <CapsLabel>Today</CapsLabel>
-      <View style={styles.planHead}>
-        <View style={[styles.zoneDot, { backgroundColor: latest ? (latest.zone === 'black' ? '#8E8E93' : ZONES[latest.zone].color) : Palette.inkFaint }]} />
-        <View style={styles.flex}>
-          <Text style={styles.planZone}>{latest ? ZONES[latest.zone].label : 'No reading yet'}</Text>
-          <Text style={styles.planMeta}>{latest ? `${temp.value(latest.wbgtF)}${temp.unit} WBGT · ${zoneRange(latest.zone, uilClass)}` : 'Take a field reading to see today’s rules.'}</Text>
-        </View>
-      </View>
+      {latest ? (
+        <Card title="Today">
+          <StatRow stats={[
+            { label: 'WBGT', value: String(temp.value(latest.wbgtF)), unit: temp.unit },
+            { label: 'Zone', value: ZONES[latest.zone].label.replace(' zone', ''), tone: latest.zone === 'black' ? Palette.inkMuted : ZONES[latest.zone].color },
+            { label: 'UIL class', value: String(uilClass) },
+          ]} />
+        </Card>
+      ) : (
+        <Card message="Take a field reading to see today’s rules." title="Today" />
+      )}
 
       <ZoneRules latest={latest} uilClass={uilClass} />
 
@@ -180,17 +182,19 @@ export function ZoneRules({ latest, uilClass }: { latest: FieldReading | null; u
         <>
           <Text style={styles.summary}>{guidance.summary}</Text>
           <Tiles>
-            <MetricTile label="Rest breaks" pill={`UIL Class ${uilClass}`} pillTone={Palette.inkMuted} unit={guidance.breaksPerHour ? 'per hr' : 'min/hr'} value={guidance.breaksPerHour ? `${guidance.breaksPerHour}+` : guidance.restMinutesPerHour ? String(guidance.restMinutesPerHour) : '--'} />
+            <MetricTile label="Rest breaks" unit={guidance.breaksPerHour ? 'per hr' : 'min/hr'} value={guidance.breaksPerHour ? `${guidance.breaksPerHour}+` : guidance.restMinutesPerHour ? String(guidance.restMinutesPerHour) : '--'} />
             <MetricTile label="Break length" unit="min" value={guidance.breakMinutes ? `${guidance.breakMinutes}+` : '--'} />
             <MetricTile label="Max practice" unit={guidance.maxPracticeMinutes ? 'hr' : undefined} value={guidance.maxPracticeMinutes ? String(guidance.maxPracticeMinutes / 60) : guidance.outdoorAllowed ? 'No limit' : 'None'} />
-            <MetricTile label="Cooling zone" pill={guidance.coolingZoneRequired ? 'Required' : 'Optional'} pillTone={guidance.coolingZoneRequired ? Palette.warning : Palette.safe} value={guidance.coolingZoneRequired ? 'Tub' : '--'} />
+            <MetricTile label="Cooling zone" value={guidance.coolingZoneRequired ? 'Required' : 'Optional'} />
           </Tiles>
           {guidance.football ? <Facts items={[{ title: 'Football equipment', body: guidance.football }]} /> : null}
         </>
       ) : null}
-      <Pressable accessibilityRole="link" onPress={() => Linking.openURL(UIL_SOURCE_URL)}>
-        <Text style={styles.source}>Source: UIL WBGT activity guidelines {UIL_VERSION}. Your school’s plan may be stricter.</Text>
-      </Pressable>
+      <View style={styles.sourceRow}>
+        <Rows>
+          <ListRow label="UIL activity chart" onPress={() => Linking.openURL(UIL_SOURCE_URL)} value={UIL_VERSION} />
+        </Rows>
+      </View>
 
     </>
   );
@@ -268,12 +272,8 @@ const styles = StyleSheet.create({
   decline: { borderColor: Palette.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   declineText: { color: Palette.inkMuted, fontSize: 15, fontWeight: '600' },
   empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22 },
-  planHead: { alignItems: 'center', flexDirection: 'row', gap: 14 },
-  zoneDot: { borderRadius: 12, height: 24, width: 24 },
-  planZone: { color: Palette.ink, fontSize: 26, fontWeight: '700' },
-  planMeta: { color: Palette.inkMuted, fontSize: 15, marginTop: 2 },
   summary: { color: Palette.ink, fontSize: 17, lineHeight: 24, marginBottom: 14, marginTop: 16 },
-  source: { color: Palette.inkMuted, fontSize: 13, lineHeight: 18, marginTop: 14, textDecorationLine: 'underline' },
+  sourceRow: { marginTop: 16 },
   identity: { alignItems: 'center', flexDirection: 'row', gap: 16, marginTop: 8 },
   avatar: { alignItems: 'center', backgroundColor: Palette.coral, borderRadius: 34, height: 68, justifyContent: 'center', width: 68 },
   avatarText: { color: '#1A0E07', fontSize: 24, fontWeight: '800' },

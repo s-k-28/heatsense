@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { FieldCheckSheet } from '@/components/field-check-sheet';
-import { SampleTag } from '@/components/whoop-ui';
+import { Card, SampleTag, StatRow } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { enter, leave, settle } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
@@ -73,11 +73,13 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
-      <View style={styles.summary}>
-        <Stat label="Open" tone={open.length ? Palette.emergency : Palette.safe} value={String(open.length)} />
-        <Stat label="Readings" value={String(readings.length)} />
-        <Stat label="Last reading" value={latest ? time(latest.measuredAt) : '--'} />
-      </View>
+      <Card title="Today">
+        <StatRow stats={[
+          { label: 'Open', value: String(open.length), tone: open.length ? Palette.emergency : Palette.safe },
+          { label: 'Readings', value: String(readings.length) },
+          { label: 'Last reading', value: latest ? time(latest.measuredAt) : '--' },
+        ]} />
+      </Card>
 
       {open.length === 0 ? (
         <View style={styles.clear}>
@@ -121,20 +123,7 @@ function AlertCard({ item }: { item: Item }) {
   );
 }
 
-function Stat({ label, tone, value }: { label: string; tone?: string; value: string }) {
-  return (
-    <View style={styles.stat}>
-      <Text style={[styles.statValue, tone ? { color: tone } : null]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  summary: { backgroundColor: Palette.card, borderRadius: 20, flexDirection: 'row', paddingVertical: 18 },
-  stat: { alignItems: 'center', flex: 1, gap: 4 },
-  statValue: { color: Palette.ink, fontSize: 26, fontVariant: ['tabular-nums'], fontWeight: '700' },
-  statLabel: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
   clear: { alignItems: 'center', gap: 8, paddingVertical: 40 },
   clearMark: { alignItems: 'center', borderColor: Palette.safe, borderRadius: 36, borderWidth: 2, height: 72, justifyContent: 'center', width: 72 },
   clearCheck: { color: Palette.safe, fontSize: 32, fontWeight: '700' },
