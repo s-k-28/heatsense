@@ -13,6 +13,8 @@ import Animated, {
   type AnimatedStyle,
 } from 'react-native-reanimated';
 
+import { useBandSpot } from '@/components/band-journey';
+
 // The HeatSense band as a product image: the official three-quarter render (cut out,
 // cleaned of background haze, with a faint peach rim on its lit edge), a pre-drawn
 // soft contact shadow, and the motion styles product imagery may use:
@@ -39,11 +41,14 @@ type Props = {
   /** The same entrance for the shadow, so it appears as the band lands. */
   shadowEntrance?: AnimatedStyle<ViewStyle>;
   style?: StyleProp<ViewStyle>;
+  /** Makes this band the onboarding journey's spot with this id (see band-journey). */
+  journeyId?: string;
 };
 
 const ease = Easing.inOut(Easing.sin);
 
-export function Wristband({ height, motion = 'none', delay = 0, entrance, shadowEntrance, style }: Props) {
+export function Wristband({ height, motion = 'none', delay = 0, entrance, shadowEntrance, style, journeyId }: Props) {
+  const { ref: spotRef, onLayout: onSpotLayout, away } = useBandSpot(journeyId);
   const reducedMotion = useReducedMotion();
   const width = height * WRISTBAND_ASPECT;
   const float = useSharedValue(0);
@@ -77,13 +82,13 @@ export function Wristband({ height, motion = 'none', delay = 0, entrance, shadow
   }));
 
   return (
-    <View accessible accessibilityRole="image" accessibilityLabel="The HeatSense band" style={[{ width, height: height * 1.06 }, style]}>
+    <View accessible accessibilityRole="image" accessibilityLabel="The HeatSense band" style={[{ width, height: height * 1.06, opacity: away ? 0 : 1 }, style]}>
       <Animated.View pointerEvents="none" style={[styles.shadow, { width: width * 1.25, height: height * 0.16, left: -width * 0.125 }, shadowEntrance]}>
         <Animated.View style={[StyleSheet.absoluteFill, shadow]}>
           <Image source={SHADOW} contentFit="fill" style={StyleSheet.absoluteFill} />
         </Animated.View>
       </Animated.View>
-      <Animated.View style={[{ width, height }, entrance]}>
+      <Animated.View onLayout={onSpotLayout} ref={spotRef} style={[{ width, height }, entrance]}>
         <Animated.View style={[{ width, height }, band]}>
           <Image source={WRISTBAND_HERO} contentFit="contain" priority="high" style={StyleSheet.absoluteFill} />
         </Animated.View>

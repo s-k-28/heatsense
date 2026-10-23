@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
+import { BandSpot } from '@/components/band-journey';
 import { EntryButton, EntryHeader, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { OnboardingSelectionSurface } from '@/components/onboarding-controls';
 import { setOnboardingRole, useOnboardingRole, type OnboardingRole } from '@/state/onboarding';
@@ -25,11 +26,11 @@ export default function RoleScreen() {
   return (
     <EntryScreen background="role" backgroundDrawIn={250}>{(compact) => <>
       <Animated.View entering={fade(0)}>
-        <EntryHeader onBack={() => router.canGoBack() ? router.back() : router.replace('/sign-in')} />
+        <EntryHeader bandDock={false} onBack={() => router.canGoBack() ? router.back() : router.replace('/sign-in')} />
       </Animated.View>
       <EntryHeading accent="you." compact={compact} delay={150} lead="Made for" size="hero" style={{ marginTop: compact ? 28 : 44 }} />
       <Animated.Text entering={fade(500)} style={entryStyles.description}>Choose how you’ll use HeatSense.</Animated.Text>
-      <View style={styles.open} />
+      <View style={[styles.open, styles.bandRoom]}><BandSpot height={compact ? 120 : 160} id="role" /></View>
       <View accessibilityRole="radiogroup" accessibilityLabel="Your role" style={[styles.roles, compact && styles.rolesCompact]}>
         {roles.map((role, index) => (
           <Animated.View key={role.id} entering={rise(560 + index * 90)}>
@@ -47,6 +48,7 @@ export default function RoleScreen() {
 const styles = StyleSheet.create({
   // The open band between the headline and the choices, where the curves run.
   open: { flexGrow: 1, minHeight: 28 },
+  bandRoom: { alignItems: 'center', justifyContent: 'center' },
   roles: { gap: 12 },
   rolesCompact: { gap: 10 },
   actions: { marginTop: 26 },
