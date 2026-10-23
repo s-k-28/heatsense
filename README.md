@@ -721,15 +721,26 @@ The practice sheet opens over the dashboard rather than as its own route.
 
 Captured from the iOS Simulator (iPhone 17 Pro Max). Dashboard screens run in sample mode; vitals are **simulated** and labelled as such in the app.
 
-| Welcome | Coach Home | Plan | Alerts |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/readme/welcome.png" width="200" alt="Welcome screen with the HeatSense Band"> | <img src="docs/screenshots/readme/home.png" width="200" alt="Coach Home: heat orb showing 84°F Yellow zone with recheck, readings and applied rings"> | <img src="docs/screenshots/readme/plan.png" width="200" alt="Plan tab: Yellow zone with UIL rules as tiles"> | <img src="docs/screenshots/readme/alerts.png" width="200" alt="Alerts: guidance not applied and a slow-recovery alert"> |
-| Read the heat. Ready the team. | Latest reading, recheck timer, applied guidance | Today's UIL rules for the zone | Built from the practice record |
+**Onboarding.** The band travels from screen to screen and lands where each step needs it.
 
-| Team vitals | Athlete vitals | Athlete Band tab | Band pairing |
+| Welcome | Choose a role | Pair the band | Coach Today |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/readme/team-vitals.png" width="200" alt="Coach Team tab with live simulated vitals for four athletes"> | <img src="docs/screenshots/readme/athlete-vitals.png" width="200" alt="Marcus Lee's vitals: 125 bpm on break, slow recovery flagged"> | <img src="docs/screenshots/readme/athlete-band.png" width="200" alt="Athlete's own Band tab with heart rate and signal tiles"> | <img src="docs/screenshots/readme/pairing.png" width="200" alt="Pairing flow: Pair your HeatSense Band"> |
-| Every athlete at a glance (coach) | Slow recovery caught during a break | The athlete's own view | Part of athlete onboarding |
+| <img src="docs/screenshots/readme/welcome.png" width="200" alt="Welcome screen with the HeatSense Band"> | <img src="docs/screenshots/readme/role.png" width="200" alt="Role screen with the band resting above the choices"> | <img src="docs/screenshots/readme/pairing.png" width="200" alt="Pair your HeatSense Band"> | <img src="docs/screenshots/readme/home.png" width="200" alt="Coach Today: 84°F Yellow zone orb, recheck, readings and applied rings"> |
+| Read the heat. Ready the team. | Coach, athlete or athletic trainer | Part of athlete onboarding | One reading, the zone, the next recheck |
+
+**Coach.** One screen per job: today's rules, the team, what needs attention.
+
+| Plan | Team | Alerts | Athlete detail |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/readme/plan.png" width="200" alt="Plan: today card with WBGT, zone and UIL class, then the rules as tiles"> | <img src="docs/screenshots/readme/team-vitals.png" width="200" alt="Team: sample athletes with live simulated heart rates"> | <img src="docs/screenshots/readme/alerts.png" width="200" alt="Alerts: today summary and guidance not applied yet"> | <img src="docs/screenshots/readme/athlete-vitals.png" width="200" alt="One athlete: heart rate, last six minutes and the other signals"> |
+| Today's UIL rules for the zone | Every athlete at a glance | Built from the practice record | Recovery during a break |
+
+**Athlete and athletic trainer.** The athlete's own band and history; the trainer's live monitor.
+
+| Band | Sessions | Learn | Trainer monitor |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/readme/athlete-band.png" width="200" alt="Athlete Band tab: heart rate hero, chart and signal tiles"> | <img src="docs/screenshots/readme/sessions.png" width="200" alt="Sessions: this week chart of peak WBGT and past practices"> | <img src="docs/screenshots/readme/learn.png" width="200" alt="Learn: what each zone means and warning signs"> | <img src="docs/screenshots/readme/trainer-monitor.png" width="200" alt="Trainer Monitor: every athlete with heart rate and status"> |
+| The athlete's own vitals | This week's heat, practice by practice | Zones and warning signs | Watching the whole team |
 
 ## Repository map
 
