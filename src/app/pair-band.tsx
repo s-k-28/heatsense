@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInUp, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
@@ -10,14 +10,12 @@ import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { Entry } from '@/constants/entry-theme';
 import { firebaseAuth, firestore } from '@/services/firebase';
 import { savePairing } from '@/services/band-vitals';
-import { bandSerial, connectBand, prepareBluetooth, startScan, stopScan, useBand, type FoundBand } from '@/state/band-ble';
 import { PAIRED_SERIAL } from '@/state/band-uplink';
 import { setPreference } from '@/state/preferences';
 
 // Pairing the HeatSense Band, in the onboarding's welcome-screen design: get the band ready, put it
-// on, look for the pairing light, pick your band, connect. On a phone, Select scans for real bands
-// over Bluetooth and Connect connects to the one picked (src/state/band-ble.ts). Where there's no
-// Bluetooth radio (the iOS Simulator, the web), finding and connecting are simulated and say so.
+// on, look for the pairing light, pick your band, connect. There is no Bluetooth layer yet (see
+// README, "HeatSense Band"), so finding and connecting are simulated, and every step says so.
 
 const SERIAL = PAIRED_SERIAL;
 const STEPS = ['ready', 'wear', 'light', 'select', 'connecting', 'connected'] as const;
@@ -88,53 +86,31 @@ export default function PairBandScreen() {
   const [step, setStep] = useState<Step>('ready');
   const [help, setHelp] = useState(false);
   const [found, setFound] = useState(false);
-  const [chosen, setChosen] = useState<FoundBand | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-  const band = useBand();
-  useEffect(() => { prepareBluetooth(); }, []);
-  // A phone with a Bluetooth radio pairs for real, even while the radio is off or not yet allowed.
-  const real = band.radio === 'on' || band.radio === 'off' || band.radio === 'unauthorized';
-  const serial = chosen ? bandSerial(chosen.id) : SERIAL;
 
   const index = STEPS.indexOf(step);
   const go = (next: Step) => { setHelp(false); if (next === 'select') setFound(false); setStep(next); };
   const finish = () => (inSetup ? router.replace('/notifications') : router.canGoBack() ? router.back() : router.replace('/dashboard?role=athlete&tab=band'));
   const back = () => (index > 0 && step !== 'connected' ? go(STEPS[index - 1]) : router.canGoBack() ? router.back() : finish());
 
-  // Searching for nearby bands: a real scan with a radio, otherwise a short simulated search.
+  // Searching for nearby bands.
   useEffect(() => {
     if (step !== 'select') return;
-    if (real) {
-      if (band.radio !== 'on') return;
-      startScan();
-      return stopScan;
-    }
     timer.current = setTimeout(() => setFound(true), 1200);
-  }, [band.radio, real, step]);
+  }, [step]);
 
   // Connecting, then connected.
   useEffect(() => {
     if (step !== 'connecting') return;
-    if (real && chosen) {
-      let live = true;
-      connectBand({ id: chosen.id, name: chosen.name }).then((ok) => {
-        if (!live) return;
-        if (!ok) { setStep('select'); return; }
-        if (firestore && firebaseAuth?.currentUser) savePairing(bandSerial(chosen.id)).catch(() => {});
-        setStep('connected');
-      });
-      return () => { live = false; };
-    }
     timer.current = setTimeout(() => {
       setPreference('bandConnected', true);
       // Signed-in athletes keep the pairing on their account; offline sample builds just remember it.
       if (firestore && firebaseAuth?.currentUser) savePairing(SERIAL).catch(() => {});
       setStep('connected');
     }, 1800);
-  }, [chosen, real, step]);
+  }, [step]);
 
-  const pick = (choice: FoundBand) => { setChosen(choice); go('connecting'); };
   const rise = (delay: number) => (reduced ? undefined : FadeInUp.delay(delay).duration(520));
   const fade = (delay: number) => (reduced ? undefined : FadeIn.delay(delay).duration(420));
   const linking = step === 'connecting' || step === 'connected';
@@ -154,46 +130,13 @@ export default function PairBandScreen() {
         <EntryHeader brand={false} onBack={step === 'connected' ? undefined : back} progress={{ step: index + 1, total: STEPS.length }} />
       </Animated.View>
       <EntryHeading accent={HEADING[step].accent} compact={compact} delay={120} lead={HEADING[step].lead} size="hero" style={{ marginTop: compact ? 22 : 34 }} />
-      <Animated.Text entering={fade(450)} style={entryStyles.description}>{step === 'connecting' ? `Pairing with HeatSense Band ${serial}.` : COPY[step]}</Animated.Text>
+      <Animated.Text entering={fade(450)} style={entryStyles.description}>{COPY[step]}</Animated.Text>
 
       <Animated.View entering={rise(500)} style={styles.stage}>
         {linking ? <Link connected={step === 'connected'} /> : <BandShot id={`pair-${step}`} light={step === 'light'} size={compact ? 200 : 240} />}
       </Animated.View>
 
-      {step === 'select' && real ? (
-        <Animated.View entering={rise(650)}>
-          {band.radio === 'off' ? (
-            <Text style={styles.searching}>Turn on Bluetooth to find your band.</Text>
-          ) : band.radio === 'unauthorized' ? (
-            <>
-              <Text style={styles.searching}>Allow Bluetooth for HeatSense to find your band.</Text>
-              <EntryLink label="Open Settings" onPress={() => Linking.openSettings()} />
-            </>
-          ) : (
-            <>
-              {band.found.map((item) => (
-                <Pressable accessibilityHint="Pairs this band" accessibilityRole="button" key={item.id} onPress={() => pick(item)} style={({ pressed }) => [styles.device, pressed && styles.pressed]}>
-                  <View>
-                    <Text style={styles.deviceText}>HeatSense Band {bandSerial(item.id)}</Text>
-                    {item.rssi !== null ? <Text style={styles.signal}>Signal {item.rssi > -60 ? 'strong' : item.rssi > -80 ? 'good' : 'weak'}</Text> : null}
-                  </View>
-                  <Svg fill="none" height={20} stroke={Entry.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={20}><Path d="m9 6 6 6-6 6" /></Svg>
-                </Pressable>
-              ))}
-              {band.status === 'scanning' ? (
-                <Text accessibilityLiveRegion="polite" style={styles.searching}>Looking for bands nearby…</Text>
-              ) : band.found.length === 0 ? (
-                <>
-                  <Text style={styles.searching}>{band.error ?? 'No bands found. Check the pairing light and keep the band close.'}</Text>
-                  <EntryLink label="Search again" onPress={startScan} />
-                </>
-              ) : null}
-            </>
-          )}
-        </Animated.View>
-      ) : null}
-
-      {step === 'select' && !real ? (
+      {step === 'select' ? (
         <Animated.View entering={rise(650)}>
           {found ? (
             <Pressable accessibilityHint="Pairs this band" accessibilityRole="button" onPress={() => go('connecting')} style={({ pressed }) => [styles.device, pressed && styles.pressed]}>
@@ -215,7 +158,7 @@ export default function PairBandScreen() {
       ) : null}
 
       <View style={styles.open} />
-      {real ? null : <Text style={styles.demo}>Demo pairing. This device has no Bluetooth radio.</Text>}
+      <Text style={styles.demo}>Demo pairing. Bluetooth arrives with the band firmware.</Text>
       <Animated.View entering={rise(700)} style={styles.actions}>
         {action ? <EntryButton label={action.label} onPress={action.onPress} /> : null}
         {step === 'wear' || step === 'light' ? <EntryLink label={help ? 'Hide tips' : step === 'wear' ? 'Need help?' : 'Not seeing the light?'} onPress={() => setHelp(!help)} /> : null}
@@ -232,7 +175,6 @@ const styles = StyleSheet.create({
   led: { backgroundColor: Entry.peach, borderRadius: 6, height: 12, position: 'absolute', shadowColor: Entry.peach, shadowOpacity: 1, shadowRadius: 10, width: 12 },
   device: { alignItems: 'center', backgroundColor: Entry.surface, borderColor: Entry.line, borderRadius: 18, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, minHeight: 60, paddingHorizontal: 18 },
   deviceText: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16 },
-  signal: { color: Entry.muted, fontFamily: Entry.body, fontSize: 13, marginTop: 2 },
   searching: { color: Entry.muted, fontFamily: Entry.medium, fontSize: 15, marginTop: 24, textAlign: 'center' },
   help: { color: Entry.muted, fontFamily: Entry.body, fontSize: 15, lineHeight: 22, marginTop: 16 },
   link: { alignItems: 'center', alignSelf: 'stretch', flexDirection: 'row', justifyContent: 'space-between', marginVertical: 16 },

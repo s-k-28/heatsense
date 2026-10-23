@@ -55,14 +55,6 @@
           "photosPermission": "HeatSense uses your photos so you can choose a profile picture.",
           "cameraPermission": "HeatSense uses the camera so you can take a profile picture."
         }
-      ],
-      [
-        "react-native-ble-plx",
-        {
-          "isBackgroundEnabled": false,
-          "modes": [],
-          "bluetoothAlwaysPermission": "HeatSense uses Bluetooth to connect to your HeatSense Band and show your heart rate during practice."
-        }
       ]
     ],
     "experiments": {

@@ -129,8 +129,8 @@ We want to be clear about what is real and what is not yet.
 | 🧪 **Simulated** | Band vitals for a demo team (heart rate, skin temperature, sweat, movement, blood oxygen, recovery check), each with its own chart over the last 30 minutes | `src/lib/band-simulator.ts`. Every screen labels it **SIMULATED BAND DATA**; on by default only in builds without Firebase |
 | 🔵 **Planned** | Custom (non-UIL) school heat policies | Every session already stores its policy version (`uil-wbgt@2025-26`), so a second policy can be added without migrating data |
 | 🔵 **Planned** | Live sensor or weather-based WBGT | Today, every reading is typed in by a coach |
-| 🟢 **Works today** | Band backend: pairing record and live practice vitals in Firestore | `src/services/band-vitals.ts`. An approved athlete's phone reports a sample every 30 s during practice; the coach and trainers read it, teammates can't; rules cap writes at one per 10 s. A real band's samples are marked `band`; without one, the athlete's band is simulated and marked `simulated` |
-| 🛠️ **In development** | HeatSense Band wearable | Bench prototype: ESP32 firmware streams heart rate, SpO2, steps and movement over Bluetooth; the app scans, pairs, decodes and shows it live. Not yet tested on the body against a reference device. See [HeatSense Band](#heatsense-band-hardware-in-development) |
+| 🟢 **Works today** | Band backend: pairing record and live practice vitals in Firestore | `src/services/band-vitals.ts`. An approved athlete's phone reports a sample every 30 s during practice; the coach and trainers read it, teammates can't; rules cap writes at one per 10 s. Samples are marked `simulated` until the firmware lands |
+| 🛠️ **In development** | HeatSense Band wearable | Pairing flow in onboarding, a tested signal simulator, and the backend above. No firmware or Bluetooth code yet. See [HeatSense Band](#heatsense-band-hardware-in-development) |
 
 ## How it works
 
@@ -441,7 +441,7 @@ This table is a summary to help explain the app. A school should always follow t
 ## HeatSense Band (hardware, in development)
 
 > [!WARNING]
-> **In development.** The band is a bench prototype: an Arduino Nano ESP32 with a MAX30102 and an MPU6050 streams heart rate, SpO2, steps and movement over Bluetooth, and the app pairs with it and shows the readings live (on a phone build; the iOS Simulator has no Bluetooth, so pairing there is simulated). Readings have not been checked against a reference device on the body. The band does not and will not diagnose heat illness. Its signals are only meant to give a coach or athletic trainer extra awareness, alongside WBGT, which stays the primary input.
+> **In development.** Right now the band is a design and a parts list. **The repository contains no firmware and no Bluetooth code, and no BLE library is installed.** `src/app/pair-band.tsx` is a pairing screen whose search and pairing are *simulated* with short delays. Nothing below has been built or tested. The band does not and will not diagnose heat illness. Its signals are only meant to give a coach or athletic trainer extra awareness, alongside WBGT, which stays the primary input.
 
 The HeatSense Band is a screenless wearable that an athlete wears on the wrist or upper arm, similar in shape to a WHOOP strap. It pairs with the HeatSense app. It would add a little individual context (pulse, movement load, and skin conductance) to the team-wide WBGT picture.
 
@@ -449,13 +449,13 @@ The HeatSense Band is a screenless wearable that an athlete wears on the wrist o
 
 | | Item |
 |---|---|
-| ✅ Exists | Pairing flow (`src/app/pair-band.tsx`): get ready → put on → pairing light → select → connect. Part of athlete onboarding and the athlete's Band tab. On a phone it scans for and connects to real bands; without a Bluetooth radio it's simulated |
-| ✅ Exists | Prototype firmware (`firmware/HeatSenseBand/HeatSenseBand.ino`): heart rate, SpO2, steps, cadence and activity, sent as v3 packets over BLE |
-| ✅ Exists | App BLE layer (`src/state/band-ble.ts`, react-native-ble-plx) and packet decoder (`src/lib/band-packet.ts`) with a self-check (`scripts/check-band-packet.ts`) |
+| ✅ Exists | Pairing flow (`src/app/pair-band.tsx`): get ready → put on → pairing light → select → connect. Part of athlete onboarding and the athlete's Band tab. Search and connection are simulated |
 | ✅ Exists | Signal simulator (`src/lib/band-simulator.ts`) that produces the same signals the band is designed to send, with a self-check (`scripts/check-band-simulator.ts`) |
 | ✅ Exists | Vitals screens fed by the simulator: coach Team tab, trainer Monitor, athlete vitals detail (`src/app/athlete-vitals.tsx`), athlete Band tab |
 | ✅ Exists | The band as an optional part of the product design. The app is fully usable without it |
-| 🔵 Planned | GSR and skin-temperature sensors, and a Control characteristic for start/stop and battery |
+| 🔵 Planned | Firmware for the ESP32 Nano (C++, Arduino framework, built with PlatformIO) |
+| 🔵 Planned | A BLE library in the app, for example `react-native-ble-plx` (needs a native build, not Expo Go) |
+| 🔵 Planned | The GATT service and packet format below, then versioning them |
 | 🔵 Planned | Bench testing each sensor on its own, then on-body testing against a reference device |
 | 🔵 Planned | A consent flow before any band data leaves the athlete's phone |
 
@@ -522,8 +522,8 @@ What each sensor measures, how the firmware is planned to turn it into a number,
 
 | Side | Language | Tools | Status |
 |---|---|---|---|
-| Band firmware | C++ | Arduino framework on ESP32 (Arduino Cloud), ArduinoBLE | Prototype: heart rate, SpO2, steps, movement |
-| App | TypeScript | React Native / Expo, `react-native-ble-plx` (needs a native build, not Expo Go) | Scans, pairs, decodes, shows live and uploads |
+| Band firmware | C++ | Arduino framework on ESP32, built with PlatformIO | Planned, no code yet |
+| App | TypeScript | React Native / Expo, plus a BLE library such as `react-native-ble-plx` | Pairing UI exists; BLE layer planned |
 
 ### Firmware main loop (planned)
 
@@ -541,32 +541,50 @@ stateDiagram-v2
     Sleep --> Advertising: wrist motion (MPU6050 interrupt)
 ```
 
-### Bluetooth Low Energy (as built)
+### Bluetooth Low Energy design (draft)
 
-The prototype band runs `firmware/HeatSenseBand/HeatSenseBand.ino` (Arduino Nano ESP32, ArduinoBLE). It reads both sensors directly over I2C, with no sensor libraries, because Arduino Cloud has several MAX3010x libraries that share file names and doesn't always pick the same one.
+- **Roles:** the band is the **GATT peripheral** and advertises the HeatSense service. The phone is the **central**: it scans, connects, and subscribes.
+- **One custom HeatSense service** (128-bit UUID, not assigned yet) with two characteristics:
+  - **Data**: *notify*. The band pushes one small binary packet on a regular interval.
+  - **Control**: *write*. The app sends simple commands, for example start/stop streaming, set the interval, or ask for the battery level.
+- **Packets are binary and versioned**, so the app can reject or adapt to formats it doesn't understand, and the firmware can change without breaking older app builds.
 
-- **Roles:** the band is the **GATT peripheral** and advertises as `HeatSense Band`. The phone is the **central**: it scans for the HeatSense service, connects, and subscribes.
-- **Service** `7c2daac7-c17d-4d78-bb0a-d6af909b166c`, **data characteristic** `a69c8da6-232c-4de9-8185-c767023d0af0` (read + notify). The band notifies one packet a second.
-- **Heart rate** comes from the firmware's own adaptive peak detector on the IR signal; **SpO2** from the ratio of red to infrared pulse size over a 4-second window, using Maxim's calibration curve. **Steps** come from peaks in the accelerometer signal with gravity removed (counting starts after 4 steps in a row); **cadence** from the last 10 seconds; **activity** (still, active, walking, running) from cadence, movement and how fast the gyroscope says the wrist is turning.
-- **Packets are binary and versioned.** `src/lib/band-packet.ts` decodes versions 1–3 and rejects anything else; `scripts/check-band-packet.ts` tests it against a packet captured from the band.
-
-**Packet v3** (what the firmware sends): little-endian, 20 bytes, which fits in one default-size BLE notification.
+**Draft packet schema (v1)**: little-endian, 13 bytes, which fits in one default-size BLE notification.
 
 | Offset | Field | Type | Meaning |
 |---|---|---|---|
-| 0 | `version` | uint8 | 3 (v1 is 13 bytes, v2 adds SpO2 at 14 bytes) |
-| 1 | `sequence` | uint16 | Counts up by one per packet. Gaps show dropped packets |
-| 3 | `seconds` | uint32 | Seconds since the band started |
+| 0 | `version` | uint8 | Packet format version (1) |
+| 1 | `sequence` | uint16 | Counts up by one per packet and wraps around. Gaps show dropped packets |
+| 3 | `timestamp` | uint32 | Seconds since the band started (the app maps this to wall-clock time) |
 | 7 | `heartRate` | uint8 | Beats per minute, 0 = no valid reading |
-| 8 | `motion` | uint16 | Movement over the last second, milli-g with gravity removed |
-| 10 | `gsr` | uint16 | Raw GSR level (0 until the sensor is wired) |
-| 12 | `battery` | uint8 | Percent, 255 = unknown |
-| 13 | `spo2` | uint8 | Percent, 0 = no valid reading |
-| 14 | `steps` | uint32 | Steps since the band started |
-| 18 | `cadence` | uint8 | Steps per minute |
-| 19 | `activity` | uint8 | 0 still, 1 active, 2 walking, 3 running |
+| 8 | `motion` | uint16 | Movement, 0–100 (see the signal chain above) |
+| 10 | `gsr` | uint16 | Raw GSR level from the ADC (relative trend, not calibrated) |
+| 12 | `battery` | uint8 | Battery percent, 0–100 |
 
-**In the app.** `src/state/band-ble.ts` (react-native-ble-plx) scans, connects, decodes each packet and keeps a short heart-rate history plus per-connection steps and an active-energy estimate (`src/lib/band-motion.ts`: MET values by activity, assuming 70 kg). The athlete's Band tab shows it live, labelled as a prototype sensor, and `src/state/band-uplink.ts` sends a sample to the team every 30 s during practice marked `band` (movement is stored as 0–100, where 1 g is 100). Without a band connected, the athlete's band stays simulated and marked `simulated`.
+> This schema is a **draft**. Field sizes, units, and the interval will change once we test real hardware.
+
+**Draft v2** appends two fields (15 bytes, still one notification): `skinTemp` int16 at offset 13 (hundredths of a °C, `0x7FFF` = no sensor) and `flags` uint8 at offset 15 (bit 0: on-wrist contact, bit 1: charging).
+
+**Planned decode in the app.** Packets become the same `Vitals` shape the simulator produces today, so the screens don't change when real data arrives:
+
+```ts
+// Planned: src/lib/band-packet.ts. Not in the repo yet.
+function decodePacket(bytes: DataView): Vitals | null {
+  const version = bytes.getUint8(0);
+  if (version !== 1 && version !== 2) return null;        // unknown format: reject, don't guess
+  const heartRate = bytes.getUint8(7);                     // 0 = no valid reading
+  const motion = bytes.getUint16(8, true);
+  const gsr = bytes.getUint16(10, true);
+  const skinC = version >= 2 ? bytes.getInt16(13, true) : 0x7fff;
+  return {
+    heartRate,
+    movement: Math.min(100, motion),
+    sweat: gsrToMicrosiemens(gsr),                         // raw ADC → µS, calibrated per module on the bench
+    skinTempF: skinC === 0x7fff ? NaN : (skinC / 100) * 1.8 + 32,
+    phase: 'work',                                         // set from the practice plan, not the band
+  };
+}
+```
 
 ### Recovery check
 
@@ -625,7 +643,7 @@ Until there's firmware, `src/lib/band-simulator.ts` produces each demo athlete's
 
 The live demo team (`src/state/demo-team.ts`) runs practice time at **10×**, so a full 20/10 work-rest cycle plays out in 3 minutes, and one athlete (*r* = 0.45) is built to recover slowly so the "slow recovery" path can be seen. `scripts/check-band-simulator.ts` checks that every signal stays in a plausible range in every zone, that work raises heart rate and rest lowers it, that heat costs something, and that the slow athlete (and only that athlete) gets flagged.
 
-With a real band connected, the decoded packets (`src/lib/band-packet.ts`) replace the simulator as the athlete's source, and the uplink and the coach's screens stay the same.
+When firmware exists, `decodePacket()` replaces the simulator as the source of `Vitals`, and nothing downstream changes.
 
 ### Data flow (planned)
 
@@ -1033,9 +1051,9 @@ gantt
 
 **HeatSense Band: in development**
 - [ ] Bench-test each sensor (MAX30102, MPU6050, GSR) on the ESP32 Nano
-- [x] Firmware v0: read sensors, build packets, BLE notify (now v3: heart rate, SpO2, steps, movement)
+- [ ] Firmware v0: read sensors, build v1 packets, BLE notify
 - [ ] Add a skin-temperature sensor (for example MAX30205) and packet v2
-- [x] App BLE layer: scan, pair, subscribe, decode, reconnect; real samples replace the simulator in the uplink
+- [ ] App BLE layer: scan, pair, subscribe, `decodePacket()`, reconnect, replacing the simulator as the `Vitals` source
 - [ ] Consent flow before any band data is shared
 - [ ] On-body testing against a reference heart-rate device
 
