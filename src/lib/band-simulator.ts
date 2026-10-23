@@ -31,8 +31,8 @@ export type Vitals = {
 export type RecoveryStatus = 'usual' | 'watch';
 
 export const DEMO_TEAM: DemoAthlete[] = [
-  { id: 'demo-1', name: 'Jordan Reyes', position: 'Midfielder', restingHr: 62, recovery: 1, acclimatizationDay: 14 },
-  { id: 'demo-2', name: 'Ava Thompson', position: 'Forward', restingHr: 58, recovery: 1.15, acclimatizationDay: 9 },
+  { id: 'demo-1', name: 'Jordan Reyes', position: 'Midfielder', restingHr: 62, recovery: 1, acclimatizationDay: 9 },
+  { id: 'demo-2', name: 'Ava Thompson', position: 'Forward', restingHr: 58, recovery: 1.15, acclimatizationDay: 14 },
   // Recovers slowly: heart rate stays high through breaks, so the trainer's view has something to catch.
   { id: 'demo-3', name: 'Marcus Lee', position: 'Defender', restingHr: 66, recovery: 0.45, acclimatizationDay: 3 },
   { id: 'demo-4', name: 'Sofia Patel', position: 'Goalkeeper', restingHr: 60, recovery: 0.95, acclimatizationDay: 14 },

@@ -18,6 +18,7 @@ import {
 import { MaxContentWidth, Palette, Spacing } from '@/constants/theme';
 import { endPracticeActivity, startPracticeActivity } from '@/lib/practice-activity';
 import { useAuthSession } from '@/state/auth-session';
+import { useAthletes } from '@/state/athletes';
 import { useHeatAlerts } from '@/state/heat-alerts';
 import { markRefreshed, usePreferences } from '@/state/preferences';
 import { usePracticePlans } from '@/state/practice-plans';
@@ -69,7 +70,7 @@ export default function DashboardScreen() {
   const params = useLocalSearchParams<{ role?: string; state?: string; tab?: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuthSession();
-  const { celsius, incidentAcknowledged, practiceLiveActivity, practiceStartedAt } = usePreferences();
+  const { bandConnected, celsius, demoTeam, incidentAcknowledged, practiceLiveActivity, practiceStartedAt } = usePreferences();
   const { active: plan } = usePracticePlans();
 
   // The Dynamic Island / Lock Screen practice activity follows the Profile switch and the unit choice.
@@ -130,6 +131,17 @@ export default function DashboardScreen() {
     }, 900);
   };
 
+  // The band in the corner: an athlete's battery, or how many athletes' bands are live for staff.
+  const team = useAthletes(role === 'trainer' ? 'trainer' : 'coach');
+  const live = team.athletes.filter((a) => a.live && !a.live.stale).length;
+  const paired = bandConnected || demoTeam;
+  // ponytail: battery is the simulator's until the band's BLE battery service lands.
+  const headerBand = role === 'athlete'
+    ? { label: paired ? '78%' : 'Pair', tone: paired ? Palette.safe : Palette.coral, accessibilityLabel: paired ? 'HeatSense Band, 78 percent battery' : 'Pair your HeatSense Band', onPress: () => select('band') }
+    : live
+      ? { label: String(live), tone: Palette.safe, accessibilityLabel: `${live} bands live`, onPress: () => select(role === 'trainer' ? 'monitor' : 'team') }
+      : undefined;
+
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
@@ -149,7 +161,7 @@ export default function DashboardScreen() {
           {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent onNavigate={select} role={role} tab={activeTab} />}
         </View>
       </Animated.ScrollView>
-      <DashboardHeader name={accountName} onAlerts={role === 'coach' ? () => select('alerts') : role === 'trainer' ? () => select('monitor') : undefined} onProfile={() => select('profile')} scrollY={scrollY} title={title} />
+      <DashboardHeader band={headerBand} name={accountName} onAlerts={role === 'coach' ? () => select('alerts') : role === 'trainer' ? () => select('monitor') : undefined} onProfile={() => select('profile')} scrollY={scrollY} title={title} />
       <TabBar activeTab={activeTab} onChange={select} tabs={tabs} />
     </View>
   );

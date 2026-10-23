@@ -88,11 +88,12 @@ function TrainerContent({ tab }: { tab: string }) {
 }
 
 function AthleteContent({ tab }: { tab: string }) {
+  const go = useContext(NavContext);
   if (tab === 'band') return <><LargeTitle title="Band" /><AthleteBand /></>;
   if (tab === 'sessions') return <><LargeTitle title="Sessions" /><AthleteSessions /></>;
   if (tab === 'learn') return <><LargeTitle title="Learn" /><LearnTab /></>;
   if (tab === 'profile') return <><LargeTitle title="Profile" /><ProfileTab role="Athlete" /></>;
-  return <><LargeTitle title="Today" /><AthleteHome /></>;
+  return <><LargeTitle title="Today" /><AthleteHome onOpenBand={() => go('band')} /></>;
 }
 
 /* ─────────────────────────────── Home screens ─────────────────────────────── */
