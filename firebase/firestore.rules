@@ -16,10 +16,60 @@ service cloud.firestore {
       return signedIn() && exists(path) && get(path).data.status == 'active';
     }
 
-    // Coaches and approved members can read their team; a pending athlete cannot.
+    // Teams. A coach creates their own and edits only its details and active code; approved
+    // members can read it; a pending athlete cannot. (Free plan: no server, so the rules check it all.)
+    function validTeam(d) {
+      return d.keys().hasOnly(['name', 'school', 'sport', 'level', 'coachUid', 'createdBy', 'status', 'activeCode', 'createdAt', 'updatedAt'])
+        && d.name is string && d.name.size() >= 1 && d.name.size() <= 80
+        && d.school is string && d.school.size() >= 1 && d.school.size() <= 80
+        && d.sport is string && d.sport.size() >= 1 && d.sport.size() <= 40
+        && d.level is string && d.level.size() >= 1 && d.level.size() <= 40
+        && (d.activeCode == null || (d.activeCode is string && d.activeCode.matches('^[0-9]{6}$')));
+    }
     match /teams/{teamId} {
-      allow read: if isCoach(teamId) || isActiveMember(teamId);
-      allow write: if false;
+      allow read: if signedIn() && (resource.data.coachUid == request.auth.uid || isActiveMember(teamId));
+      allow create: if signedIn() && validTeam(request.resource.data)
+        && request.resource.data.coachUid == request.auth.uid
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.activeCode == null
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn() && resource.data.coachUid == request.auth.uid
+        && validTeam(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'school', 'sport', 'level', 'activeCode', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && (request.resource.data.activeCode == null
+          || get(/databases/$(database)/documents/inviteCodes/$(request.resource.data.activeCode)).data.teamId == teamId);
+      allow delete: if false;
+    }
+
+    // Invite codes. Anyone signed in can look up one exact code (never list them). Only the team's
+    // coach creates a code (only if it isn't taken) or revokes one. Codes last at most 8 days.
+    function liveCode(code, teamId) {
+      let path = /databases/$(database)/documents/inviteCodes/$(code);
+      return exists(path) && get(path).data.teamId == teamId && get(path).data.revoked == false && get(path).data.expiresAt > request.time;
+    }
+    match /inviteCodes/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && code.matches('^[0-9]{6}$')
+        && isCoach(request.resource.data.teamId)
+        && request.resource.data.keys().hasOnly(['teamId', 'team', 'createdBy', 'createdAt', 'expiresAt', 'revoked'])
+        && request.resource.data.team == {
+          'teamName': get(/databases/$(database)/documents/teams/$(request.resource.data.teamId)).data.name,
+          'school': get(/databases/$(database)/documents/teams/$(request.resource.data.teamId)).data.school,
+          'sport': get(/databases/$(database)/documents/teams/$(request.resource.data.teamId)).data.sport }
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <= request.time + duration.value(8, 'd')
+        && request.resource.data.revoked == false;
+      allow update: if isCoach(resource.data.teamId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked'])
+        && request.resource.data.revoked == true;
+      allow delete: if false;
     }
 
     function isActiveTrainer(teamId) {
@@ -32,11 +82,44 @@ service cloud.firestore {
     // team's athletic trainers are, but not other athletes. Nobody can approve or edit from the app.
     match /teamMembers/{membershipId} {
       allow read: if signedIn() && (
-        resource.data.userId == request.auth.uid
+        // Your own membership, even before it exists (so the app can check before asking to join).
+        membershipId.matches('.+_' + request.auth.uid + '$')
+        || resource.data.userId == request.auth.uid
         || isCoach(resource.data.teamId)
         || isActiveTrainer(resource.data.teamId)
         || (resource.data.role == 'trainer' && resource.data.status == 'active' && isActiveMember(resource.data.teamId)));
-      allow write: if false;
+      // Asking to join: your own PENDING request, with a live code for that team, never your own team.
+      allow create: if signedIn()
+        && membershipId == request.resource.data.teamId + '_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(['teamId', 'userId', 'role', 'status', 'inviteCode', 'team', 'displayName', 'email', 'requestedAt', 'joinedAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.role in ['athlete', 'trainer']
+        && request.resource.data.status == 'pending'
+        && request.resource.data.requestedAt == request.time
+        && request.resource.data.joinedAt == null
+        && liveCode(request.resource.data.inviteCode, request.resource.data.teamId)
+        && request.resource.data.team == get(/databases/$(database)/documents/inviteCodes/$(request.resource.data.inviteCode)).data.team
+        && get(/databases/$(database)/documents/teams/$(request.resource.data.teamId)).data.coachUid != request.auth.uid
+        && request.resource.data.displayName == request.auth.token.get('name', null)
+        && request.resource.data.email == request.auth.token.get('email', null);
+      allow update: if signedIn() && (
+        // The coach approves or declines a pending request; nothing else changes.
+        (isCoach(resource.data.teamId)
+          && resource.data.status == 'pending'
+          && request.resource.data.status in ['active', 'declined']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'joinedAt', 'respondedAt', 'respondedBy'])
+          && request.resource.data.respondedAt == request.time
+          && request.resource.data.respondedBy == request.auth.uid
+          && request.resource.data.joinedAt == (request.resource.data.status == 'active' ? request.time : null))
+        // Declined before: ask again with a live code for the same team.
+        || (resource.data.userId == request.auth.uid
+          && resource.data.status == 'declined'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.role in ['athlete', 'trainer']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'status', 'inviteCode', 'team', 'requestedAt'])
+          && request.resource.data.requestedAt == request.time
+          && liveCode(request.resource.data.inviteCode, resource.data.teamId)));
+      allow delete: if false;
     }
 
     // Athlete profile (onboarding page 1). The athlete writes their own; every field is
