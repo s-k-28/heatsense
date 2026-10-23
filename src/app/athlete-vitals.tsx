@@ -4,10 +4,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { VitalsDetail } from '@/components/vitals';
+import { SimulatedTag, VitalsDetail } from '@/components/vitals';
+import { MetricTile, Tiles } from '@/components/whoop-ui';
 import { MaxContentWidth, Palette } from '@/constants/theme';
 import { useDemoTeam } from '@/state/demo-team';
-import { useCoachData, type SessionRole } from '@/state/team-session';
+import { useCoachData, useRoster, useTeamVitals, type SessionRole } from '@/state/team-session';
 
 // One athlete's band vitals, opened from the coach's Team tab or the trainer's Monitor.
 
@@ -18,6 +19,10 @@ export default function AthleteVitalsScreen() {
   const zone = data?.readings.at(-1)?.zone ?? 'yellow';
   const { members } = useDemoTeam(zone);
   const member = members.find((m) => m.athlete.id === id) ?? null;
+  // A real athlete: their name from the roster and their latest band sample from this practice.
+  const roster = useRoster(data?.teamId ?? null);
+  const live = useTeamVitals(data?.session ?? null).find((r) => r.athleteUid === id) ?? null;
+  const name = member ? member.athlete.name : roster?.find((m) => m.userId === id)?.displayName ?? 'Athlete';
 
   return (
     <View style={styles.screen}>
@@ -26,7 +31,7 @@ export default function AthleteVitalsScreen() {
         <Pressable accessibilityLabel="Back" accessibilityRole="button" hitSlop={10} onPress={() => (router.canGoBack() ? router.back() : router.replace('/dashboard?role=coach&tab=team'))} style={styles.back}>
           <Svg fill="none" height={24} stroke={Palette.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={24}><Path d="m15 5-7 7 7 7" /></Svg>
         </Pressable>
-        <Text numberOfLines={1} style={styles.barTitle}>{member ? member.athlete.name : 'Athlete'}</Text>
+        <Text numberOfLines={1} style={styles.barTitle}>{name}</Text>
         <View style={styles.back} />
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
@@ -36,8 +41,23 @@ export default function AthleteVitalsScreen() {
               <Text style={styles.position}>{member.athlete.position}</Text>
               <VitalsDetail member={member} />
             </>
+          ) : live ? (
+            <>
+              {live.source === 'simulated' ? <SimulatedTag /> : null}
+              <View style={styles.liveHero}>
+                <Text style={styles.liveHr}>{live.heartRate}</Text>
+                <Text style={styles.liveUnit}>bpm · {live.recovery === 'watch' ? 'slow recovery' : 'usual range'}</Text>
+                <Text style={styles.liveWhen}>Updated {live.updatedAt ? live.updatedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : 'just now'}</Text>
+              </View>
+              <Tiles>
+                <MetricTile label="Skin temp" unit="°F" value={live.skinTempF?.toFixed(1) ?? '--'} />
+                <MetricTile label="Sweat (GSR)" unit="µS" value={live.sweat?.toFixed(1) ?? '--'} />
+                <MetricTile label="Movement" unit="%" value={String(Math.round(live.movement))} />
+                <MetricTile label="Band" value={live.serial ?? '--'} />
+              </Tiles>
+            </>
           ) : (
-            <Text style={styles.empty}>No band data for this athlete. Vitals appear once they pair a HeatSense Band.</Text>
+            <Text style={styles.empty}>No band data from {name.split(' ')[0]} yet. Vitals appear during practice once their HeatSense Band is paired and their app is open.</Text>
           )}
         </View>
       </ScrollView>
@@ -46,6 +66,10 @@ export default function AthleteVitalsScreen() {
 }
 
 const styles = StyleSheet.create({
+  liveHero: { alignItems: 'center', gap: 4, marginBottom: 20 },
+  liveHr: { color: Palette.ink, fontSize: 80, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -2 },
+  liveUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
+  liveWhen: { color: Palette.inkFaint, fontSize: 14 },
   screen: { backgroundColor: '#0A0B0D', flex: 1 },
   bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12 },
   back: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },

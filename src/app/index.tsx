@@ -33,7 +33,9 @@ import {
   WbgtVisual,
   WristbandVisual,
 } from '@/components/onboarding-visuals';
+import { Entry } from '@/constants/entry-theme';
 import { MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
+import { homeRoute } from '@/services/team-invites';
 import { useAuthSession } from '@/state/auth-session';
 
 const icons = {
@@ -99,7 +101,18 @@ type Role = 'Coach' | 'Athletic trainer' | 'Athlete';
 export default function OnboardingRoute() {
   const { step } = useLocalSearchParams<{ step?: string }>();
   const { user } = useAuthSession();
-  if (step === undefined) return <Redirect href={user ? '/role' : '/welcome'} />;
+  // A signed-in person with a team opens on their dashboard, not on the role picker again.
+  const [home, setHome] = useState<string | null>(null);
+  useEffect(() => {
+    if (step !== undefined || !user) return;
+    let live = true;
+    homeRoute().then((route) => { if (live) setHome(route); });
+    return () => { live = false; };
+  }, [step, user]);
+  if (step === undefined) {
+    if (!user) return <Redirect href="/welcome" />;
+    return home ? <Redirect href={home as never} /> : <View style={{ backgroundColor: Entry.canvas, flex: 1 }} />;
+  }
   return <OnboardingScreen />;
 }
 

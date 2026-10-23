@@ -101,6 +101,20 @@ async function liveInvite(teamId: string, code: string | null): Promise<TeamInvi
   return { teamId, code, expiresAt: invite.expiresAt.toDate().toISOString() };
 }
 
+/** Where a signed-in person belongs: their dashboard if they coach a team or have joined (or asked to join) one; otherwise choosing a role. */
+export async function homeRoute(): Promise<string> {
+  try {
+    const user = firebaseAuth?.currentUser;
+    if (!user || !firestore) return '/role';
+    if (await myTeam()) return '/dashboard?role=coach';
+    const mine = await getDocs(query(collection(firestore, 'teamMembers'), where('userId', '==', user.uid), where('role', 'in', ['athlete', 'trainer'])));
+    const joined = mine.docs.map((d) => d.data()).find((d) => d.status === 'active' || d.status === 'pending');
+    return joined ? `/dashboard?role=${joined.role}` : '/role';
+  } catch {
+    return '/role';
+  }
+}
+
 /** Coach: creates the team the first time (or updates its details) and returns its active invite. Safe to retry. */
 export function ensureTeamInvite(details: TeamDetails): Promise<TeamInvite> {
   return attempt('ensureTeamInvite', async () => {

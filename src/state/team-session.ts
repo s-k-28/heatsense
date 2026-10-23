@@ -4,7 +4,8 @@ import { SAMPLE_READING } from '@/lib/practice';
 import { watchTeamVitals, type VitalsRecord } from '@/services/band-vitals';
 import { watchActiveSession, watchReadings, type FieldReading, type PracticeSession } from '@/services/practice-sessions';
 import { firebaseAuth, firestore } from '@/services/firebase';
-import { getMyTeamInvite, watchMyMembership } from '@/services/team-invites';
+import { getMyTeamInvite, watchMyMembership, type Membership } from '@/services/team-invites';
+import { useAuthSession } from '@/state/auth-session';
 import { watchRoster, watchTrainers, type RosterMember } from '@/services/team-roster';
 
 // The team's open practice session, live: the coach's own team, or the team an athlete belongs to.
@@ -94,6 +95,17 @@ export function useTeamVitals(session: PracticeSession | null) {
     return watchTeamVitals(open, setRecords, () => setRecords([]));
   }, [open]);
   return open ? records : [];
+}
+
+/** An athlete's or trainer's own membership, live: approved, waiting, declined, or none (null). */
+export function useMembership(enabled = true) {
+  const { user } = useAuthSession();
+  const [membership, setMembership] = useState<Membership | null | undefined>(undefined);
+  useEffect(() => {
+    if (!enabled || !user) return;
+    return watchMyMembership(user.uid, setMembership, () => setMembership(null));
+  }, [enabled, user]);
+  return enabled && user ? membership : null;
 }
 
 /** Everyone who asked to join or was approved, live. Null while loading or without a team. */

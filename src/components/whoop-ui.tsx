@@ -46,7 +46,8 @@ export function ListRow({ label, detail, value, valueTone, onPress, trailing, de
   return onPress ? (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>{body}</Pressable>
   ) : (
-    <View accessible style={styles.row}>{body}</View>
+    // A row that holds its own controls (approve, a switch) can't be one accessible element, or those controls disappear for VoiceOver.
+    <View accessible={!trailing} style={styles.row}>{body}</View>
   );
 }
 
