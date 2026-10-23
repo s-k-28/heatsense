@@ -8,8 +8,11 @@ import { SampleTag } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
 import { enter, leave, settle } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
+import { checkPlan } from '@/lib/plan-check';
+import { UIL_GUIDANCE } from '@/lib/uil-wbgt';
 import { recheckStatus } from '@/services/practice-sessions';
 import { useDemoTeam } from '@/state/demo-team';
+import { usePracticePlans } from '@/state/practice-plans';
 import { useTemperature } from '@/state/preferences';
 import { useCoachData, useRoster, useTeamVitals } from '@/state/team-session';
 
@@ -70,6 +73,13 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
   }
   if (latest && !latest.acknowledgedAt) {
     items.push({ id: `ack-${latest.id}`, tone: Palette.warning, open: true, resolvable: false, at: latest.measuredAt, title: 'Guidance not applied yet', detail: `${temp.value(latest.wbgtF)}${temp.unit} · ${ZONES[latest.zone].label}. Confirm the UIL changes.`, action: openSheet });
+  }
+  // The field got hotter than today's plan allows: say which rules it breaks and open the plan.
+  const { active: plan } = usePracticePlans();
+  const planCheck = latest && session ? checkPlan(plan, UIL_GUIDANCE[latest.zone]) : null;
+  if (planCheck && !planCheck.ok && latest) {
+    const broken = planCheck.rows.filter((r) => !r.ok).map((r) => `${r.label.toLowerCase()} ${r.plan} (needs ${r.rule})`).join(', ');
+    items.push({ id: `plan-${latest.id}-${plan.id}`, tone: Palette.warning, open: true, resolvable: false, at: latest.measuredAt, title: `${plan.name} doesn’t meet ${ZONES[latest.zone].label} rules`, detail: `${broken.charAt(0).toUpperCase()}${broken.slice(1)}.`, action: { label: 'Adjust plan', onPress: () => router.push({ pathname: '/plan-editor', params: { id: plan.id } }) } });
   }
   const demo = useDemoTeam(latest?.zone ?? 'yellow');
   demo.members.filter((m) => m.status === 'watch').forEach((m) => {
