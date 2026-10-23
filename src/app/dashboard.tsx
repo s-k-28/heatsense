@@ -151,6 +151,7 @@ export default function DashboardScreen() {
           { paddingBottom: TAB_BAR_HEIGHT + insets.bottom + Spacing.six, paddingTop: insets.top + HEADER_ROW },
         ]}
         key={contentKey}
+        automaticallyAdjustKeyboardInsets
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         onScroll={onScroll}
