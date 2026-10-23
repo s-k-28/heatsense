@@ -8,15 +8,14 @@ import { Face, Palette } from '@/constants/theme';
 import { enter, settle } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
-import type { EmergencyPlan } from '@/services/team-safety';
-import { useEmergencyPlan } from '@/state/emergency-plan';
-import { useStored } from '@/state/stored';
+import type { EmergencyPlan, Incident } from '@/services/team-safety';
+import { useEmergencyPlan, useIncidents, useReadiness } from '@/state/emergency-plan';
 import { useCoachData } from '@/state/team-session';
 
 // Protocols as tools for the sideline, in three parts:
 // Respond: pick what you're seeing, work the steps (each stamped with the time), call 911, run the
-//   cold-water immersion clock, and save the response to an incident log you can share.
-// Prepare: today's readiness checks (they reset each day, on this phone) and the team's emergency
+//   cold-water immersion clock, and save the response to the team's incident record (staff only).
+// Prepare: today's readiness checks (shared by staff, fresh each day) and the team's emergency
 //   action plan, shared with every coach, trainer and athlete on the team.
 // Tools: a sweat-rate calculator and the UIL zones.
 // Steps follow the Korey Stringer Institute / NATA guidance on exertional heat illness.
@@ -80,7 +79,6 @@ const EAP_FIELDS: { id: keyof EmergencyPlan; label: string; placeholder: string 
   { id: 'caller', label: 'Calls 911', placeholder: 'Who makes the call' },
 ];
 
-type Incident = { id: string; kind: Situation; at: number; steps: number; total: number; coolingSec: number | null };
 
 const ORDER: Zone[] = ['green', 'yellow', 'orange', 'red', 'black'];
 const COOL_GOAL_MS = 30 * 60_000;
@@ -137,7 +135,9 @@ function Respond() {
   const [coolStart, setCoolStart] = useState<number | null>(null);
   const [coolStop, setCoolStop] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [log, setLog] = useStored<Incident[]>('incidents', []);
+  const data = useCoachData('trainer');
+  // The team's record when there is a team (staff only), otherwise this phone's.
+  const [log, addIncident] = useIncidents(data?.sample ? null : data?.teamId ?? null);
   useEffect(() => {
     if (coolStart === null || coolStop !== null) return;
     const tick = setInterval(() => setNow(Date.now()), 1000);
@@ -157,7 +157,7 @@ function Respond() {
   const save = () => {
     if (!situation) return;
     const first = Math.min(...Object.values(done), coolStart ?? Infinity);
-    setLog([{ id: String(Date.now()), kind: situation, at: Number.isFinite(first) ? first : Date.now(), steps: count, total: SITUATIONS[situation].steps.length, coolingSec: coolStart ? Math.round(elapsed / 1000) : null }, ...log].slice(0, 30));
+    addIncident({ kind: situation, at: Number.isFinite(first) ? first : Date.now(), steps: count, total: SITUATIONS[situation].steps.length, coolingSec: coolStart ? Math.round(elapsed / 1000) : null });
     reset();
   };
   const share = (i: Incident) => Share.share({
@@ -262,19 +262,18 @@ function Respond() {
 
 function Prepare() {
   const data = useCoachData('trainer');
-  const [today] = useState(() => new Date().toDateString());
-  const [ready, setReady] = useStored<{ date: string; done: Record<string, number> }>('readiness', { date: today, done: {} });
+  // Today's checks, shared by the team's staff so nobody re-checks the tub someone already filled.
+  const [done, setDone] = useReadiness(data?.sample ? null : data?.teamId ?? null);
   // Shared with the whole team when there is one; athletes read it on Learn.
   const [eap, setEap] = useEmergencyPlan(data?.sample ? null : data?.teamId ?? null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<EmergencyPlan>({});
   const fields = useRef<(TextInput | null)[]>([]);
-  const done = ready.date === today ? ready.done : {};
   const count = READINESS.filter((r) => done[r.id]).length;
   const toggle = (id: string) => {
     const next = { ...done };
     if (next[id]) delete next[id]; else next[id] = stamp();
-    setReady({ date: today, done: next });
+    setDone(next);
   };
   const filled = EAP_FIELDS.filter((f) => eap[f.id]?.trim()).length;
   const sharePlan = () => Share.share({ message: ['Emergency action plan', ...EAP_FIELDS.map((f) => `${f.label}: ${eap[f.id]?.trim() || '—'}`)].join('\n') }).catch(() => {});
@@ -297,7 +296,7 @@ function Prepare() {
             {done[r.id] ? <Text style={styles.stepTime}>{time(done[r.id])}</Text> : null}
           </Pressable>
         ))}
-        <Text style={styles.cardNote}>Resets each morning.</Text>
+        <Text style={styles.cardNote}>Shared with your staff. Starts fresh each morning.</Text>
       </View>
 
       <Heading action={editing ? undefined : { label: filled ? 'Edit' : 'Set up', onPress: () => { setDraft(eap); setEditing(true); } }}>Emergency action plan</Heading>

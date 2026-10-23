@@ -552,6 +552,35 @@ const trainer = await signUp('trainer');
   });
 }
 
+// Incident records and readiness checks: staff only.
+{
+  const teamId = invite.teamId;
+  const { addDoc, collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc, Timestamp } = await import('firebase/firestore');
+  const incident = (user, extra = {}) => ({ kind: 'stroke', at: Timestamp.now(), steps: 3, total: 5, coolingSec: 600, recordedBy: user.uid, createdAt: serverTimestamp(), ...extra });
+
+  await test('staff record heat-illness responses; athletes and strangers can’t read them; records never change', async () => {
+    const saved = await addDoc(collection(trainer.db, 'teams', teamId, 'incidents'), incident(trainer));
+    await addDoc(collection(coach.db, 'teams', teamId, 'incidents'), incident(coach, { kind: 'cramps', steps: 4, total: 4, coolingSec: null }));
+    equal((await getDocs(collection(coach.db, 'teams', teamId, 'incidents'))).size, 2, 'coach reads both');
+    await rejects(getDocs(collection(athlete.db, 'teams', teamId, 'incidents')), 'permission-denied', 'athlete reading incidents');
+    await rejects(getDocs(collection(stranger.db, 'teams', teamId, 'incidents')), 'permission-denied', 'stranger reading incidents');
+    await rejects(addDoc(collection(athlete.db, 'teams', teamId, 'incidents'), incident(athlete)), 'permission-denied', 'athlete recording');
+    await rejects(addDoc(collection(trainer.db, 'teams', teamId, 'incidents'), incident(trainer, { kind: 'flu' })), 'permission-denied', 'unknown kind');
+    await rejects(addDoc(collection(trainer.db, 'teams', teamId, 'incidents'), incident(trainer, { steps: 9 })), 'permission-denied', 'more steps than total');
+    await rejects(updateDoc(doc(coach.db, saved.path), { steps: 5 }), 'permission-denied', 'editing a record');
+  });
+
+  await test('staff share today’s readiness checks', async () => {
+    const today = doc(coach.db, 'teams', teamId, 'readiness', '2026-10-23');
+    await setDoc(today, { done: { tub: Timestamp.now() }, updatedBy: coach.uid, updatedAt: serverTimestamp() });
+    await setDoc(doc(trainer.db, today.path), { done: { tub: Timestamp.now(), aed: Timestamp.now() }, updatedBy: trainer.uid, updatedAt: serverTimestamp() });
+    equal(Object.keys((await getDoc(today)).data().done).length, 2, 'coach sees the trainer’s check');
+    await rejects(setDoc(doc(trainer.db, today.path), { done: { bananas: Timestamp.now() }, updatedBy: trainer.uid, updatedAt: serverTimestamp() }), 'permission-denied', 'unknown check');
+    await rejects(setDoc(doc(trainer.db, 'teams', teamId, 'readiness', 'today'), { done: {}, updatedBy: trainer.uid, updatedAt: serverTimestamp() }), 'permission-denied', 'bad day id');
+    await rejects(getDoc(doc(athlete.db, today.path)), 'permission-denied', 'athlete reading readiness');
+  });
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 await Promise.all([coach, athlete, stranger, trainer].map((u) => deleteApp(u.app)));
 process.exit(failed ? 1 : 0);
