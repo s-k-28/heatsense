@@ -16,7 +16,7 @@ import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 
 import { HeatIcon } from '@/components/heat-icon';
 import WristbandIllustration from '@/components/WristbandIllustration';
-import { Fonts, Palette, Radius, Spacing } from '@/constants/theme';
+import { Palette, Radius, Spacing } from '@/constants/theme';
 
 const iconNames = {
   runner: { ios: 'figure.run', android: 'directions_run', web: 'directions_run' },

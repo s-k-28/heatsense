@@ -33,7 +33,7 @@ import {
   WbgtVisual,
   WristbandVisual,
 } from '@/components/onboarding-visuals';
-import { Fonts, MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
 import { useAuthSession } from '@/state/auth-session';
 
 const icons = {

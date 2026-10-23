@@ -26,7 +26,9 @@ async function shareImage(widgetsDirectory: string, name: string, source: number
 export async function startPracticeActivity({ celsius, incidentOpen = true, startedAt: practiceStart }: { celsius: boolean; incidentOpen?: boolean; startedAt?: number | null }) {
   if (Platform.OS !== 'ios') return;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- iOS-only widget code, loaded lazily
     const { widgetsDirectory } = require('expo-widgets') as typeof import('expo-widgets');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- iOS-only widget code, loaded lazily
     const PracticeActivity = require('@/widgets/PracticeActivity').default as typeof import('@/widgets/PracticeActivity').default;
     if (!widgetsDirectory) return;
 
@@ -45,7 +47,9 @@ export async function startPracticeActivity({ celsius, incidentOpen = true, star
       startedAt: startedAt.toISOString(),
       endsAt: new Date(start + plan.lengthMinutes * 60_000).toISOString(),
       nextBreakAt: new Date(nextBreak).toISOString(),
+       
       logoUri: await shareImage(widgetsDirectory, 'heatsense-logo-island.png', require('@/assets/images/heatsense-logo-island.png')),
+       
       bandUri: await shareImage(widgetsDirectory, 'heatsense-band-island.png', require('@/assets/images/heatsense-band-island.png')),
       incident: incidentOpen && INCIDENT ? INCIDENT.title : '',
       incidentDetail: incidentOpen && INCIDENT ? INCIDENT.detail : '',
@@ -69,6 +73,7 @@ export async function startPracticeActivity({ celsius, incidentOpen = true, star
 export async function endPracticeActivity() {
   if (Platform.OS !== 'ios') return;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- iOS-only widget code, loaded lazily
     const PracticeActivity = require('@/widgets/PracticeActivity').default as typeof import('@/widgets/PracticeActivity').default;
     await Promise.all(PracticeActivity.getInstances().map((instance) => instance.end('immediate')));
   } catch {

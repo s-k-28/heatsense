@@ -2,7 +2,7 @@ import { SymbolView } from 'expo-symbols';
 import type { ComponentProps } from 'react';
 import { Text } from 'react-native';
 
-import { Fonts, Palette } from '@/constants/theme';
+import { Palette } from '@/constants/theme';
 
 type HeatIconProps = Omit<ComponentProps<typeof SymbolView>, 'fallback'> & {
   fallback?: string;
