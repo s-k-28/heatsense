@@ -27,11 +27,11 @@ function AcclimatizationPill({ day }: { day: number }) {
   const done = day >= ACCLIMATIZATION_DAYS;
   const tone = done ? Palette.safe : day < 6 ? Palette.warning : Palette.coral;
   return (
-    <View accessibilityLabel={done ? 'Acclimatized' : `Acclimatization day ${day} of 14`} accessible style={[styles.pill, { borderColor: tone }]}>
+    <View accessibilityLabel={done ? 'Acclimatized' : day === 0 ? 'New, acclimatization not started' : `Acclimatization day ${day} of 14`} accessible style={[styles.pill, { borderColor: tone }]}>
       {done ? (
         <Svg fill="none" height={12} stroke={tone} strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} viewBox="0 0 24 24" width={12}><Path d="m5 12 5 5L20 7" /></Svg>
       ) : null}
-      <Text style={[styles.pillText, { color: tone }]}>{done ? 'Ready' : `Day ${day}/14`}</Text>
+      <Text style={[styles.pillText, { color: tone }]}>{done ? 'Ready' : day === 0 ? 'New' : `Day ${day}/14`}</Text>
     </View>
   );
 }

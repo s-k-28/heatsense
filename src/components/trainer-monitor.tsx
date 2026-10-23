@@ -107,7 +107,7 @@ export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach
 
   return (
     <>
-      {sample ? <SimulatedTag /> : null}
+      {sample || onBand.some((a) => a.simulated) ? <SimulatedTag /> : null}
       <View accessible style={styles.strip}>
         <View style={[styles.stripEdge, { backgroundColor: latest ? (latest.zone === 'black' ? '#8E8E93' : ZONES[latest.zone].color) : Palette.inkFaint }]} />
         <View style={styles.stripCopy}>

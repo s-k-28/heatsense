@@ -8,6 +8,7 @@ export type AcclimatizationPhase = { title: string; rule: string };
 
 export function acclimatizationPhase(day: number): AcclimatizationPhase {
   if (day >= ACCLIMATIZATION_DAYS) return { title: 'Acclimatized', rule: 'Full practice and equipment.' };
+  if (day <= 0) return { title: 'Starts at the first practice', rule: 'Days 1 and 2: one practice a day, 3 hours at most, helmets as the only protective equipment.' };
   if (day <= 2) return { title: `Day ${day}: helmets only`, rule: 'One practice a day, 3 hours at most. Helmets as the only protective equipment.' };
   if (day <= 5) return { title: `Day ${day}: helmets and shoulder pads`, rule: 'One practice a day, 3 hours at most. Add shoulder pads; no full contact.' };
   return { title: `Day ${day}: full equipment`, rule: 'Full equipment and contact. Double-practice days need 3 hours of rest between sessions in a cool place.' };

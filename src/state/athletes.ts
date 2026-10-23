@@ -36,9 +36,11 @@ export function useAthletes(role: SessionRole = 'trainer'): { athletes: AthleteV
   const data = useCoachData(role);
   const zone = data?.readings.at(-1)?.zone ?? 'yellow';
   const demo = useDemoTeam(zone);
-  const roster = useRoster(data?.teamId ?? null);
-  const live = useTeamVitals(data?.session ?? null);
-  const past = usePastSessions(data?.teamId ?? null, false, 40);
+  // Only staff read the roster and the team's band samples; an athlete's phone asks for neither.
+  const staff = role !== 'athlete';
+  const roster = useRoster(staff ? data?.teamId ?? null : null);
+  const live = useTeamVitals(staff ? data?.session ?? null : null);
+  const past = usePastSessions(staff ? data?.teamId ?? null : null, false, 40);
   const now = useNow(15_000);
 
   if (demo.enabled) {
