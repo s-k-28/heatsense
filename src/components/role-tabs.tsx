@@ -13,7 +13,7 @@ import { recentSessions, SOURCE_LABEL, type SessionSummary } from '@/services/pr
 import { usePreferences, useTemperature } from '@/state/preferences';
 import { LiveVitalsRows, SimulatedTag, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
-import { useCoachData, useNow, useRoster, useTeamVitals, useTrainers } from '@/state/team-session';
+import { useCoachData, useMembership, useNow, useRoster, useTeamVitals, useTrainers } from '@/state/team-session';
 
 // Athlete and athletic-trainer tabs on the same WHOOP-style kit as the coach's. Athletes see their
 // team's real field reading (Firestore lets approved members read it). Band signals don't exist yet,
@@ -28,9 +28,22 @@ const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2
 
 export function AthleteHome() {
   const data = useCoachData('athlete');
+  const membership = useMembership();
   const latest = data?.readings.at(-1) ?? null;
+  // Until the coach approves them, an athlete can't see the team's practice, so say why.
+  const waiting = !data?.sample && membership?.status === 'pending';
+  const noTeam = !data?.sample && (membership === null || membership?.status === 'declined');
   return (
     <>
+      {waiting ? (
+        <Rows>
+          <ListRow detail={`Your request to join ${membership.team?.teamName ?? 'the team'} is with your coach. Practice readings show up here once they approve you.`} label="Waiting for approval" />
+        </Rows>
+      ) : noTeam ? (
+        <Rows>
+          <ListRow detail={membership?.status === 'declined' ? 'Your coach declined the request. Check the code with them and try again.' : 'Enter the six-digit code from your coach.'} label="Join your team" onPress={() => router.push('/setup/athlete')} />
+        </Rows>
+      ) : null}
       <CoachToday readOnly role="athlete" />
       {latest ? (
         <>

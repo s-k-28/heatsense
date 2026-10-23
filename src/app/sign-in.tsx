@@ -10,6 +10,7 @@ import { OnboardingTextField } from '@/components/onboarding-fields';
 import { Entry } from '@/constants/entry-theme';
 import { createEmailAccount, emailAuthMessage, sendPasswordReset, signInWithEmail } from '@/services/email-auth';
 import { signInWithGoogle } from '@/services/google-auth';
+import { homeRoute } from '@/services/team-invites';
 import { useAuthSession } from '@/state/auth-session';
 
 export default function SignInScreen() {
@@ -30,7 +31,9 @@ export default function SignInScreen() {
   const passwordField = useRef<TextInput>(null);
 
   useEffect(() => {
-    if (signedInUid && ready && user?.uid === signedInUid) router.replace(next === 'athlete' ? '/setup/athlete' : '/role');
+    if (!(signedInUid && ready && user?.uid === signedInUid)) return;
+    // Returning people go straight to their team; only new accounts choose a role.
+    homeRoute().then((home) => router.replace((home === '/role' && next === 'athlete' ? '/setup/athlete' : home) as never));
   }, [next, ready, router, signedInUid, user?.uid]);
 
   const signIn = async () => {

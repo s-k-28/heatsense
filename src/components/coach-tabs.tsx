@@ -9,13 +9,13 @@ import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, zoneRange } from '@/lib/uil-wbgt';
 import { firebaseAuth } from '@/services/firebase';
 import type { FieldReading } from '@/services/practice-sessions';
-import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, watchMyMembership, type Membership, type TeamInvite, type TeamSummary } from '@/services/team-invites';
+import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
 import { buildSchedule, clockTime, usePracticePlans } from '@/state/practice-plans';
 import { useAuthSession } from '@/state/auth-session';
 import { LiveVitalsRows, SimulatedTag, TeamVitalsRows } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
-import { useCoachData, useNow, useRoster, useTeamVitals, useTrainers, type SessionRole } from '@/state/team-session';
+import { useCoachData, useMembership, useNow, useRoster, useTeamVitals, useTrainers, type SessionRole } from '@/state/team-session';
 
 // Team, Plan and Profile, decluttered after WHOOP: one heading per section, small caps groups,
 // full-width rows and metric tiles. Every number comes from the team's real data or the UIL chart.
@@ -28,17 +28,6 @@ function useMyTeam() {
     return () => { live = false; };
   }, []);
   return mine;
-}
-
-/** An athlete's or trainer's own membership, live: approved, waiting, or none. */
-function useMembership(enabled: boolean) {
-  const { user } = useAuthSession();
-  const [membership, setMembership] = useState<Membership | null>(null);
-  useEffect(() => {
-    if (!enabled || !user) return;
-    return watchMyMembership(user.uid, setMembership, () => setMembership(null));
-  }, [enabled, user]);
-  return enabled ? membership : null;
 }
 
 /* ─────────────────────────────── Team ─────────────────────────────── */
