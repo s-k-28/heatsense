@@ -17,7 +17,7 @@ export function SimulatedTag() {
   return (
     <View accessibilityLabel="Simulated band data" accessible style={styles.tag}>
       <View style={styles.tagDot} />
-      <Text style={styles.tagText}>SIMULATED BAND DATA · {DEMO_SPEED}× SPEED</Text>
+      <Text style={styles.tagText}>Simulated band data · {DEMO_SPEED}× speed</Text>
     </View>
   );
 }
@@ -35,8 +35,7 @@ export function TeamVitalsRows({ members, role = 'coach' }: { members: DemoMembe
           key={m.athlete.id}
           label={m.athlete.name}
           onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: m.athlete.id, role } })}
-          value={`${m.vitals.heartRate} bpm`}
-          valueTone={statusTone(m)}
+          trailing={<View style={styles.statusRow}><Text style={styles.bpm}>{m.vitals.heartRate}<Text style={styles.bpmUnit}> bpm</Text></Text><View style={[styles.statusDot, { backgroundColor: statusTone(m) }]} /></View>}
         />
       ))}
     </Rows>
@@ -52,9 +51,10 @@ export function VitalsDetail({ member }: { member: DemoMember }) {
       <SimulatedTag />
       <View style={styles.hero}>
         <Animated.Text entering={swap(reduced)} key={vitals.heartRate} style={styles.hr}>{vitals.heartRate}</Animated.Text>
-        <Text style={styles.hrUnit}>BPM · {vitals.phase === 'work' ? 'WORKING' : 'ON BREAK'}</Text>
-        <View style={[styles.pill, { borderColor: statusTone(member) }]}>
-          <Text style={[styles.pillText, { color: statusTone(member) }]}>{statusLabel(member)}</Text>
+        <Text style={styles.hrUnit}>bpm · {vitals.phase === 'work' ? 'working' : 'on break'}</Text>
+        <View style={styles.pill}>
+          <View style={[styles.statusDot, { backgroundColor: statusTone(member) }]} />
+          <Text style={styles.pillText}>{statusLabel(member)}</Text>
         </View>
       </View>
       <LineChart
@@ -88,16 +88,20 @@ export function VitalsDetail({ member }: { member: DemoMember }) {
 }
 
 const styles = StyleSheet.create({
-  tag: { alignItems: 'center', alignSelf: 'center', borderColor: Palette.info, borderRadius: 999, borderWidth: 1, flexDirection: 'row', gap: 6, marginBottom: 12, paddingHorizontal: 10, paddingVertical: 4 },
+  tag: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: 6, marginBottom: 12 },
   tagDot: { backgroundColor: Palette.info, borderRadius: 3, height: 6, width: 6 },
-  tagText: { color: Palette.info, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  tagText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
+  statusRow: { alignItems: 'center', flexDirection: 'row', gap: 10 },
+  bpm: { color: Palette.ink, fontSize: 20, fontVariant: ['tabular-nums'], fontWeight: '700' },
+  bpmUnit: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
+  statusDot: { borderRadius: 5, height: 10, width: 10 },
   hero: { alignItems: 'center', gap: 4, marginBottom: 12, marginTop: 4 },
-  hr: { color: Palette.ink, fontSize: 72, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -2 },
-  hrUnit: { color: Palette.inkMuted, fontSize: 13, fontWeight: '700', letterSpacing: 1.4 },
-  pill: { borderRadius: 999, borderWidth: 1, marginTop: 8, paddingHorizontal: 12, paddingVertical: 4 },
-  pillText: { fontSize: 13, fontWeight: '700' },
-  note: { backgroundColor: Palette.card, borderColor: Palette.warning, borderRadius: 16, borderWidth: 1, gap: 4, marginTop: 16, padding: 16 },
-  noteTitle: { color: Palette.ink, fontSize: 16, fontWeight: '700' },
+  hr: { color: Palette.ink, fontSize: 80, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -2 },
+  hrUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
+  pill: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 10 },
+  pillText: { color: Palette.ink, fontSize: 16, fontWeight: '600' },
+  note: { backgroundColor: Palette.surface, borderRadius: 16, gap: 4, marginTop: 16, padding: 16 },
+  noteTitle: { color: Palette.warning, fontSize: 17, fontWeight: '600' },
   noteBody: { color: Palette.inkMuted, fontSize: 15, lineHeight: 21 },
   tiles: { marginBottom: 20, marginTop: 20 },
 });

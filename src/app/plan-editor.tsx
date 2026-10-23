@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
@@ -71,7 +70,6 @@ export default function PlanEditorScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      <LinearGradient colors={['#2A3139', '#161A1F', '#0A0B0D']} locations={[0, 0.38, 0.75]} pointerEvents="none" style={StyleSheet.absoluteFill} />
       <View style={[styles.bar, { paddingTop: insets.top + Spacing.two }]}>
         <TextLink label="Cancel" onPress={close} />
         <Text style={styles.barTitle}>{source ? (editing ? 'Edit plan' : 'New from standard') : 'New plan'}</Text>
@@ -163,7 +161,7 @@ function Stepper({ detail, format, label, last, max, min, onChange, step, value 
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: '#0A0B0D', flex: 1 },
+  screen: { backgroundColor: Palette.canvas, flex: 1 },
   flex: { flex: 1 },
   pressed: { opacity: 0.6 },
   bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.three, paddingHorizontal: Spacing.four },
@@ -178,7 +176,7 @@ const styles = StyleSheet.create({
   stepLabel: { color: Palette.ink, ...Type.body },
   stepDetail: { color: Palette.inkMuted, ...Type.footnote },
   stepValue: { color: Palette.ink, ...Type.figure, fontSize: 20, lineHeight: 24, minWidth: 74, textAlign: 'center' },
-  round: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, height: 32, justifyContent: 'center', width: 32 },
+  round: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: 16, height: 32, justifyContent: 'center', width: 32 },
   roundOff: { opacity: 0.35 },
   preview: { marginTop: Spacing.four },
   breaks: { color: Palette.inkMuted, ...Type.footnote, marginBottom: Spacing.two, marginTop: Spacing.three },

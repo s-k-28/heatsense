@@ -26,7 +26,7 @@ export default function AthleteVitalsScreen() {
         <Pressable accessibilityLabel="Back" accessibilityRole="button" hitSlop={10} onPress={() => (router.canGoBack() ? router.back() : router.replace('/dashboard?role=coach&tab=team'))} style={styles.back}>
           <Svg fill="none" height={24} stroke={Palette.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={24}><Path d="m15 5-7 7 7 7" /></Svg>
         </Pressable>
-        <Text numberOfLines={1} style={styles.barTitle}>{member ? member.athlete.name.toUpperCase() : 'ATHLETE'}</Text>
+        <Text numberOfLines={1} style={styles.barTitle}>{member ? member.athlete.name : 'Athlete'}</Text>
         <View style={styles.back} />
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   screen: { backgroundColor: '#0A0B0D', flex: 1 },
   bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12 },
   back: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
-  barTitle: { color: Palette.ink, flex: 1, fontSize: 14, fontWeight: '800', letterSpacing: 1.6, textAlign: 'center' },
+  barTitle: { color: Palette.ink, flex: 1, fontSize: 17, fontWeight: '600', textAlign: 'center' },
   content: { alignItems: 'center', paddingTop: 8 },
   column: { maxWidth: MaxContentWidth, paddingHorizontal: 16, width: '100%' },
   position: { color: Palette.inkMuted, fontSize: 15, marginBottom: 12, textAlign: 'center' },

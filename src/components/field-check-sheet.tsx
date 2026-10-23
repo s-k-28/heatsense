@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
@@ -72,7 +73,14 @@ export function FieldCheckSheet({ onClose, visible, trainerTeamId }: { onClose: 
 
   let body;
   if (teamId === undefined || (teamId && session === undefined && !failed)) body = <ActivityIndicator color={Palette.inkMuted} style={styles.loading} />;
-  else if (!teamId) body = <Notice text={trainer ? 'Join your team first. Your coach approves your request.' : 'Create your team first. Practice records are saved to the team so every coach sees the same readings.'} />;
+  else if (!teamId) body = trainer ? <Notice text="Join your team first. Your coach approves your request." /> : (
+    <>
+      <Notice text="Create your team first. Practice records are saved to the team so every coach sees the same readings." />
+      <Pressable accessibilityRole="button" onPress={() => { onClose(); router.push('/team/create'); }} style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
+        <Text style={styles.primaryText}>Create your team</Text>
+      </Pressable>
+    </>
+  );
   else if (failed) body = <Notice text="Couldn’t load practice records. Check your connection and try again." />;
   else if (!session) body = trainer ? <Notice text="Practice hasn’t started yet. Once the head coach starts it, you can log readings and confirm guidance here." /> : <StartForm teamId={teamId} />;
   else body = <SessionView canEnd={!trainer} session={session} />;
