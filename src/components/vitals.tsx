@@ -30,17 +30,29 @@ const statusLabel = (member: DemoMember) => (member.status === 'watch' ? 'Slow r
 /** One row per athlete: name, live heart rate, and whether recovery looks usual. */
 export function TeamVitalsRows({ members, role = 'coach' }: { members: DemoMember[]; role?: 'coach' | 'trainer' }) {
   return (
+    <>
+    <StatusKey />
     <Rows>
       {members.map((m) => (
         <ListRow
-          detail={`${m.athlete.position} · ${m.vitals.phase === 'work' ? 'Working' : 'On break'} · ${statusLabel(m)}`}
           key={m.athlete.id}
           label={m.athlete.name}
           onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: m.athlete.id, role } })}
-          trailing={<View style={styles.statusRow}><Text style={styles.bpm}>{m.vitals.heartRate}<Text style={styles.bpmUnit}> bpm</Text></Text><View style={[styles.statusDot, { backgroundColor: statusTone(m) }]} /></View>}
+          trailing={<View accessibilityLabel={statusLabel(m)} accessible style={styles.statusRow}><Text style={styles.bpm}>{m.vitals.heartRate}<Text style={styles.bpmUnit}> bpm</Text></Text><View style={[styles.statusDot, { backgroundColor: statusTone(m) }]} /></View>}
         />
       ))}
     </Rows>
+    </>
+  );
+}
+
+/** What the dots mean, said once above the list rather than under every athlete. */
+function StatusKey() {
+  return (
+    <View style={styles.key}>
+      <View style={styles.keyItem}><View style={[styles.statusDot, { backgroundColor: Palette.safe }]} /><Text style={styles.keyText}>Usual range</Text></View>
+      <View style={styles.keyItem}><View style={[styles.statusDot, { backgroundColor: Palette.warning }]} /><Text style={styles.keyText}>Slow recovery</Text></View>
+    </View>
   );
 }
 
@@ -50,6 +62,8 @@ const STALE_MS = 2 * 60_000;
 export function LiveVitalsRows({ records, roster, now }: { records: VitalsRecord[]; roster: RosterMember[] | null; now: number }) {
   const name = (uid: string) => roster?.find((m) => m.userId === uid)?.displayName ?? 'Athlete';
   return (
+    <>
+    <StatusKey />
     <Rows>
       {records.map((r) => {
         const stale = !r.updatedAt || now - r.updatedAt.getTime() > STALE_MS;
@@ -57,14 +71,14 @@ export function LiveVitalsRows({ records, roster, now }: { records: VitalsRecord
         const state = stale ? 'No recent signal' : r.recovery === 'watch' ? 'Slow recovery' : 'Usual range';
         return (
           <ListRow
-            detail={`${r.source === 'simulated' ? 'Simulated band' : 'Band'} · ${state}`}
             key={r.athleteUid}
             label={name(r.athleteUid)}
-            trailing={<View style={styles.statusRow}><Text style={[styles.bpm, stale && { color: Palette.inkMuted }]}>{r.heartRate}<Text style={styles.bpmUnit}> bpm</Text></Text><View style={[styles.statusDot, { backgroundColor: tone }]} /></View>}
+            trailing={<View accessibilityLabel={state} accessible style={styles.statusRow}><Text style={[styles.bpm, stale && { color: Palette.inkMuted }]}>{stale ? '--' : r.heartRate}<Text style={styles.bpmUnit}> bpm</Text></Text><View style={[styles.statusDot, { backgroundColor: tone }]} /></View>}
           />
         );
       })}
     </Rows>
+    </>
   );
 }
 
@@ -105,10 +119,6 @@ export function VitalsDetail({ member }: { member: DemoMember }) {
           <MetricTile label="Resting HR" unit="bpm" value={String(member.athlete.restingHr)} />
         </Tiles>
       </View>
-      <Rows>
-        <ListRow detail="MAX30102 optical sensor on the band" label="Heart rate source" />
-        <ListRow detail="Simulated stream. Real readings arrive with the band firmware." label="Data" />
-      </Rows>
     </>
   );
 }
@@ -121,6 +131,9 @@ const styles = StyleSheet.create({
   bpm: { color: Palette.ink, fontSize: 20, fontVariant: ['tabular-nums'], fontWeight: '700' },
   bpmUnit: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
   statusDot: { borderRadius: 5, height: 10, width: 10 },
+  key: { flexDirection: 'row', gap: 18, marginBottom: 12 },
+  keyItem: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  keyText: { color: Palette.inkMuted, fontSize: 15 },
   hero: { alignItems: 'center', gap: 4, marginBottom: 12, marginTop: 4 },
   hr: { color: Palette.ink, fontSize: 80, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -2 },
   hrUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },

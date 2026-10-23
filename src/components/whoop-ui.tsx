@@ -88,6 +88,54 @@ export function Tiles({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Information people read (a zone rule, a warning sign, a step to take): a bold lead-in and the rest
+ * of the sentence at full reading size, as one paragraph, never a title with a small grey line under it.
+ */
+export function Facts({ items }: { items: { title: string; body: string; tone?: string }[] }) {
+  return (
+    <Rows>
+      {items.map((item) => (
+        <View accessible key={item.title} style={styles.fact}>
+          {item.tone ? <View style={[styles.factDot, { backgroundColor: item.tone }]} /> : null}
+          <Text style={styles.factText}><Text style={styles.factTitle}>{item.title}. </Text>{item.body}</Text>
+        </View>
+      ))}
+    </Rows>
+  );
+}
+
+/** Numbers side by side, value over its label, the way an activity summary reads. */
+export function StatRow({ stats }: { stats: { label: string; value: string; unit?: string; tone?: string }[] }) {
+  return (
+    <View style={styles.statRow}>
+      {stats.map((stat) => (
+        <View accessible accessibilityLabel={`${stat.label}: ${stat.value}${stat.unit ? ` ${stat.unit}` : ''}`} key={stat.label} style={styles.stat}>
+          <Text style={[styles.statValue, stat.tone ? { color: stat.tone } : null]}>{stat.value}{stat.unit ? <Text style={styles.statUnit}>{stat.unit}</Text> : null}</Text>
+          <Text style={styles.statLabel}>{stat.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** One self-contained card: a title, an optional message, and whatever it holds. */
+export function Card({ title, message, children, onPress }: { title: string; message?: string; children?: ReactNode; onPress?: () => void }) {
+  const body = (
+    <>
+      <View style={styles.cardTop}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        {onPress ? <Chevron /> : null}
+      </View>
+      {message ? <Text style={styles.cardMessage}>{message}</Text> : null}
+      {children}
+    </>
+  );
+  return onPress ? (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>{body}</Pressable>
+  ) : <View style={styles.card}>{body}</View>;
+}
+
 /** Marks example numbers so nobody takes them for the team's own. */
 export function SampleTag() {
   return (
@@ -119,6 +167,19 @@ const styles = StyleSheet.create({
   pill: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   pillDot: { borderRadius: 4, height: 8, width: 8 },
   pillText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
+  fact: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, paddingHorizontal: 18, paddingVertical: 16 },
+  factDot: { borderRadius: 5, height: 10, marginTop: 7, width: 10 },
+  factText: { color: Palette.inkMuted, flex: 1, fontSize: 17, lineHeight: 24 },
+  factTitle: { color: Palette.ink, fontWeight: '600' },
+  statRow: { flexDirection: 'row', gap: 12 },
+  stat: { flex: 1, gap: 2 },
+  statValue: { color: Palette.ink, fontSize: 26, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -0.4 },
+  statUnit: { color: Palette.inkMuted, fontSize: 16, fontWeight: '500' },
+  statLabel: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
+  card: { backgroundColor: Palette.surface, borderRadius: 16, gap: 14, padding: 18 },
+  cardTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  cardTitle: { color: Palette.ink, flex: 1, fontSize: 18, fontWeight: '600' },
+  cardMessage: { color: Palette.inkMuted, fontSize: 17, lineHeight: 24, marginTop: -6 },
   sample: { alignSelf: 'flex-start', borderColor: Palette.border, borderRadius: 999, borderWidth: 1, marginBottom: 12, paddingHorizontal: 10, paddingVertical: 3 },
   sampleText: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },
 });

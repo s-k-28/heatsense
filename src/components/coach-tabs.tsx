@@ -3,7 +3,7 @@ import { signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { CapsLabel, ListRow, MetricTile, Rows, SampleTag, SectionTitle, Tiles } from '@/components/whoop-ui';
+import { CapsLabel, Facts, ListRow, MetricTile, Rows, SampleTag, SectionTitle, Tiles } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, zoneRange } from '@/lib/uil-wbgt';
@@ -11,7 +11,7 @@ import { firebaseAuth } from '@/services/firebase';
 import type { FieldReading } from '@/services/practice-sessions';
 import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
-import { buildSchedule, clockTime, usePracticePlans } from '@/state/practice-plans';
+import { clockTime, usePracticePlans } from '@/state/practice-plans';
 import { useAuthSession } from '@/state/auth-session';
 import { LiveVitalsRows, SimulatedTag, TeamVitalsRows } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
@@ -63,10 +63,9 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
       <CapsLabel>Getting started</CapsLabel>
       <Rows>
         {mine === null ? (
-          <ListRow detail="Your team code appears here once the team exists" label="Create your team" onPress={() => router.push('/team/create')} />
+          <ListRow label="Create your team" onPress={() => router.push('/team/create')} />
         ) : (
           <ListRow
-            detail="Athletes enter it after they sign in. Tap to share."
             label="Team code"
             onPress={code ? () => Share.share({ message: `Join ${mine!.team.teamName} on HeatSense with the code ${code}.` }) : undefined}
             value={code ? code.replace(/(\d{3})(\d{3})/, '$1 $2') : '…'}
@@ -81,7 +80,6 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
           <Rows>
             {waiting.map((m) => (
               <ListRow
-                detail={`${m.role === 'trainer' ? 'Athletic trainer' : 'Athlete'}${m.email ? ` · ${m.email}` : ''}`}
                 key={m.userId}
                 label={m.displayName ?? 'Athlete'}
                 trailing={
@@ -100,7 +98,7 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
         <>
           <SectionTitle title="Staff" />
           <Rows>
-            {staff.map((m) => <ListRow detail="Athletic trainer" key={m.userId} label={m.displayName ?? 'Trainer'} />)}
+            {staff.map((m) => <ListRow key={m.userId} label={m.displayName ?? 'Trainer'} value="Athletic trainer" />)}
           </Rows>
         </>
       ) : null}
@@ -109,7 +107,7 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
       {active.length ? (
         <Rows>
           {active.map((m) => (
-            <ListRow detail="No band data yet" key={m.userId} label={m.displayName ?? 'Athlete'} onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: m.userId, role: role === 'trainer' ? 'trainer' : 'coach' } })} />
+            <ListRow key={m.userId} label={m.displayName ?? 'Athlete'} onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: m.userId, role: role === 'trainer' ? 'trainer' : 'coach' } })} />
           ))}
         </Rows>
       ) : demo.enabled ? null : (
@@ -159,19 +157,15 @@ export function PlanTab() {
 
       <SectionTitle action="New" onAction={() => router.push('/plan-editor')} title="Practice plans" />
       <Rows>
-        {plans.map((plan) => {
-          const breaks = buildSchedule(plan).filter((block) => block.kind === 'rest').length;
-          return (
-            <ListRow
-              detail={`${clockTime(plan.startMinutes, true)} · ${plan.lengthMinutes} min · ${plan.workMinutes}/${plan.restMinutes} · ${breaks} ${breaks === 1 ? 'break' : 'breaks'}`}
-              key={plan.id}
-              label={plan.name}
-              onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })}
-              value={plan.id === active.id ? 'Today' : undefined}
-              valueTone={Palette.coral}
-            />
-          );
-        })}
+        {plans.map((plan) => (
+          <ListRow
+            key={plan.id}
+            label={plan.name}
+            onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })}
+            value={plan.id === active.id ? 'Today' : `${clockTime(plan.startMinutes, true)} · ${plan.lengthMinutes} min`}
+            valueTone={plan.id === active.id ? Palette.coral : undefined}
+          />
+        ))}
       </Rows>
     </>
   );
@@ -191,7 +185,7 @@ export function ZoneRules({ latest, uilClass }: { latest: FieldReading | null; u
             <MetricTile label="Max practice" unit={guidance.maxPracticeMinutes ? 'hr' : undefined} value={guidance.maxPracticeMinutes ? String(guidance.maxPracticeMinutes / 60) : guidance.outdoorAllowed ? 'No limit' : 'None'} />
             <MetricTile label="Cooling zone" pill={guidance.coolingZoneRequired ? 'Required' : 'Optional'} pillTone={guidance.coolingZoneRequired ? Palette.warning : Palette.safe} value={guidance.coolingZoneRequired ? 'Tub' : '--'} />
           </Tiles>
-          {guidance.football ? <ListRow detail={guidance.football} label="Football equipment" /> : null}
+          {guidance.football ? <Facts items={[{ title: 'Football equipment', body: guidance.football }]} /> : null}
         </>
       ) : null}
       <Pressable accessibilityRole="link" onPress={() => Linking.openURL(UIL_SOURCE_URL)}>
@@ -236,7 +230,7 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
       <CapsLabel>Account</CapsLabel>
       <Rows>
         <ListRow label="Team" onPress={role === 'Coach' && mine === null ? () => router.push('/team/create') : undefined} value={teamValue} />
-        {role !== 'Coach' && !member?.teamId && membership?.status !== 'pending' ? <ListRow detail="Enter the code from your coach" label="Join a team" onPress={() => router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')} /> : null}
+        {role !== 'Coach' && !member?.teamId && membership?.status !== 'pending' ? <ListRow label="Join a team" onPress={() => router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')} /> : null}
         {role === 'Athlete' ? <ListRow label="Athletic trainer" value={trainers.length ? trainers.map((t) => t.displayName ?? 'Trainer').join(', ') : 'None yet'} /> : null}
         {role === 'Athlete' ? (
           <ListRow label="HeatSense Band" onPress={() => router.push('/pair-band')} value={bandConnected ? 'Connected' : 'Not paired'} valueTone={bandConnected ? Palette.safe : Palette.inkMuted} />
@@ -245,9 +239,9 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
 
       <CapsLabel>App settings</CapsLabel>
       <Rows>
-        <ListRow detail="Made-up athletes with simulated band vitals" label="Demo team" trailing={<Switch accessibilityLabel="Show the simulated demo team" onValueChange={(value) => setPreference('demoTeam', value)} trackColor={{ true: Palette.coral }} value={demoTeam} />} />
+        <ListRow label="Sample athletes" trailing={<Switch accessibilityLabel="Show the simulated demo team" onValueChange={(value) => setPreference('demoTeam', value)} trackColor={{ true: Palette.coral }} value={demoTeam} />} />
         <ListRow label="Temperatures in °C" trailing={<Switch accessibilityLabel="Show temperatures in Celsius" onValueChange={(value) => setPreference('celsius', value)} trackColor={{ true: Palette.coral }} value={celsius} />} />
-        <ListRow detail="Field zone and practice clock on the Lock Screen" label="Live Activity" trailing={<Switch accessibilityLabel="Show practice on the Dynamic Island and Lock Screen" onValueChange={(value) => setPreference('practiceLiveActivity', value)} trackColor={{ true: Palette.coral }} value={practiceLiveActivity} />} />
+        <ListRow label="Lock Screen practice clock" trailing={<Switch accessibilityLabel="Show practice on the Dynamic Island and Lock Screen" onValueChange={(value) => setPreference('practiceLiveActivity', value)} trackColor={{ true: Palette.coral }} value={practiceLiveActivity} />} />
       </Rows>
 
       <CapsLabel>Support</CapsLabel>
