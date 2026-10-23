@@ -32,9 +32,12 @@ export default function NotificationsScreen() {
       {/* What an alert looks like, quieter the further down the list. */}
       <View style={[styles.list, { marginTop: compact ? 24 : 34 }]}>
         {EXAMPLES.map((text, i) => (
-          <Animated.View entering={rise(600 + i * 110)} key={text} style={[styles.alert, { opacity: 1 - i * 0.25 }]}>
-            <Text style={styles.source}>HeatSense · now</Text>
-            <Text style={styles.text}>{text}</Text>
+          <Animated.View entering={rise(600 + i * 110)} key={text}>
+            {/* The fade sits on an inner view: the entrance animation owns the outer one's opacity. */}
+            <View style={[styles.alert, { opacity: 1 - i * 0.25 }]}>
+              <Text style={styles.source}>HeatSense · now</Text>
+              <Text style={styles.text}>{text}</Text>
+            </View>
           </Animated.View>
         ))}
       </View>
