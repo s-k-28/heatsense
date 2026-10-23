@@ -1,8 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type TextInput } from 'react-native';
 
 import { GoogleLogo } from '@/components/brand-logos';
 import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';
@@ -25,6 +25,9 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
+  // The keyboard's Next key walks name → email → password, so no field hides under the keyboard.
+  const emailField = useRef<TextInput>(null);
+  const passwordField = useRef<TextInput>(null);
 
   useEffect(() => {
     if (signedInUid && ready && user?.uid === signedInUid) router.replace(next === 'athlete' ? '/setup/athlete' : '/role');
@@ -87,9 +90,9 @@ export default function SignInScreen() {
       <Text style={entryStyles.description}>Sign in to set up your team or join with a coach’s invite.</Text>
       {emailMode ? (
         <View style={styles.form}>
-          {creating ? <OnboardingTextField autoCapitalize="words" autoComplete="name" label="Name" onChangeText={setName} placeholder="Your full name" returnKeyType="next" textContentType="name" value={name} /> : null}
-          <OnboardingTextField autoCapitalize="none" autoComplete="email" inputMode="email" keyboardType="email-address" label="Email" onChangeText={setEmail} placeholder="you@school.org" returnKeyType="next" textContentType="emailAddress" value={email} />
-          <OnboardingTextField autoCapitalize="none" autoComplete={creating ? 'new-password' : 'current-password'} label="Password" onChangeText={setPassword} onSubmitEditing={submitEmail} placeholder={creating ? 'At least 6 characters' : 'Your password'} returnKeyType="go" secureTextEntry textContentType={creating ? 'newPassword' : 'password'} value={password} />
+          {creating ? <OnboardingTextField autoCapitalize="words" autoComplete="name" label="Name" onChangeText={setName} onSubmitEditing={() => emailField.current?.focus()} placeholder="Your full name" returnKeyType="next" submitBehavior="submit" textContentType="name" value={name} /> : null}
+          <OnboardingTextField autoCapitalize="none" autoComplete="email" inputMode="email" keyboardType="email-address" inputRef={emailField} label="Email" onChangeText={setEmail} onSubmitEditing={() => passwordField.current?.focus()} placeholder="you@school.org" returnKeyType="next" submitBehavior="submit" textContentType="emailAddress" value={email} />
+          <OnboardingTextField autoCapitalize="none" autoComplete={creating ? 'new-password' : 'current-password'} inputRef={passwordField} label="Password" onChangeText={setPassword} onSubmitEditing={submitEmail} placeholder={creating ? 'At least 6 characters' : 'Your password'} returnKeyType="go" secureTextEntry textContentType={creating ? 'newPassword' : 'password'} value={password} />
           <View style={styles.formActions}>
             <EntryButton label={creating ? 'Create account' : 'Sign in'} loading={busy} loadingLabel={creating ? 'Creating account…' : 'Signing in…'} onPress={submitEmail} />
             {error ? <ErrorPanel message={error} /> : null}

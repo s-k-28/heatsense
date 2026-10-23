@@ -225,13 +225,13 @@ function Content({ role }: { role: MemberRole }) {
 
         {/* One real input drives every box: typing, pasting, deleting and the numeric keyboard all come from it. */}
         <View style={[styles.codeWrap, { marginTop: compact ? 24 : 30 }]}>
-          <View style={[styles.codeRow, { gap }]}>
+          <Pressable accessible={false} onPress={() => inputRef.current?.focus()} style={[styles.codeRow, { gap }]}>
             {Array.from({ length: INVITE_CODE_LENGTH }, (_, index) => (
               <Animated.View key={index} entering={rise(750 + index * 60)}>
                 <CodeBox digit={code[index] ?? ''} active={index === activeIndex} error={codeError !== null} found={valid !== null || pending !== null} width={boxWidth} height={boxHeight} />
               </Animated.View>
             ))}
-          </View>
+          </Pressable>
           <TextInput
             ref={inputRef}
             value={code}
@@ -325,7 +325,8 @@ const styles = StyleSheet.create({
   codeRow: { flexDirection: 'row', justifyContent: 'center' },
   box: { borderRadius: 18, borderWidth: 1.5, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center' },
   digit: { color: Entry.ink, fontFamily: Entry.heading, fontSize: 27, letterSpacing: -0.5 },
-  hiddenInput: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.01, color: 'transparent', fontSize: 16 },
+  // iOS ignores taps on views at 1% opacity or less, so the input stays just above that.
+  hiddenInput: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.02, color: 'transparent', fontSize: 16 },
   status: { minHeight: 56, marginTop: 20, alignItems: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
   statusText: { color: MUTED, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
