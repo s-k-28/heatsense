@@ -121,9 +121,12 @@ We want to be clear about what is real and what is not yet.
 | 🟢 **Works today** | Athlete profile onboarding (profile → body → safety) | Profile saved to Firestore; health and contact answers are **not** saved in production yet |
 | 🟢 **Works today** | iOS Live Activity / Dynamic Island practice widget | Shows the team's latest real reading, practice clock and next water break; the sample reading appears only in the offline sample build |
 | 🟢 **Works today** | Heat alerts: recheck reminders and zone changes | Local notifications (`expo-notifications`), no server. Reminders fire with the app closed; zone-change alerts need the app running. See [Heat alerts](#heat-alerts) |
-| 🟢 **Works today** | Coach Home | Home shows the session's latest real reading; rings for recheck, readings and applied guidance; alerts derived from the practice record |
+| 🟢 **Works today** | Coach Home | The session's latest real reading on the UIL zone scale; next reading / readings / applied; today's readings plotted over the zone bands; a week or month heat history (tap any day) |
+| 🟢 **Works today** | Trainer Monitor and Athletes | Monitor: who needs attention (slow recovery, no signal, near max, early acclimatization) with Checked in, then a live tile grid. Athletes: searchable roster with each athlete's heat-acclimatization day (NATA 14-day guidance) and band status |
+| 🟢 **Works today** | Protocols you work, not read | Respond (situation steps stamped with times, Call 911, cold-water immersion timer, incident log you can share), Prepare (daily readiness checks, editable emergency action plan), Tools (sweat-rate calculator, UIL zones). Kept on the phone |
+| 🟢 **Works today** | Profile | Photo from library or camera, editable name, season stats (1M / 3M / All with change from the period before), band device card, notification switches wired to the real alerts |
 | 🟢 **Works today** | Three role-specific apps: coach (team-centred), athlete (their own band, past practices), athletic trainer (logs readings, watches vitals) | See [Roles](#roles). Access is enforced in `firebase/firestore.rules` |
-| 🧪 **Simulated** | Band vitals for a demo team (heart rate, skin temperature, sweat, movement, recovery check) | `src/lib/band-simulator.ts`. Every screen labels it **SIMULATED BAND DATA**; on by default only in builds without Firebase |
+| 🧪 **Simulated** | Band vitals for a demo team (heart rate, skin temperature, sweat, movement, blood oxygen, recovery check), each with its own chart over the last 30 minutes | `src/lib/band-simulator.ts`. Every screen labels it **SIMULATED BAND DATA**; on by default only in builds without Firebase |
 | 🔵 **Planned** | Custom (non-UIL) school heat policies | Every session already stores its policy version (`uil-wbgt@2025-26`), so a second policy can be added without migrating data |
 | 🔵 **Planned** | Live sensor or weather-based WBGT | Today, every reading is typed in by a coach |
 | 🟢 **Works today** | Band backend: pairing record and live practice vitals in Firestore | `src/services/band-vitals.ts`. An approved athlete's phone reports a sample every 30 s during practice; the coach and trainers read it, teammates can't; rules cap writes at one per 10 s. Samples are marked `simulated` until the firmware lands |
@@ -174,8 +177,10 @@ Some decisions we made on purpose:
 | **WBGT recheck in 5 minutes** | Whoever logs readings: the coach and approved trainers | 5 minutes before the next reading is due | ✅ Scheduled on the phone ahead of time |
 | **WBGT recheck is due** | Same | The moment the recheck interval runs out | ✅ |
 | **The field moved into the Orange zone** | Everyone on the team except the person who entered the reading | When a new reading lands in a different zone than the one before | ⚠️ Needs the app running or recently open |
+| **Marcus Lee: slow recovery** | The coach and approved trainers | Once per athlete per practice, when their band shows heart rate staying high through a break | ⚠️ Needs the app running or recently open |
 
 - Every new reading reschedules the reminders; ending practice clears them.
+- Each alert type has its own switch in Profile → Notifications; turning reminders off cancels the scheduled ones. Profile also sends a test alert.
 - Permission is asked at the moment it makes sense: athletes on the onboarding *Heat alerts* screen, coaches when they start practice.
 - **Trade-off:** a true push to a closed phone needs a server (Cloud Functions on the paid Blaze plan). The reminders, which matter most, already fire with the app closed.
 
@@ -187,8 +192,8 @@ HeatSense is three apps in one, chosen on the role screen during onboarding. The
 |---|---|---|---|
 | Joins a team by | Creating it (gets the invite code) | Entering the coach's code, then approval | Entering the coach's code, then approval |
 | Tabs | Plan · Team · **Home** · Alerts · Profile | Monitor · Athletes · **Home** · Protocols · Profile | Band · Sessions · **Home** · Learn · Profile |
-| Home | Latest reading on UIL's zone scale, next reading/readings/applied figures, get-started cards, today's readings | Same reading and figures, plus *Add a reading* once the coach starts practice | Same reading, read-only, plus today's UIL rules and their athletic trainer |
-| Vitals | Team tab: every athlete's live vitals, tap for detail | Monitor tab: the same team view | Band tab: their own vitals in depth |
+| Home | Latest reading on UIL's zone scale, next reading/readings/applied figures, today's readings over the zone bands, week/month heat history | Same, plus *Add a reading* once the coach starts practice | Same reading, read-only, plus Your body (four vitals vs usual), their acclimatization and today's UIL rules |
+| Vitals | Team tab: Roster (code, approvals, acclimatization, staff) and Live | Monitor: needs attention + live grid; Athletes: the roster | Band tab: five vitals, each with its own chart |
 | Can record readings | Yes, and starts or ends practice | Yes, during a practice the coach started; can't start or end it | No (rules refuse) |
 | Can invite | Yes, shares the code | No | No, only enters a code |
 
@@ -726,21 +731,28 @@ Captured from the iOS Simulator (iPhone 17 Pro Max). Dashboard screens run in sa
 | Welcome | Choose a role | Pair the band | Coach Today |
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/readme/welcome.png" width="200" alt="Welcome screen with the HeatSense Band"> | <img src="docs/screenshots/readme/role.png" width="200" alt="Role screen with the band resting above the choices"> | <img src="docs/screenshots/readme/pairing.png" width="200" alt="Pair your HeatSense Band"> | <img src="docs/screenshots/readme/home.png" width="200" alt="Coach Today: 84°F Yellow zone on the UIL zone scale, with next reading, readings and applied"> |
-| Read the heat. Ready the team. | Coach, athlete or athletic trainer | Part of athlete onboarding | One reading, the zone, the next recheck |
+| Read the heat. Ready the team. | Coach, athlete or athletic trainer | Part of athlete onboarding | The reading, the zone, the next recheck |
 
-**Coach.** One screen per job: today's rules, the team, what needs attention.
+**Coach.** Today's heat in context, the team to run, what needs attention, the rules.
 
-| Plan | Team | Alerts | Athlete detail |
+| Heat history | Team | Alerts | Plan |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/readme/plan.png" width="200" alt="Plan: today card with WBGT, zone and UIL class, then the rules as tiles"> | <img src="docs/screenshots/readme/team-vitals.png" width="200" alt="Team: sample athletes with live simulated heart rates"> | <img src="docs/screenshots/readme/alerts.png" width="200" alt="Alerts: today summary and guidance not applied yet"> | <img src="docs/screenshots/readme/athlete-vitals.png" width="200" alt="One athlete: heart rate, last six minutes and the other signals"> |
-| Today's UIL rules for the zone | Every athlete at a glance | Built from the practice record | Recovery during a break |
+| <img src="docs/screenshots/readme/history.png" width="200" alt="Heat history: a month of practices as zone-colored tiles, with practices, hottest and orange-or-hotter"> | <img src="docs/screenshots/readme/team.png" width="200" alt="Team roster: join code, search, filters and each athlete's acclimatization day and band status"> | <img src="docs/screenshots/readme/alerts.png" width="200" alt="Alerts: live zone and recheck countdown, Open and Resolved tabs"> | <img src="docs/screenshots/readme/plan.png" width="200" alt="Plan: today's rules for the zone and saved practice plans"> |
+| Week strip or month calendar, tap any day | Roster and a live view | Live countdown, resolve or act | Today's UIL rules |
 
-**Athlete and athletic trainer.** The athlete's own band and history; the trainer's live monitor.
+**Athletic trainer.** The live sideline, the roster, one athlete in depth, and protocols to work.
 
-| Band | Sessions | Learn | Trainer monitor |
+| Monitor | Athletes | Athlete detail | Protocols |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/readme/athlete-band.png" width="200" alt="Athlete Band tab: heart rate hero, chart and signal tiles"> | <img src="docs/screenshots/readme/sessions.png" width="200" alt="Sessions: this week chart of peak WBGT and past practices"> | <img src="docs/screenshots/readme/learn.png" width="200" alt="Learn: what each zone means and warning signs"> | <img src="docs/screenshots/readme/trainer-monitor.png" width="200" alt="Trainer Monitor: every athlete with heart rate and status"> |
-| The athlete's own vitals | This week's heat, practice by practice | Zones and warning signs | Watching the whole team |
+| <img src="docs/screenshots/readme/trainer-monitor.png" width="200" alt="Monitor: zone and work/rest clock, live tiles with heart rate, share of max and trend"> | <img src="docs/screenshots/readme/athletes.png" width="200" alt="Athletes: searchable roster with acclimatization day and band status"> | <img src="docs/screenshots/readme/athlete-vitals.png" width="200" alt="One athlete: heat acclimatization day 3 of 14, live heart rate and its chart"> | <img src="docs/screenshots/readme/protocols.png" width="200" alt="Protocols: exertional heat stroke steps with timestamps and Call 911"> |
+| Who needs attention, then everyone | Acclimatization and band at a glance | 14-day acclimatization, five vitals | Steps, 911, immersion timer |
+
+**Athlete.** Their body, their band, what to do, their season.
+
+| Today | Band | Learn | Profile |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/readme/athlete-home.png" width="200" alt="Athlete Today: readings, your body (four vitals checked against usual) and acclimatization"> | <img src="docs/screenshots/readme/athlete-band.png" width="200" alt="Band: heart rate with time in zones; skin temperature, sweat, movement and blood oxygen cards follow"> | <img src="docs/screenshots/readme/learn.png" width="200" alt="Learn: symptom check answering Stop and cool down, and the hydration color check"> | <img src="docs/screenshots/readme/profile.png" width="200" alt="Profile: photo, season stats with change from before, band device"> |
+| Your body and acclimatization | Five vitals, each its own chart | How do you feel? Hydration | Photo, season, band, alerts |
 
 ## Repository map
 
