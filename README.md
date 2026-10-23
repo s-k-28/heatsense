@@ -187,7 +187,7 @@ HeatSense is three apps in one, chosen on the role screen during onboarding. The
 |---|---|---|---|
 | Joins a team by | Creating it (gets the invite code) | Entering the coach's code, then approval | Entering the coach's code, then approval |
 | Tabs | Plan · Team · **Home** · Alerts · Profile | Monitor · Athletes · **Home** · Protocols · Profile | Band · Sessions · **Home** · Learn · Profile |
-| Home | Latest reading on UIL's zone scale, next reading/readings/applied figures, get-started cards, today's readings | Same orb and rings, plus *Add a reading* once the coach starts practice | Same orb, read-only, plus today's UIL rules and their athletic trainer |
+| Home | Latest reading on UIL's zone scale, next reading/readings/applied figures, get-started cards, today's readings | Same reading and figures, plus *Add a reading* once the coach starts practice | Same reading, read-only, plus today's UIL rules and their athletic trainer |
 | Vitals | Team tab: every athlete's live vitals, tap for detail | Monitor tab: the same team view | Band tab: their own vitals in depth |
 | Can record readings | Yes, and starts or ends practice | Yes, during a practice the coach started; can't start or end it | No (rules refuse) |
 | Can invite | Yes, shares the code | No | No, only enters a code |
