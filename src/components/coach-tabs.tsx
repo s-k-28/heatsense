@@ -2,13 +2,12 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
-import { Card, Facts, ListRow, Rows, SampleTag, SectionTitle, StatRow } from '@/components/whoop-ui';
+import { Card, Facts, ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION } from '@/lib/uil-wbgt';
 import type { FieldReading } from '@/services/practice-sessions';
 import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
-import { useTemperature } from '@/state/preferences';
 import { clockTime, usePracticePlans } from '@/state/practice-plans';
 import { TrainerAthletes } from '@/components/trainer-athletes';
 import { TrainerMonitor } from '@/components/trainer-monitor';
@@ -122,7 +121,6 @@ export function TeamTab() {
 
 export function PlanTab() {
   const data = useCoachData();
-  const temp = useTemperature();
   const { active, plans } = usePracticePlans();
   const latest = data?.readings.at(-1) ?? null;
   const session = data?.session ?? null;
@@ -131,15 +129,9 @@ export function PlanTab() {
     <>
       {data?.sample ? <SampleTag /> : null}
       {latest ? (
-        <Card message={UIL_GUIDANCE[latest.zone].summary} title="Today">
-          <StatRow stats={[
-            { label: 'WBGT', value: String(temp.value(latest.wbgtF)), unit: temp.unit },
-            { label: 'Zone', value: ZONES[latest.zone].label.replace(' zone', ''), tone: latest.zone === 'black' ? Palette.inkMuted : ZONES[latest.zone].color },
-            { label: 'UIL class', value: String(uilClass) },
-          ]} />
-        </Card>
+        <Card message={`${UIL_GUIDANCE[latest.zone].summary} UIL Class ${uilClass}, measured ${latest.measuredAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`} title={`Today’s rules · ${ZONES[latest.zone].label}`} />
       ) : (
-        <Card message="Take a field reading to see today’s rules." title="Today" />
+        <Card message="Take a field reading to see today’s rules." title="Today’s rules" />
       )}
 
       <ZoneRules hideSummary latest={latest} uilClass={uilClass} />
