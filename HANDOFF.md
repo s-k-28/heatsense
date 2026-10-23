@@ -111,11 +111,32 @@ This file covers what was built in the last working session, how the app is put 
     - Heart-rate heroes are left-aligned to match Home.
   - **Deleted:** `heat-orb.tsx`, `FerrofluidOrb.tsx`, `Ring`, `MetricTile`/`Tiles`, and the unused visuals (`RingAvatar`, `PhotoBanner`, `Spark`, `DateTile`, `BaselineChart`, `Timeline`).
 
+### Overnight build (Oct 23): the five tabs made into tools
+References: WHOOP (Mobbin downloads in `~/Downloads/WHOOP iOS *.zip`), Strava, Polar Team (live team tiles), Cal AI (streak and calendar), Gentler Streak (Apple Design Award: body metrics vs usual, period comparisons).
+- **Band vitals (`src/components/vital-cards.tsx`):** five signals over the last 30 minutes, each with its own chart: heart rate (trend + time in zones), skin temp (against usual range), sweat (bars), movement (work/rest strip), blood oxygen (gauge). SpO₂ added to the simulator, uplink and rules (optional, range-checked, tested).
+- **Home (`coach-today.tsx`):** readings timeline over the UIL zone bands (`readings-timeline.tsx`); week/month heat history (`heat-calendar.tsx`) with tap-a-day detail. Sample mode has a ~100-day season and a three-reading afternoon.
+- **Trainer:**
+  - Monitor (`trainer-monitor.tsx`): needs attention + Checked in, live tile grid (HR, % of max, trend), team figures.
+  - Athletes (`trainer-athletes.tsx`): searchable roster with filters, heat-acclimatization day (`src/lib/acclimatization.ts`, NATA 14-day phases) and band status.
+  - One athlete model for both: `src/state/athletes.ts`.
+- **Coach Team (`coach-tabs.tsx` TeamTab):** Roster (code, approvals, roster, staff) | Live (the Monitor grid).
+- **Protocols (`protocols-tab.tsx`):**
+  - Respond: steps with timestamps, Call 911, immersion timer, incident log you can share.
+  - Prepare: daily readiness, editable emergency action plan.
+  - Tools: sweat-rate calculator, UIL zone picker.
+  - Device-local storage via `src/state/stored.ts`.
+- **Alerts (`alerts-tab.tsx`):** live status bar with recheck countdown, Open/Resolved, resolve band and roster alerts, alerts when today's plan breaks the zone.
+- **Profile (`profile-tab.tsx`):**
+  - Photo (expo-image-picker, kept in app documents, shown in the header) and an editable name (updates Firebase displayName).
+  - Season stats (1M/3M/All vs before), athlete band device card.
+  - Notification switches wired to `state/heat-alerts.ts`, test alert, °F/°C.
+- **Athlete:** Home has Your body (`body-strip.tsx`) and acclimatization. Learn (`learn-tab.tsx`) has a symptom check, a hydration color check and the zone explorer. Sessions uses the shared heat history.
+- **Plans:** `src/lib/plan-check.ts` checks a plan against the zone. The editor has Today's zone + Fix to meet UIL, the Plan list flags failing plans, and the built-in Standard plan is now 16/4 (20/10 failed Green and Yellow).
+- **Band presence:** header chip on every dashboard tab (athlete battery, or live bands for staff).
+- **Fixed:** the yellow dev warning bar was a require cycle (`band-journey` ↔ `wristband`); constants moved to `wristband-asset.ts`.
+
 ### Docs and tooling
-- **README:**
-  - Startup-technical rewrite: architecture, heat alerts, engineering decisions table, tests.
-  - Gallery of 12 screenshots in `docs/screenshots/readme/`.
-  - Text was updated for the new Home, but **the screenshots still show the old orb and tiles**.
+- **README:** startup-technical rewrite; gallery of 16 screenshots (13 recaptured on Oct 23) in `docs/screenshots/readme/`.
 - **Task list:** kept in `~/.claude/heatsense-tasks.json`, outside the repo.
 
 ## 4. Running and checking
@@ -128,6 +149,7 @@ npx tsc --noEmit                 # typecheck — must be clean
 npx eslint src                   # lint — must be clean (0 warnings at handoff)
 node scripts/check-band-simulator.ts
 node scripts/check-uil-wbgt.ts
+node scripts/check-plan-check.ts
 npm run test:invites             # Firestore rules + flows on emulators (47/47)
 npm run check:auth               # auth config sanity
 ```
@@ -144,15 +166,17 @@ npm run check:auth               # auth config sanity
 
 | # | Item | State | Notes |
 |---|---|---|---|
-| 1 | Recapture the 12 README screenshots | todo | They still show the removed orb, rings and tiles. Use sample mode and the same file names in `docs/screenshots/readme/`. |
-| 2 | Coach/trainer see trends for real athletes | todo | `/athlete-vitals` shows only the latest real sample (no chart). Keep a short rolling history (for example, the last 12 samples) and reuse the `VitalsDetail` signal picker. |
-| 3 | Dev warnings (yellow LogBox bar) | todo | Comes from React Native or a library, not app code. Find the source warning (press `j` in Metro for the debugger). |
+| 1 | README screenshots | done | Recaptured Oct 23. |
+| 2 | Trends for real athletes | todo | A real athlete's detail shows only the latest sample (Firestore keeps one doc per athlete). Keep a short rolling history to feed `VitalCards`. |
+| 3 | Dev warnings (yellow LogBox bar) | done | Was a require cycle; fixed in `wristband-asset.ts`. |
 | 4 | First tap on *Save reading* only dismisses the keyboard | needs a real device | Seen only under automation; `keyboardShouldPersistTaps="always"` is already set. |
 | 5 | Swap in the 8 band angle renders | blocked | The image file isn't in the repo yet; the current render is used. |
 | 6 | Parent/guardian consent flow | blocked | Needs a product decision from the team. |
 | 7 | README team names + AI-use disclosure | blocked | Required by the contest; the team must supply the wording. |
 | 8 | Live sign-in test on a real account | blocked | The user does it (no automated real-credential entry). |
 | 9 | Real band over Bluetooth | future | Replace the simulator in `useBandUplink` with BLE packets (marked `ponytail:` there). The Firestore path and the UI stay. |
+| 11 | Share Protocols data with staff | future | Emergency plan, readiness and incident log live on one phone (`state/stored.ts`); move to the team doc so all staff see them. |
+| 12 | Profile photo for teammates | future | Stored on the phone only (Firebase Storage needs the Blaze plan). |
 | 10 | Server push for zone changes | future | Needs Cloud Functions (Blaze plan). Today, zone alerts fire only when the phone sees the new reading. |
 
 ## 6. Map of key files

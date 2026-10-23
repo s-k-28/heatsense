@@ -835,6 +835,7 @@ heatsense/
 │
 ├── scripts/                     Developer scripts
 │   ├── check-uil-wbgt.ts        Self-check for the UIL classifier (node scripts/check-uil-wbgt.ts)
+│   ├── check-plan-check.ts      Self-check: practice plans against UIL zone rules
 │   ├── check-band-simulator.ts  Self-check for the band signal model and recovery check
 │   ├── test-team-invites.mjs    Emulator test suite: teams, codes, joining, roles, sessions, readings (47 tests)
 │   ├── check-auth-config.mjs    Checks Google sign-in configuration (npm run check:auth)
@@ -981,6 +982,7 @@ npx tsc --noEmit                          # type errors → should print nothing
 npm run lint                              # style and React rules → 0 errors
 node scripts/check-uil-wbgt.ts            # heat engine → "all checks passed"
 node scripts/check-band-simulator.ts      # band model → "all checks passed"
+node scripts/check-plan-check.ts          # plan vs UIL → "all checks passed"
 npm run test:invites                      # backend rules → "47 passed, 0 failed"
 ```
 
