@@ -90,7 +90,7 @@ type TextFieldProps = {
   hideLabel?: boolean;
   /** Outline the field as invalid without a message under it (the message is shown elsewhere). */
   invalid?: boolean;
-} & Pick<TextInputProps, 'returnKeyType' | 'onSubmitEditing' | 'autoCapitalize' | 'textContentType' | 'autoComplete' | 'maxLength' | 'submitBehavior' | 'keyboardType' | 'inputMode' | 'accessibilityHint' | 'autoCorrect'>;
+} & Pick<TextInputProps, 'returnKeyType' | 'onSubmitEditing' | 'autoCapitalize' | 'textContentType' | 'autoComplete' | 'maxLength' | 'submitBehavior' | 'keyboardType' | 'inputMode' | 'accessibilityHint' | 'autoCorrect' | 'secureTextEntry'>;
 
 export function OnboardingTextField({ label, value, onChangeText, placeholder, error, height = 60, inputRef, onFocus, onBlur, hideLabel, invalid, ...inputProps }: TextFieldProps) {
   const ms = useMs();

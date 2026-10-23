@@ -5,8 +5,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { GoogleLogo } from '@/components/brand-logos';
-import { EntryButton, EntryHeader, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
+import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';
+import { OnboardingTextField } from '@/components/onboarding-fields';
 import { Entry } from '@/constants/entry-theme';
+import { createEmailAccount, emailAuthMessage, sendPasswordReset, signInWithEmail } from '@/services/email-auth';
 import { signInWithGoogle } from '@/services/google-auth';
 import { useAuthSession } from '@/state/auth-session';
 
@@ -17,6 +19,12 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
   const [signedInUid, setSignedInUid] = useState<string | null>(null);
   const { user, ready } = useAuthSession();
+  // null: the Google button; 'signin' / 'create': the email form in place of it.
+  const [emailMode, setEmailMode] = useState<'signin' | 'create' | null>(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (signedInUid && ready && user?.uid === signedInUid) router.replace(next === 'athlete' ? '/setup/athlete' : '/role');
@@ -36,19 +44,76 @@ export default function SignInScreen() {
     }
   };
 
+  const switchMode = (mode: typeof emailMode) => { setEmailMode(mode); setError(null); setNotice(null); };
+
+  const submitEmail = async () => {
+    if (pending || signedInUid) return;
+    const creating = emailMode === 'create';
+    if (creating && !name.trim()) return setError('Enter your name.');
+    if (!email.trim()) return setError('Enter your email address.');
+    if (creating ? password.length < 6 : !password) return setError(creating ? 'Use at least 6 characters for your password.' : 'Enter your password.');
+    setPending(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = creating ? await createEmailAccount(name, email, password) : await signInWithEmail(email, password);
+      setSignedInUid(result.uid);
+    } catch (reason) {
+      setError(emailAuthMessage(reason));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!email.trim()) return setError('Enter your email first, then tap Forgot password.');
+    setError(null);
+    try {
+      await sendPasswordReset(email);
+      setNotice(`If ${email.trim()} has an account, a reset link is on its way.`);
+    } catch (reason) {
+      setError(emailAuthMessage(reason));
+    }
+  };
+
+  const creating = emailMode === 'create';
+  const busy = pending || Boolean(signedInUid);
+
   return (
     <EntryScreen background="auth" backgroundDrawIn={350} backdrop={<Photo />}>{(compact) => <>
       <EntryHeader onBack={() => router.canGoBack() ? router.back() : router.replace('/welcome')} />
-      <View style={[styles.hero, compact && styles.heroCompact]} />
+      <View style={[styles.hero, compact && styles.heroCompact, emailMode && styles.heroForm]} />
       <EntryHeading accent="starts here." compact={compact} delay={200} lead="Your team" size="hero" />
       <Text style={entryStyles.description}>Sign in to set up your team or join with a coach’s invite.</Text>
-      <View style={styles.actions}>
-        <EntryButton label="Continue with Google" loading={pending || Boolean(signedInUid)} onPress={signIn} icon={<GoogleLogo size={21} />} neutral />
-        {error ? <View accessibilityRole="alert" style={styles.errorPanel}><Text style={styles.errorTitle}>Couldn’t sign in</Text><Text style={styles.error}>{error}</Text></View> : null}
-        <Text style={styles.privacy}>Google handles your sign-in. Your password stays with Google.</Text>
-      </View>
+      {emailMode ? (
+        <View style={styles.form}>
+          {creating ? <OnboardingTextField autoCapitalize="words" autoComplete="name" label="Name" onChangeText={setName} placeholder="Your full name" returnKeyType="next" textContentType="name" value={name} /> : null}
+          <OnboardingTextField autoCapitalize="none" autoComplete="email" inputMode="email" keyboardType="email-address" label="Email" onChangeText={setEmail} placeholder="you@school.org" returnKeyType="next" textContentType="emailAddress" value={email} />
+          <OnboardingTextField autoCapitalize="none" autoComplete={creating ? 'new-password' : 'current-password'} label="Password" onChangeText={setPassword} onSubmitEditing={submitEmail} placeholder={creating ? 'At least 6 characters' : 'Your password'} returnKeyType="go" secureTextEntry textContentType={creating ? 'newPassword' : 'password'} value={password} />
+          <View style={styles.formActions}>
+            <EntryButton label={creating ? 'Create account' : 'Sign in'} loading={busy} loadingLabel={creating ? 'Creating account…' : 'Signing in…'} onPress={submitEmail} />
+            {error ? <ErrorPanel message={error} /> : null}
+            {notice ? <Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text> : null}
+            <EntryLink label={creating ? 'Have an account? Sign in' : 'New to HeatSense? Create an account'} onPress={() => switchMode(creating ? 'signin' : 'create')} />
+            {creating ? null : <EntryLink label="Forgot password?" onPress={resetPassword} />}
+            <EntryLink label="Use Google instead" onPress={() => switchMode(null)} />
+          </View>
+        </View>
+      ) : (
+        <View style={styles.actions}>
+          <EntryButton label="Continue with Google" loading={busy} onPress={signIn} icon={<GoogleLogo size={21} />} neutral />
+          <View style={styles.gap} />
+          <EntryButton label="Continue with email" onPress={() => switchMode('signin')} secondary />
+          {error ? <ErrorPanel message={error} /> : null}
+          <Text style={styles.privacy}>Google sign-in keeps your password with Google. Email accounts are secured by Firebase.</Text>
+        </View>
+      )}
     </>}</EntryScreen>
   );
+}
+
+function ErrorPanel({ message }: { message: string }) {
+  return <View accessibilityRole="alert" style={styles.errorPanel}><Text style={styles.errorTitle}>Couldn’t sign in</Text><Text style={styles.error}>{message}</Text></View>;
 }
 
 /** The field photograph, fading into the page so the copy below sits on solid dark. */
@@ -69,7 +134,13 @@ const styles = StyleSheet.create({
   // Leaves the photograph open above the copy.
   hero: { flexGrow: 1, minHeight: 300 },
   heroCompact: { minHeight: 200 },
+  // The email form needs the room more than the photograph does.
+  heroForm: { minHeight: 140 },
   actions: { marginTop: 32 },
+  gap: { height: 12 },
+  form: { gap: 16, marginTop: 28 },
+  formActions: { gap: 14, marginTop: 8 },
+  notice: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   privacy: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 18, textAlign: 'center', marginTop: 20, paddingHorizontal: 12 },
   errorPanel: { padding: 14, borderRadius: 18, backgroundColor: '#34241E', marginTop: 14, gap: 6 },
   errorTitle: { color: '#FFD0B5', fontFamily: Entry.strong, fontSize: 14 },
