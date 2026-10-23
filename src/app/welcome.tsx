@@ -273,7 +273,7 @@ function Welcome({ fresh }: { fresh: boolean }) {
 
           <View style={[styles.illustration, compact && styles.illustrationCompact]}>
             <View style={styles.scene}>
-              <Wristband height={bandHeight} motion="float" delay={playIntro ? T.band[1] : 0} entrance={band} shadowEntrance={bandShadow} />
+              <Wristband height={bandHeight} journeyId="welcome" motion="float" delay={playIntro ? T.band[1] : 0} entrance={band} shadowEntrance={bandShadow} />
             </View>
           </View>
 

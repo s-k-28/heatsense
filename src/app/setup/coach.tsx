@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
+import { BandSpot } from '@/components/band-journey';
 import { EntryButton, EntryHeader, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { OnboardingSelectionSurface } from '@/components/onboarding-controls';
 import { ONBOARDING_STEPS } from '@/constants/entry-theme';
@@ -13,7 +14,7 @@ import { setTeamChoice, useTeamChoice, type TeamChoice } from '@/state/onboardin
 
 const options: { id: TeamChoice; title: string; description: string }[] = [
   { id: 'create', title: 'Create a team', description: 'Set up your school, sport, and level.' },
-  { id: 'join', title: 'Join a team', description: 'Connect with a team already on HeatSense.' },
+  { id: 'join', title: 'Join as staff', description: 'An assistant on a team already on HeatSense: enter its code.' },
 ];
 
 export default function CoachTeamSetup() {
@@ -24,12 +25,13 @@ export default function CoachTeamSetup() {
   const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(420));
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/role'));
-  const next = () => { if (choice) router.push(`/team/${choice}`); };
+  // Joining staff uses the code screen; the head coach approves, as for athletes.
+  const next = () => { if (choice) router.push(choice === 'create' ? '/team/create' : '/setup/trainer'); };
 
   return (
     <EntryScreen background="team">{(compact) => <>
       <Animated.View entering={fade(0)}>
-        <EntryHeader onBack={back} progress={{ step: 1, total: ONBOARDING_STEPS.coach }} />
+        <EntryHeader bandDock={false} onBack={back} progress={{ step: 1, total: ONBOARDING_STEPS.coach }} />
       </Animated.View>
       <EntryHeading accent="ready." compact={compact} delay={150} lead="Get your team" style={{ marginTop: compact ? 30 : 44 }} />
       <Animated.Text entering={fade(500)} style={entryStyles.description}>Start a new team or join an existing one.</Animated.Text>
@@ -47,7 +49,7 @@ export default function CoachTeamSetup() {
         ))}
       </View>
 
-      <View style={styles.open} />
+      <View style={[styles.open, styles.bandRoom]}><BandSpot height={compact ? 130 : 180} id="setup-coach" /></View>
       <Animated.View entering={rise(780)} style={styles.actions}>
         <EntryButton label={choice ? 'Continue' : 'Choose an option to continue'} disabled={choice === null} onPress={next} />
       </Animated.View>
@@ -58,5 +60,6 @@ export default function CoachTeamSetup() {
 const styles = StyleSheet.create({
   options: { gap: 12 },
   open: { flexGrow: 1, minHeight: 28 },
+  bandRoom: { alignItems: 'center', justifyContent: 'center' },
   actions: { marginTop: 8 },
 });

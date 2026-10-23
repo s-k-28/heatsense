@@ -26,6 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BandSpot } from '@/components/band-journey';
 import { AthleteHeader, AthletePillButton as JoinButton } from '@/components/athlete-onboarding';
 import { EntryHeading, entryStyles } from '@/components/entry-ui';
 import { OnboardingBackground } from '@/components/onboarding-background';
@@ -215,10 +216,10 @@ function Content({ role }: { role: MemberRole }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <Animated.View entering={fade(200)}>
-          <AthleteHeader onBack={back} step={1} />
+          <AthleteHeader bandDock={false} onBack={back} step={1} />
         </Animated.View>
 
-        <View style={styles.above} />
+        <View style={[styles.above, styles.bandRoom]}><BandSpot height={compact ? 100 : 130} id={`join-${role}`} /></View>
         <EntryHeading accent="awaits." align="center" compact={compact} delay={300} lead="Your team" />
         <Animated.Text entering={fade(600)} style={[entryStyles.description, styles.centered]}>Enter the six-digit code from your coach.</Animated.Text>
 
@@ -318,6 +319,7 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingHorizontal: 26 },
   // Equal open space above the headline and below the status centers the code on the page.
   above: { flexGrow: 1, minHeight: 20 },
+  bandRoom: { alignItems: 'center', justifyContent: 'center' },
   centered: { alignSelf: 'center', textAlign: 'center' },
   codeWrap: { alignSelf: 'center' },
   codeRow: { flexDirection: 'row', justifyContent: 'center' },

@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
+import { BandSpot } from '@/components/band-journey';
 import { BrandAssemble } from '@/components/brand-assemble';
 import { EntryButton, EntryHeader, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { Entry } from '@/constants/entry-theme';
@@ -73,7 +74,7 @@ export default function ReadyScreen() {
           </Animated.View>
         ))}
       </View>
-      <View style={styles.open} />
+      <View style={[styles.open, styles.bandRoom]}><BandSpot height={compact ? 110 : 150} id="ready" /></View>
       <Animated.View entering={rise(1500)}>
         <EntryButton label="Finish setup" onPress={() => router.replace(`/dashboard?role=${setup.dashboardRole}` as never)} />
       </Animated.View>
@@ -90,4 +91,5 @@ const styles = StyleSheet.create({
   itemTitle: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16.5, lineHeight: 22, letterSpacing: -0.2 },
   itemDetail: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   open: { flexGrow: 1, minHeight: 28 },
+  bandRoom: { alignItems: 'center', justifyContent: 'center' },
 });

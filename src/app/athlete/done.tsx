@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
+import { BandSpot } from '@/components/band-journey';
 import { BrandAssemble } from '@/components/brand-assemble';
 import { EntryButton, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
-import { Entry } from '@/constants/entry-theme';
 import { watchMyMembership, type Membership } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
 
@@ -19,6 +19,7 @@ const DASHBOARD = '/dashboard?role=athlete';
 type State = { kind: 'loading' } | { kind: 'member'; teamName: string | null } | { kind: 'pending'; teamName: string | null } | { kind: 'none' };
 
 const COPY = {
+  loading: { lead: 'One', accent: 'moment.', detail: () => 'Checking your team status…' },
   member: { lead: 'You’re on', accent: 'the team.', detail: (team: string | null) => (team ? `Welcome to ${team}.` : 'Your coach approved your request.') },
   pending: { lead: 'Request', accent: 'sent.', detail: (team: string | null) => (team ? `${team} will approve your request soon.` : 'Your coach will approve your request soon.') },
   none: { lead: 'You’re', accent: 'all set.', detail: () => 'Join a team anytime with a code from your coach.' },
@@ -58,28 +59,18 @@ export default function AthleteDoneScreen() {
     return () => clearTimeout(timer);
   }, [state.kind]);
 
-  if (state.kind === 'loading') {
-    return (
-      <EntryScreen background="complete">{() => (
-        <View style={styles.loading}>
-          <ActivityIndicator accessibilityLabel="Checking your team status" color={Entry.muted} />
-        </View>
-      )}</EntryScreen>
-    );
-  }
-
   const copy = COPY[state.kind];
-  const teamName = state.kind === 'none' ? null : state.teamName;
+  const teamName = state.kind === 'member' || state.kind === 'pending' ? state.teamName : null;
   return (
     <EntryScreen background="complete" backgroundDrawIn={500}>{(compact) => <>
-      <View style={styles.open} />
+      <View style={[styles.open, styles.bandRoom]}><BandSpot height={compact ? 120 : 170} id="athlete-done" /></View>
       {/* The branded finish: the H assembles, then the headline rises beneath it. */}
       <BrandAssemble delay={150} size={compact ? 64 : 80} style={styles.mark} />
-      <EntryHeading accent={copy.accent} align="center" compact={compact} delay={700} lead={copy.lead} size="hero" />
-      <Animated.Text entering={fade(1100)} style={[entryStyles.description, styles.centered]}>{copy.detail(teamName)}</Animated.Text>
+      <EntryHeading accent={copy.accent} align="center" key={state.kind} compact={compact} delay={700} lead={copy.lead} size="hero" />
+      <Animated.Text accessibilityLiveRegion="polite" entering={fade(1100)} style={[entryStyles.description, styles.centered]}>{copy.detail(teamName)}</Animated.Text>
       <View style={styles.open} />
       <Animated.View entering={rise(1250)} style={styles.actions}>
-        <EntryButton label={state.kind === 'member' ? 'Go to dashboard' : 'Continue'} onPress={() => router.replace(DASHBOARD as never)} />
+        {state.kind === 'loading' ? <EntryButton disabled label="Checking…" onPress={() => {}} /> : <EntryButton label={state.kind === 'member' ? 'Go to dashboard' : 'Continue'} onPress={() => router.replace(DASHBOARD as never)} />}
         {state.kind === 'none' ? <EntryButton label="Join a team" onPress={() => router.push('/setup/athlete')} secondary /> : null}
       </Animated.View>
     </>}</EntryScreen>
@@ -87,8 +78,8 @@ export default function AthleteDoneScreen() {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   open: { flexGrow: 1, minHeight: 24 },
+  bandRoom: { alignItems: 'center', justifyContent: 'center' },
   mark: { alignSelf: 'center', marginBottom: 28 },
   centered: { alignSelf: 'center', textAlign: 'center' },
   actions: { gap: 12 },

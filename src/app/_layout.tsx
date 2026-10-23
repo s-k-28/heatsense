@@ -16,6 +16,7 @@ import { createTamagui, TamaguiProvider } from 'tamagui';
 import { defaultConfig } from '@tamagui/config/v6';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
+import { BandJourneyLayer } from '@/components/band-journey';
 import { PhoneFrame } from '@/components/mobile-viewport';
 import { Palette } from '@/constants/theme';
 import { firebaseAuth } from '@/services/firebase';
@@ -104,7 +105,6 @@ export default function RootLayout() {
             <Stack.Screen name="ready" />
             {/* The dashboard is home base once set up: no swipe back into onboarding, which also frees left-edge drags for the content. */}
             <Stack.Screen name="dashboard" options={{ gestureEnabled: false }} />
-            <Stack.Screen name="detail" />
             <Stack.Screen name="setup/coach" />
             <Stack.Screen name="setup/athlete" />
             <Stack.Screen name="athlete/profile" />
@@ -114,10 +114,9 @@ export default function RootLayout() {
             <Stack.Screen name="setup/[role]" />
             <Stack.Screen name="team/create" />
             <Stack.Screen name="team/invite" />
-            <Stack.Screen name="team/[mode]" />
-            <Stack.Screen name="team/practice-location" />
           </Stack.Protected>
         </Stack>
+        <BandJourneyLayer />
         </PhoneFrame>
       </TamaguiProvider>
     </AuthSessionContext.Provider>

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
+import { BandSpot } from '@/components/band-journey';
 import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { Entry } from '@/constants/entry-theme';
 
@@ -24,7 +25,7 @@ export default function NotificationsScreen() {
   return (
     <EntryScreen background="form">{(compact) => <>
       <Animated.View entering={fade(0)}>
-        <EntryHeader onBack={() => (router.canGoBack() ? router.back() : done())} />
+        <EntryHeader bandDock={false} onBack={() => (router.canGoBack() ? router.back() : done())} />
       </Animated.View>
       <EntryHeading accent="right on time." compact={compact} delay={150} lead="Heat alerts," style={{ marginTop: compact ? 30 : 44 }} />
       <Animated.Text entering={fade(500)} style={entryStyles.description}>HeatSense tells you when the field changes.</Animated.Text>
@@ -37,7 +38,7 @@ export default function NotificationsScreen() {
           </Animated.View>
         ))}
       </View>
-      <View style={styles.open} />
+      <View style={[styles.open, styles.bandRoom]}><BandSpot height={compact ? 110 : 150} id="notifications" /></View>
       <Animated.View entering={rise(950)} style={styles.actions}>
         <EntryButton label="Continue" onPress={done} />
         <EntryLink label="Not now" onPress={done} />
@@ -52,5 +53,6 @@ const styles = StyleSheet.create({
   source: { color: Entry.subtle, fontFamily: Entry.medium, fontSize: 12.5 },
   text: { color: Entry.ink, fontFamily: Entry.body, fontSize: 15.5, lineHeight: 21 },
   open: { flexGrow: 1, minHeight: 28 },
+  bandRoom: { alignItems: 'center', justifyContent: 'center' },
   actions: { gap: 18 },
 });

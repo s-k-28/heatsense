@@ -44,8 +44,8 @@ export function useAthleteEntrance() {
 }
 
 /** Back, the HeatSense brand, and the progress track for this step of the athlete flow. */
-export function AthleteHeader({ onBack, step }: { onBack?: () => void; step?: number }) {
-  return <EntryHeader onBack={onBack} progress={step ? { step, total: ONBOARDING_STEPS.athlete } : undefined} />;
+export function AthleteHeader({ onBack, step, bandDock }: { onBack?: () => void; step?: number; bandDock?: boolean }) {
+  return <EntryHeader bandDock={bandDock} onBack={onBack} progress={step ? { step, total: ONBOARDING_STEPS.athlete } : undefined} />;
 }
 
 /** The entry peach primary button. */

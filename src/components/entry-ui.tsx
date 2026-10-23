@@ -1,10 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
+import { BandSpot } from '@/components/band-journey';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { OnboardingBackground, type CurveDraw, type OnboardingBackgroundVariant } from '@/components/onboarding-background';
@@ -89,7 +90,7 @@ export function EntryHeading({ lead, accent, size = 'form', compact = false, del
  * Brand header. With `onBack` the brand is centered between Back and a spacer. `progress` adds the step track below it.
  * `brand={false}` leaves only Back, for a screen whose own mark is the brand (the finish).
  */
-export function EntryHeader({ onBack, progress, brand = true }: { onBack?: () => void; progress?: { step: number; total: number }; brand?: boolean }) {
+export function EntryHeader({ onBack, progress, brand = true, bandDock = true }: { onBack?: () => void; progress?: { step: number; total: number }; brand?: boolean; bandDock?: boolean }) {
   return (
     <View>
       <View style={entryStyles.header}>
@@ -100,11 +101,17 @@ export function EntryHeader({ onBack, progress, brand = true }: { onBack?: () =>
             <Text style={entryStyles.wordmark}>HeatSense</Text>
           </View>
         ) : null}
-        {onBack && brand ? <View style={entryStyles.spacer} /> : null}
+        {onBack && brand ? <View style={entryStyles.spacer}>{bandDock ? <DockedBand /> : null}</View> : null}
       </View>
       {progress ? <OnboardingProgress step={progress.step} total={progress.total} /> : null}
     </View>
   );
+}
+
+/** The band, small, in the header's right-hand slot: it travels with you through the form screens. */
+function DockedBand() {
+  const id = useId();
+  return <BandSpot height={40} id={`dock${id}`} />;
 }
 
 /** A short track that fills from the previous step to this one as the page opens. */
@@ -181,7 +188,7 @@ export const entryStyles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   wordmark: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 19, letterSpacing: -0.6 },
   // Same width as Back so the brand stays centered.
-  spacer: { width: 44, height: 44 },
+  spacer: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   track: { height: 3, borderRadius: 2, backgroundColor: Entry.raised, marginTop: 16, overflow: 'hidden' },
   trackFill: { height: '100%', borderRadius: 2, backgroundColor: Entry.peach },
   back: { height: 44, width: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, borderColor: Entry.line, borderWidth: 1, backgroundColor: Entry.canvas },

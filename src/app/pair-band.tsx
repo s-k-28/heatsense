@@ -1,10 +1,10 @@
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInUp, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
+import { BandSpot } from '@/components/band-journey';
 import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { Entry } from '@/constants/entry-theme';
@@ -14,7 +14,6 @@ import { setPreference } from '@/state/preferences';
 // on, look for the pairing light, pick your band, connect. There is no Bluetooth layer yet (see
 // README, "HeatSense Band"), so finding and connecting are simulated, and every step says so.
 
-const BAND = require('@/assets/images/heatsense-band-refined.png');
 const SERIAL = 'HS-02A7';
 const STEPS = ['ready', 'wear', 'light', 'select', 'connecting', 'connected'] as const;
 type Step = (typeof STEPS)[number];
@@ -37,7 +36,7 @@ const COPY: Record<Step, string> = {
   connected: 'Your band is ready for practice.',
 };
 
-function BandShot({ size, light = false }: { size: number; light?: boolean }) {
+function BandShot({ id, size, light = false }: { id: string; size: number; light?: boolean }) {
   const reduced = useReducedMotion();
   const pulse = useSharedValue(0.3);
   useEffect(() => {
@@ -45,11 +44,10 @@ function BandShot({ size, light = false }: { size: number; light?: boolean }) {
   }, [light, pulse, reduced]);
   const glow = useAnimatedStyle(() => ({ opacity: pulse.value }));
   return (
-    <View style={[styles.shot, { height: size, width: size }]}>
-      <Image accessibilityIgnoresInvertColors contentFit="contain" source={BAND} style={StyleSheet.absoluteFill} />
-      {/* The pairing light sits on the sensor pod's edge. */}
-      {light ? <Animated.View style={[styles.led, { left: size * 0.6, top: size * 0.34 }, glow]} /> : null}
-    </View>
+    <BandSpot height={size} id={id} style={styles.shot}>
+      {/* The pairing light sits on the sensor pod's right edge. */}
+      {light ? <Animated.View style={[styles.led, { left: size * 0.695 * 0.88 - 6, top: size * 0.31 - 6 }, glow]} /> : null}
+    </BandSpot>
   );
 }
 
@@ -72,7 +70,7 @@ function Link({ connected }: { connected: boolean }) {
           </Animated.View>
         ) : <Animated.View style={[styles.travel, dot]} />}
       </View>
-      <BandShot size={96} />
+      <BandShot id={`pair-link-${connected ? 'on' : 'off'}`} size={96} />
     </View>
   );
 }
@@ -127,7 +125,7 @@ export default function PairBandScreen() {
       <Animated.Text entering={fade(450)} style={entryStyles.description}>{COPY[step]}</Animated.Text>
 
       <Animated.View entering={rise(500)} style={styles.stage}>
-        {linking ? <Link connected={step === 'connected'} /> : <BandShot light={step === 'light'} size={compact ? 200 : 240} />}
+        {linking ? <Link connected={step === 'connected'} /> : <BandShot id={`pair-${step}`} light={step === 'light'} size={compact ? 200 : 240} />}
       </Animated.View>
 
       {step === 'select' ? (
