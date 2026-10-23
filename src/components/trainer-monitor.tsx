@@ -97,7 +97,10 @@ export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach
   const flagged = onBand
     .map((a) => ({ a, why: attention(a) }))
     .filter(({ a, why }) => why && !(checked[a.id] && now - checked[a.id].getTime() < 10 * 60_000));
-  const sorted = [...onBand].sort((x, y) => (sort === 'name' ? x.name.localeCompare(y.name) : (y.live!.heartRate - x.live!.heartRate)));
+  // Effort sorts by 10%-of-max bands, then name, so tiles hold still while heart rates wobble and
+  // only move when someone really works harder or eases off.
+  const band = (a: AthleteView) => Math.floor(hrPercent(a.live!.heartRate) / 10);
+  const sorted = [...onBand].sort((x, y) => (sort === 'name' ? x.name.localeCompare(y.name) : band(y) - band(x) || x.name.localeCompare(y.name)));
   const hrs = onBand.filter((a) => !a.live!.stale).map((a) => a.live!.heartRate);
   const cycle = 30 * 60, into = ((demo.seconds % cycle) + cycle) % cycle;
   const blockLeft = demo.enabled ? Math.ceil(((into < 20 * 60 ? 20 * 60 : cycle) - into) / 60) : null;
@@ -152,13 +155,13 @@ export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach
         <View accessibilityRole="tablist" style={styles.sort}>
           {(['effort', 'name'] as const).map((key) => (
             <Pressable accessibilityRole="tab" accessibilityState={{ selected: sort === key }} key={key} onPress={() => setSort(key)} style={[styles.sortItem, sort === key && styles.sortOn]}>
-              <Text style={[styles.sortText, sort === key && styles.sortTextOn]}>{key === 'effort' ? 'Highest HR' : 'A–Z'}</Text>
+              <Text style={[styles.sortText, sort === key && styles.sortTextOn]}>{key === 'effort' ? 'Effort' : 'A–Z'}</Text>
             </Pressable>
           ))}
         </View>
       </View>
       <View style={styles.grid}>
-        {sorted.map((a) => <Animated.View key={a.id} layout={settle(reduced)} style={styles.cell}><Tile a={a} role={role} /></Animated.View>)}
+        {sorted.map((a) => <View key={a.id} style={styles.cell}><Tile a={a} role={role} /></View>)}
       </View>
 
       <View style={styles.team}>
