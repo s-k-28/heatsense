@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
+import { CoachPalette } from '@/constants/coach-theme';
 import { Face, Palette } from '@/constants/theme';
 
 const AthleteAppearance = createContext(false);
@@ -24,8 +25,8 @@ const cache = new WeakMap<object, Styles>();
 /** Only neutral card and text tokens change. Safety colors and selection cues retain their meaning. */
 export function athleteStyle(style: Style): Style {
   const next = { ...style };
-  if (style.backgroundColor === Palette.surface || style.backgroundColor === Palette.surfaceMuted) next.backgroundColor = '#000000';
-  if (style.color === Palette.inkMuted || style.color === Palette.inkFaint) next.color = '#FFFFFF';
+  if (style.backgroundColor === Palette.surface || style.backgroundColor === Palette.surfaceMuted || style.backgroundColor === CoachPalette.surface || style.backgroundColor === CoachPalette.surfaceAlt) next.backgroundColor = '#000000';
+  if (style.color === Palette.inkMuted || style.color === Palette.inkFaint || style.color === CoachPalette.muted || style.color === CoachPalette.faint) next.color = '#FFFFFF';
   if (style.fontFamily === Face.figure) {
     next.fontFamily = 'BarlowCondensed_600SemiBold';
   } else if (!style.fontFamily && (style.fontSize !== undefined || style.fontWeight !== undefined)) {

@@ -4,8 +4,7 @@ import { useRef, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ZoneRules } from '@/components/coach-tabs';
-import { FieldHero } from '@/components/field-hero';
-import { PracticeCard, TodaysReadings } from '@/components/coach-home';
+import { HomeOverview } from '@/components/coach-home';
 import { CoachToday } from '@/components/coach-today';
 import { TrainerHomeOverview } from '@/components/trainer-home-overview';
 import { Card, ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
@@ -66,13 +65,11 @@ export function AthleteHome({ onOpenBand }: { onOpenBand: () => void }) {
       {!waiting && !noTeam ? team.status === 'error' ? (
         <Card title="Practice data unavailable"><ActionButton label="Try again" onPress={team.retry} variant="secondary" /></Card>
       ) : <>
-        <FieldHero data={data} onAction={() => setRulesOpen(true)} readOnly />
-        <PracticeCard data={data} onOpenPlan={() => setRulesOpen(true)} readOnly />
-        <TodaysReadings data={data} />
+        <HomeOverview data={data} role="athlete" onAction={() => setRulesOpen(true)} onOpenPlan={() => setRulesOpen(true)} personalBand={band ? { heartRate: band.vitals.heartRate, recovery: band.status, simulated: true } : null} />
       </> : null}
       <Modal animationType="slide" onRequestClose={() => setRulesOpen(false)} presentationStyle="pageSheet" visible={rulesOpen}>
         <View style={styles.guidanceSheet}>
-          <View style={styles.homeModuleHead}>
+          <View style={[styles.homeModuleHead, styles.guidanceSheetHeader]}>
             <Text accessibilityRole="header" style={styles.homeModuleTitle}>Practice guidance</Text>
             <ActionButton label="Done" onPress={() => setRulesOpen(false)} variant="secondary" />
           </View>
@@ -228,6 +225,7 @@ export function TrainerHome({ onOpenMonitor }: { onOpenMonitor: () => void }) {
 
 const baseStyles = StyleSheet.create({
   guidanceSheet: { backgroundColor: Palette.canvas, flex: 1, padding: 20 },
+  guidanceSheetHeader: { flexWrap: 'wrap', gap: 12 },
   guidanceSheetContent: { gap: 16, paddingBottom: 32, paddingTop: 20 },
   homeBandLink: { alignItems: 'center', flexDirection: 'row', gap: 16, minHeight: 84, flexShrink: 1 },
   homeBandCopy: { gap: 8, flexShrink: 1 },
