@@ -71,6 +71,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function isActiveAthlete(teamId) {
+      let path = /databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid);
+      return signedIn() && exists(path) && get(path).data.status == 'active' && get(path).data.role == 'athlete';
+    }
+
     function isActiveTrainer(teamId) {
       let path = /databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid);
       return signedIn() && exists(path) && get(path).data.status == 'active' && get(path).data.role == 'trainer';
@@ -167,6 +172,18 @@ service cloud.firestore {
           && ((docId == 'health' && validHealth(request.resource.data))
             || (docId == 'safety' && validSafety(request.resource.data)));
       }
+
+      // The athlete's paired HeatSense Band. Only the athlete; unpairing deletes it.
+      match /band/{docId} {
+        allow read, delete: if signedIn() && request.auth.uid == uid && docId == 'current';
+        allow create, update: if signedIn() && request.auth.uid == uid && docId == 'current'
+          && request.resource.data.keys().hasOnly(['serial', 'firmware', 'pairedAt', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['serial', 'firmware', 'pairedAt', 'updatedAt'])
+          && request.resource.data.serial is string && request.resource.data.serial.matches('^HS-[0-9A-F]{4}$')
+          && (request.resource.data.firmware == null || (request.resource.data.firmware is string && request.resource.data.firmware.size() <= 20))
+          && request.resource.data.pairedAt is timestamp
+          && request.resource.data.updatedAt == request.time;
+      }
     }
 
     function validHealth(data) {
@@ -231,6 +248,33 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endedAt'])
         && request.resource.data.endedAt == request.time;
       allow delete: if false;
+
+      // Band vitals during practice: one document per athlete, overwritten as new samples arrive.
+      // Only that athlete writes it, only while practice is open, at most every 10 seconds (the
+      // free plan's write budget); the coach, approved trainers and the athlete read it, teammates never.
+      match /vitals/{athleteUid} {
+        function practice() { return get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)).data; }
+        function validVitals(d) {
+          return d.keys().hasOnly(['heartRate', 'skinTempF', 'sweat', 'movement', 'recovery', 'source', 'serial', 'sampledAt', 'updatedAt'])
+            && d.keys().hasAll(['heartRate', 'skinTempF', 'sweat', 'movement', 'recovery', 'source', 'serial', 'sampledAt', 'updatedAt'])
+            && d.heartRate is int && d.heartRate >= 30 && d.heartRate <= 230
+            && (d.skinTempF == null || (d.skinTempF is number && d.skinTempF >= 77 && d.skinTempF <= 113))
+            && (d.sweat == null || (d.sweat is number && d.sweat >= 0 && d.sweat <= 100))
+            && d.movement is number && d.movement >= 0 && d.movement <= 100
+            && d.recovery in ['usual', 'watch', 'unknown']
+            && d.source in ['band', 'simulated']
+            && (d.serial == null || (d.serial is string && d.serial.matches('^HS-[0-9A-F]{4}$')))
+            && d.sampledAt is timestamp && d.sampledAt <= request.time + duration.value(1, 'm')
+            && d.updatedAt == request.time;
+        }
+        allow read: if isCoach(teamId) || isActiveTrainer(teamId) || (signedIn() && request.auth.uid == athleteUid && isActiveMember(teamId));
+        allow create: if signedIn() && request.auth.uid == athleteUid && isActiveAthlete(teamId)
+          && practice().endedAt == null && validVitals(request.resource.data);
+        allow update: if signedIn() && request.auth.uid == athleteUid && isActiveAthlete(teamId)
+          && practice().endedAt == null && validVitals(request.resource.data)
+          && request.time > resource.data.updatedAt + duration.value(10, 's');
+        allow delete: if false;
+      }
 
       match /readings/{readingId} {
         function session() { return get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)).data; }

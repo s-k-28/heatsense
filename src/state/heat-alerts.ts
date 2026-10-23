@@ -5,11 +5,14 @@ import { setActivityReading } from '@/lib/practice-activity';
 import { UIL_GUIDANCE } from '@/lib/uil-wbgt';
 import { alertZoneChange, scheduleRecheck } from '@/services/heat-alerts';
 import { firebaseAuth } from '@/services/firebase';
+import { useBandUplink } from '@/state/band-uplink';
 import { useCoachData, type SessionRole } from '@/state/team-session';
 
-/** Keeps this phone's heat alerts in step with the team's practice record. Mount once on the dashboard. */
+/** Keeps this phone in step with the team's practice: heat alerts, the Live Activity, and the athlete's band uplink. Mount once on the dashboard. */
 export function useHeatAlerts(role: SessionRole) {
   const data = useCoachData(role);
+  // An athlete's band reports to the team during practice (see band-uplink).
+  useBandUplink(role === 'athlete');
   const live = Boolean(data && !data.sample);
   const session = data?.session ?? null;
   const readings = data?.readings ?? [];

@@ -87,7 +87,7 @@ flowchart LR
 | **What HeatSense does** | Turns one WBGT reading into the zone and the exact UIL rules, times the next recheck, keeps a tamper-proof record, and shows each athlete's recovery so staff can act early. |
 | **Who uses it** | Coaches (run the practice), athletic trainers (watch recovery), athletes (see the zone, wear the band). |
 | **Built with** | Expo / React Native (iOS, Android, web), Firebase Auth + Firestore on the free plan, security rules as the backend, an ESP32 wearable in development. |
-| **By the numbers** | ~13,400 lines of TypeScript, rules and tests · 45 backend tests on the emulator · 2 self-check suites (UIL engine, band simulator) · 3 role-specific apps · 0 servers to run · $0 a month to operate |
+| **By the numbers** | ~13,400 lines of TypeScript, rules and tests · 47 backend tests on the emulator · 2 self-check suites (UIL engine, band simulator) · 3 role-specific apps · 0 servers to run · $0 a month to operate |
 
 ### A coach's practice day
 
@@ -115,7 +115,7 @@ We want to be clear about what is real and what is not yet.
 | | Feature | Notes |
 |---|---|---|
 | 🟢 **Works today** | Field check: WBGT reading → UIL zone → guidance → acknowledge → recheck → history → share | See [How it works](#how-it-works). The readings are entered by hand |
-| 🟢 **Works today** | Firestore rules recompute the UIL zone and keep readings append-only | `firebase/firestore.rules`. 45/45 emulator tests pass (`npm run test:invites`) |
+| 🟢 **Works today** | Firestore rules recompute the UIL zone and keep readings append-only | `firebase/firestore.rules`. 47/47 emulator tests pass (`npm run test:invites`) |
 | 🟢 **Works today** | Sign-in with Google, or email and password (with password reset), through Firebase Auth | Android Google sign-in still needs release setup and device testing ([auth setup](docs/engineering/auth-setup.md)) |
 | 🟢 **Works today** | Coach creates a team and gets a six-digit invite code; an athlete or athletic trainer joins; coach approves | Enforced by `firebase/firestore.rules`, with no server code (free Firebase plan) |
 | 🟢 **Works today** | Athlete profile onboarding (profile → body → safety) | Profile saved to Firestore; health and contact answers are **not** saved in production yet |
@@ -126,7 +126,8 @@ We want to be clear about what is real and what is not yet.
 | 🧪 **Simulated** | Band vitals for a demo team (heart rate, skin temperature, sweat, movement, recovery check) | `src/lib/band-simulator.ts`. Every screen labels it **SIMULATED BAND DATA**; on by default only in builds without Firebase |
 | 🔵 **Planned** | Custom (non-UIL) school heat policies | Every session already stores its policy version (`uil-wbgt@2025-26`), so a second policy can be added without migrating data |
 | 🔵 **Planned** | Live sensor or weather-based WBGT | Today, every reading is typed in by a coach |
-| 🛠️ **In development** | HeatSense Band wearable | Pairing flow in onboarding and a tested signal simulator. No firmware or Bluetooth code yet. See [HeatSense Band](#heatsense-band-hardware-in-development) |
+| 🟢 **Works today** | Band backend: pairing record and live practice vitals in Firestore | `src/services/band-vitals.ts`. An approved athlete's phone reports a sample every 30 s during practice; the coach and trainers read it, teammates can't; rules cap writes at one per 10 s. Samples are marked `simulated` until the firmware lands |
+| 🛠️ **In development** | HeatSense Band wearable | Pairing flow in onboarding, a tested signal simulator, and the backend above. No firmware or Bluetooth code yet. See [HeatSense Band](#heatsense-band-hardware-in-development) |
 
 ## How it works
 
@@ -161,7 +162,7 @@ Some decisions we made on purpose:
 - **The server checks the math.** The app computes the zone, but `firebase/firestore.rules` has its own copy of the UIL thresholds. It recomputes the zone from `wbgtF` and the session's class, and rejects any reading whose zone doesn't match.
 - **Readings are append-only.** Once saved, a reading can't be edited or deleted. The only allowed change is the coach's one-time acknowledgment. Sessions can only be ended, never edited.
 - **Every reading records its source.** Each session stores the policy version (`uil-wbgt@2025-26`). Each reading stores the entered value and unit, the source, the time measured, and who recorded it.
-- **Tested both ways.** `scripts/check-uil-wbgt.ts` checks the classifier against the chart, including the zone boundaries. The emulator suite (`npm run test:invites`, 45/45 passing) covers invites, access rules, and session/reading rules.
+- **Tested both ways.** `scripts/check-uil-wbgt.ts` checks the classifier against the chart, including the zone boundaries. The emulator suite (`npm run test:invites`, 47/47 passing) covers invites, access rules, and session/reading rules.
 
 ## Heat alerts
 
@@ -813,7 +814,7 @@ heatsense/
 ├── scripts/                     Developer scripts
 │   ├── check-uil-wbgt.ts        Self-check for the UIL classifier (node scripts/check-uil-wbgt.ts)
 │   ├── check-band-simulator.ts  Self-check for the band signal model and recovery check
-│   ├── test-team-invites.mjs    Emulator test suite: teams, codes, joining, roles, sessions, readings (45 tests)
+│   ├── test-team-invites.mjs    Emulator test suite: teams, codes, joining, roles, sessions, readings (47 tests)
 │   ├── check-auth-config.mjs    Checks Google sign-in configuration (npm run check:auth)
 │   ├── check-coach-countdown.mjs Checks the recheck countdown math
 │   ├── capture-screen.sh        Screenshot one route on the iOS Simulator
@@ -869,7 +870,7 @@ heatsense/
 | Graphics | React Native SVG, Skia | 15.15, ^2.6 | Heat orb, rings and charts |
 | iOS extras | expo-widgets | ~57.0 | Practice Live Activity / Dynamic Island |
 | Device | expo-location, expo-maps, expo-crypto | ~57.0 | Practice location; secure random invite codes |
-| Testing | Firebase Emulator Suite, firebase-admin, Node test scripts | firebase-admin ^14.5 | 45 backend tests against the real rules; self-checks for the heat engine and band simulator |
+| Testing | Firebase Emulator Suite, firebase-admin, Node test scripts | firebase-admin ^14.5 | 47 backend tests against the real rules; self-checks for the heat engine and band simulator |
 | Hardware (planned) | ESP32, C++, Arduino framework, PlatformIO, react-native-ble-plx | n/a | Low-cost BLE microcontroller with standard I2C sensors |
 
 ## Getting started
@@ -939,9 +940,9 @@ npm run web        # web browser
 npm run test:invites
 ```
 
-This starts local Firebase emulators (Auth + Firestore), runs 45 tests against the real security rules, and shuts them down.
+This starts local Firebase emulators (Auth + Firestore), runs 47 tests against the real security rules, and shuts them down.
 
-✅ The last line reads `45 passed, 0 failed`.
+✅ The last line reads `47 passed, 0 failed`.
 
 ### 6. Deploy the security rules (team leads only)
 
@@ -959,7 +960,7 @@ npx tsc --noEmit                          # type errors → should print nothing
 npm run lint                              # style and React rules → 0 errors
 node scripts/check-uil-wbgt.ts            # heat engine → "all checks passed"
 node scripts/check-band-simulator.ts      # band model → "all checks passed"
-npm run test:invites                      # backend rules → "45 passed, 0 failed"
+npm run test:invites                      # backend rules → "47 passed, 0 failed"
 ```
 
 ### Troubleshooting
