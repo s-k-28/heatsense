@@ -1,3 +1,4 @@
+import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -10,6 +11,7 @@ export const chevron = { ios: 'chevron.right', android: 'chevron_right', web: 'c
 
 /** A rounded surface, the building block of every screen. Flat: no outline, no shadow. */
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const styles = useAthleteStyles(baseStyles);
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
@@ -28,6 +30,8 @@ export function CardHeader({
   tone?: string;
   trailing?: string;
 }) {
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   const color = tone ?? Palette.ink;
   const content = (
     <View style={styles.cardHeader}>
@@ -51,6 +55,7 @@ export function CardHeader({
 
 /** Inset grouped list: rows on one surface with hairline separators between them. */
 export function Group({ children, inset = Spacing.four, style }: { children: ReactNode; inset?: number; style?: StyleProp<ViewStyle> }) {
+  const styles = useAthleteStyles(baseStyles);
   const items = Children.toArray(children).filter(isValidElement);
   return (
     <View style={[styles.group, style]}>
@@ -95,6 +100,8 @@ export function Row({
   value?: string;
   valueTone?: string;
 }) {
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   const body = (pressed: boolean) => (
     <View style={[styles.row, pressed && styles.rowPressed]}>
       {leading}
@@ -118,6 +125,7 @@ export function Row({
 
 /** Solid square behind a symbol, as in the Settings app. */
 export function IconTile({ color = '#636366', icon }: { color?: string; icon: IconName }) {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <View style={[styles.iconTile, { backgroundColor: color }]}>
       <HeatIcon name={icon} size={16} tintColor="#FFFFFF" weight="semibold" />
@@ -126,6 +134,7 @@ export function IconTile({ color = '#636366', icon }: { color?: string; icon: Ic
 }
 
 export function Initials({ name, size = 40 }: { name: string; size?: number }) {
+  const styles = useAthleteStyles(baseStyles);
   const letters = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]!.toUpperCase()).join('');
   return (
     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.initials, { borderRadius: size / 2, height: size, width: size }]}>
@@ -136,6 +145,7 @@ export function Initials({ name, size = 40 }: { name: string; size?: number }) {
 
 /** Standard filled button. */
 export function Button({ label, onPress, tone = 'tint' }: { label: string; onPress: () => void; tone?: 'tint' | 'gray' }) {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <Pressable
       accessibilityRole="button"
@@ -148,6 +158,7 @@ export function Button({ label, onPress, tone = 'tint' }: { label: string; onPre
 
 /** Plain text link in the tint color. */
 export function TextLink({ label, onPress }: { label: string; onPress?: () => void }) {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <Pressable accessibilityRole="button" hitSlop={10} onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
       <Text style={styles.link}>{label}</Text>
@@ -165,7 +176,7 @@ export const textStyles = StyleSheet.create({
   footnote: { color: Palette.inkMuted, ...Type.footnote },
 });
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.55 },
   card: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, padding: Spacing.four },
   cardHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 24 },

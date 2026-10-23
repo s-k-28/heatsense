@@ -1,8 +1,12 @@
+import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
-import { ZonePicker } from '@/components/protocols-tab';
+import { PressScale } from '@/components/motion/press-scale';
+import { ActionButton } from '@/components/ui/action-button';
+import { SafetyStatus, ZonePicker } from '@/components/protocols-tab';
 import { ListRow, Rows, SectionTitle } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { enter } from '@/lib/motion';
@@ -42,6 +46,9 @@ const hydration = (i: number) =>
       : { title: 'Dehydrated', body: 'Drink now, and tell your coach or trainer before practice. Dehydration raises your risk of heat illness.', tone: Palette.emergency };
 
 function SelfCheck() {
+  const styles = useAthleteStyles(baseStyles);
+  const { width, fontScale } = useWindowDimensions();
+  const singleColumn = width < 360 || fontScale > 1.2;
   const reduced = useReducedMotion();
   const [picked, setPicked] = useState<string[]>([]);
   const levels = SYMPTOMS.filter((s) => picked.includes(s.label)).map((s) => s.level);
@@ -49,12 +56,13 @@ function SelfCheck() {
   const toggle = (label: string) => setPicked(picked.includes(label) ? picked.filter((p) => p !== label) : [...picked, label]);
   return (
     <>
-      <View style={styles.chips}>
+      <View style={styles.symptoms}>
         {SYMPTOMS.map((s) => {
           const on = picked.includes(s.label);
           return (
-            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} key={s.label} onPress={() => toggle(s.label)} style={({ pressed }) => [styles.chip, on && styles.chipOn, pressed && styles.pressed]}>
-              <Text style={[styles.chipText, on && styles.chipTextOn]}>{s.label}</Text>
+            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} key={s.label} onPress={() => toggle(s.label)} style={({ pressed }) => [styles.symptom, singleColumn && styles.symptomWide, on && styles.symptomOn, pressed && styles.pressed]}>
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.check, on && styles.checkOn]}><Text style={styles.checkMark}>{on ? '✓' : ''}</Text></View>
+              <Text style={styles.symptomText}>{s.label}</Text>
             </Pressable>
           );
         })}
@@ -65,7 +73,7 @@ function SelfCheck() {
           <View style={styles.resultCopy}>
             <Text style={[styles.resultTitle, { color: ADVICE[level].tone }]}>{ADVICE[level].title}</Text>
             <Text style={styles.resultBody}>{ADVICE[level].body}</Text>
-            <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setPicked([])}><Text style={styles.clear}>Clear</Text></Pressable>
+            <ActionButton label="Clear selection" onPress={() => setPicked([])} style={styles.clear} variant="text" />
           </View>
         </Animated.View>
       ) : (
@@ -76,13 +84,17 @@ function SelfCheck() {
 }
 
 function HydrationCheck() {
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
+  const { width, fontScale } = useWindowDimensions();
+  const compact = width < 480 || fontScale > 1.2;
   const [shade, setShade] = useState<number | null>(null);
   const result = shade === null ? null : hydration(shade);
   return (
     <View style={styles.card}>
       <View style={styles.shades}>
         {SHADES.map((color, i) => (
-          <Pressable accessibilityLabel={`Shade ${i + 1} of 8`} accessibilityRole="button" accessibilityState={{ selected: shade === i }} key={color} onPress={() => setShade(i)} style={[styles.shade, { backgroundColor: color }, shade === i && styles.shadeOn]} />
+          <PressScale accessibilityLabel={`Shade ${i + 1} of 8`} accessibilityRole="button" accessibilityState={{ selected: shade === i }} key={color} onPress={() => setShade(i)} style={[styles.shade, compact && styles.shadeCompact, { backgroundColor: color }, shade === i && styles.shadeOn]}><Text accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.shadeNumber, { color: i < 5 ? Palette.canvas : Palette.ink }]}>{i + 1}</Text></PressScale>
         ))}
       </View>
       <View style={styles.shadeAxis}><Text style={styles.axisText}>Lighter</Text><Text style={styles.axisText}>Darker</Text></View>
@@ -104,8 +116,9 @@ function HydrationCheck() {
 /** Where help is: the team's emergency action plan, as the coach and trainers keep it. */
 function WhereHelpIs() {
   const data = useCoachData('athlete');
-  const [plan] = useEmergencyPlan(data?.sample ? null : data?.teamId ?? null);
+  const [plan, , planState] = useEmergencyPlan(data?.sample ? null : data?.teamId ?? null);
   const rows = ([['aed', 'AED'], ['tub', 'Cooling tub'], ['hospital', 'Hospital'], ['caller', 'Calls 911']] as const).filter(([k]) => plan[k]?.trim());
+  if (planState.status !== 'ready') return <><SectionTitle title="If something goes wrong" /><SafetyStatus label="emergency plan" retry={planState.retry} status={planState.status} /></>;
   if (!rows.length) return null;
   return (
     <>
@@ -117,7 +130,8 @@ function WhereHelpIs() {
   );
 }
 
-export function LearnTab() {
+export function LearnTab({ onOpenBand }: { onOpenBand: () => void }) {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <>
       <SectionTitle title="How do you feel?" />
@@ -126,27 +140,41 @@ export function LearnTab() {
       <SectionTitle title="Check your hydration" />
       <HydrationCheck />
       <ZonePicker role="athlete" />
+      <SectionTitle title="Your HeatSense Band" />
+      <PressScale accessibilityRole="button" accessibilityLabel="Explore your band and its signals" onPress={onOpenBand} style={styles.bandLink}>
+        <Image contentFit="contain" source={require('@/assets/images/band-views/module.png')} style={styles.bandDetailImage} />
+        <View style={styles.bandLinkCopy}><Text style={styles.hydrationTitle}>Explore your band</Text><Text style={styles.bandLinkAction}>Views and signals ›</Text></View>
+      </PressScale>
     </>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
+  bandLink: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 16, flexDirection: 'row', gap: 20, minHeight: 112, overflow: 'hidden', paddingRight: 20 },
+  bandDetailImage: { width: 88, height: 112 },
+  bandLinkCopy: { flex: 1, gap: 8 },
+  bandLinkAction: { color: Palette.coral, fontSize: 15, lineHeight: 21 },
   pressed: { opacity: 0.7 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderColor: Palette.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 9 },
-  chipOn: { backgroundColor: Palette.ink, borderColor: Palette.ink },
-  chipText: { color: Palette.ink, fontSize: 15, fontWeight: '600' },
-  chipTextOn: { color: '#101416' },
+  symptoms: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12 },
+  symptom: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', flexGrow: 1, flexBasis: '45%', gap: 10, minHeight: 60, paddingVertical: 12, paddingHorizontal: 4 },
+  symptomWide: { flexBasis: '100%' },
+  symptomOn: { backgroundColor: Palette.surface },
+  symptomText: { color: Palette.ink, flex: 1, fontSize: 15, lineHeight: 21 },
+  check: { alignItems: 'center', borderColor: Palette.inkMuted, borderRadius: 6, borderWidth: 1, height: 22, justifyContent: 'center', width: 22 },
+  checkOn: { backgroundColor: Palette.ink, borderColor: Palette.ink },
+  checkMark: { color: Palette.canvas, fontSize: 16, fontWeight: '700' },
   hint: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22, marginTop: 12 },
   result: { backgroundColor: Palette.surface, borderRadius: 16, borderWidth: 1, flexDirection: 'row', marginTop: 14, overflow: 'hidden' },
   resultBar: { width: 5 },
   resultCopy: { flex: 1, gap: 4, padding: 16 },
   resultTitle: { fontSize: 20, fontWeight: '700' },
   resultBody: { color: Palette.ink, fontSize: 16, lineHeight: 22 },
-  clear: { color: Palette.inkMuted, fontSize: 15, fontWeight: '600', marginTop: 6 },
+  clear: { alignSelf: 'flex-start', marginTop: 4 },
   card: { backgroundColor: Palette.surface, borderRadius: 16, padding: 16 },
-  shades: { flexDirection: 'row', gap: 6 },
-  shade: { borderColor: 'transparent', borderRadius: 10, borderWidth: 3, flex: 1, height: 52 },
+  shades: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  shade: { alignItems: 'center', borderColor: 'transparent', borderRadius: 10, borderWidth: 3, flexBasis: '10%', flexGrow: 1, justifyContent: 'center', minHeight: 56, minWidth: 44, paddingVertical: 8 },
+  shadeCompact: { flexBasis: '20%' },
+  shadeNumber: { fontSize: 14, fontWeight: '700' },
   shadeOn: { borderColor: Palette.ink },
   shadeAxis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   axisText: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },

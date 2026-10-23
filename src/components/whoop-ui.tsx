@@ -1,22 +1,25 @@
+import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { Children, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
+import { PressScale } from '@/components/motion/press-scale';
 import { Face, Palette } from '@/constants/theme';
-import { enter, settle } from '@/lib/motion';
+import { settle } from '@/lib/motion';
 
 // The dashboard's building blocks: one heading per section, rows grouped on one surface with
 // hairline dividers, stats and cards. Sentence case throughout, peach only on things you can tap.
 
 export function SectionTitle({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <View style={styles.sectionRow}>
       <Text accessibilityRole="header" style={styles.section}>{title}</Text>
       {action && onAction ? (
-        <Pressable accessibilityRole="button" hitSlop={10} onPress={onAction}>
+        <PressScale accessibilityRole="button" onPress={onAction} style={styles.sectionTarget}>
           <Text style={styles.sectionAction}>{action}</Text>
-        </Pressable>
+        </PressScale>
       ) : null}
     </View>
   );
@@ -24,11 +27,13 @@ export function SectionTitle({ title, action, onAction }: { title: string; actio
 
 /** A quiet heading for a group of rows. */
 export function CapsLabel({ children }: { children: string }) {
+  const styles = useAthleteStyles(baseStyles);
   return <Text accessibilityRole="header" style={styles.caps}>{children}</Text>;
 }
 
 /** Stands in for a profile picture or initials before someone has a name. */
 export function PersonGlyph({ size = 44 }: { size?: number }) {
+  const Palette = useAthletePalette();
   return <Svg fill="none" height={size} stroke={Palette.inkMuted} strokeLinecap="round" strokeWidth={1.8} viewBox="0 0 24 24" width={size}><Path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20a7.5 7.5 0 0 1 15 0" /></Svg>;
 }
 
@@ -37,7 +42,9 @@ const Chevron = () => (
 );
 
 /** One row: a label, an optional detail line, and a value, control or chevron. */
-export function ListRow({ label, detail, value, valueTone, onPress, trailing, destructive }: { label: string; detail?: string; value?: string; valueTone?: string; onPress?: () => void; trailing?: ReactNode; destructive?: boolean }) {
+export function ListRow({ label, detail, value, valueTone, onPress, trailing, destructive, selected }: { label: string; detail?: string; value?: string; valueTone?: string; onPress?: () => void; trailing?: ReactNode; destructive?: boolean; selected?: boolean }) {
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   const body = (
     <>
       <View style={styles.rowCopy}>
@@ -49,20 +56,21 @@ export function ListRow({ label, detail, value, valueTone, onPress, trailing, de
     </>
   );
   return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>{body}</Pressable>
+    <Pressable accessibilityRole="button" accessibilityState={selected === undefined ? undefined : { selected }} onPress={onPress} style={({ pressed }) => [styles.row, selected && styles.rowSelected, pressed && styles.pressed]}>{body}</Pressable>
   ) : (
     // A row that holds its own controls (approve, a switch) can't be one accessible element, or those controls disappear for VoiceOver.
     <View accessible={!trailing} style={styles.row}>{body}</View>
   );
 }
 
-/** Rows on one surface with hairline dividers. They arrive one after another and close up smoothly when one leaves. */
+/** Rows on one surface with hairline dividers. Reading lists appear immediately; changed rows settle calmly. */
 export function Rows({ children }: { children: ReactNode }) {
+  const styles = useAthleteStyles(baseStyles);
   const reduced = useReducedMotion();
   return (
     <View style={styles.rows}>
       {Children.toArray(children).map((child, i) => (
-        <Animated.View entering={enter(i, reduced)} key={(child as { key?: string }).key ?? i} layout={settle(reduced)}>
+        <Animated.View key={(child as { key?: string }).key ?? i} layout={settle(reduced)}>
           {i > 0 ? <View style={styles.divider} /> : null}
           {child}
         </Animated.View>
@@ -76,6 +84,7 @@ export function Rows({ children }: { children: ReactNode }) {
  * of the sentence at full reading size, as one paragraph, never a title with a small grey line under it.
  */
 export function Facts({ items }: { items: { title: string; body: string; tone?: string }[] }) {
+  const styles = useAthleteStyles(baseStyles);
   // When any item has a dot, the others keep the dot's space so every paragraph starts on one edge.
   const dotted = items.some((item) => item.tone);
   return (
@@ -92,6 +101,7 @@ export function Facts({ items }: { items: { title: string; body: string; tone?: 
 
 /** Numbers side by side, value over its label, the way an activity summary reads. */
 export function StatRow({ stats }: { stats: { label: string; value: string; unit?: string; tone?: string }[] }) {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <View style={styles.statRow}>
       {stats.map((stat) => (
@@ -106,6 +116,7 @@ export function StatRow({ stats }: { stats: { label: string; value: string; unit
 
 /** One self-contained card: a title, an optional message, and whatever it holds. */
 export function Card({ title, message, children, onPress }: { title: string; message?: string; children?: ReactNode; onPress?: () => void }) {
+  const styles = useAthleteStyles(baseStyles);
   const body = (
     <>
       <View style={styles.cardTop}>
@@ -117,12 +128,13 @@ export function Card({ title, message, children, onPress }: { title: string; mes
     </>
   );
   return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>{body}</Pressable>
+    <PressScale accessibilityRole="button" onPress={onPress} style={styles.card}>{body}</PressScale>
   ) : <View style={styles.card}>{body}</View>;
 }
 
 /** Marks example numbers so nobody takes them for the team's own. */
 export function SampleTag() {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <View accessible accessibilityLabel="Sample data" style={styles.sample}>
       <View style={styles.sampleDot} />
@@ -131,19 +143,21 @@ export function SampleTag() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.7 },
-  sectionRow: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, marginTop: 32 },
-  section: { color: Palette.ink, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+  sectionTarget: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' },
+  sectionRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', marginBottom: 12, marginTop: 32 },
+  section: { flexShrink: 1, color: Palette.ink, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
   sectionAction: { color: Palette.coral, fontSize: 16, fontWeight: '600' },
   caps: { color: Palette.inkMuted, fontSize: 15, fontWeight: '600', marginBottom: 8, marginTop: 24 },
   rows: { backgroundColor: Palette.surface, borderRadius: 16, overflow: 'hidden' },
   divider: { backgroundColor: Palette.border, height: StyleSheet.hairlineWidth, marginLeft: 18 },
   row: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 56, paddingHorizontal: 18, paddingVertical: 13 },
   rowCopy: { flex: 1, gap: 2 },
+  rowSelected: { backgroundColor: Palette.fill },
   rowLabel: { color: Palette.ink, fontSize: 17, fontWeight: '500' },
   rowDetail: { color: Palette.inkMuted, fontSize: 15, lineHeight: 20 },
-  rowValue: { color: Palette.ink, fontSize: 17, fontVariant: ['tabular-nums'], fontWeight: '600' },
+  rowValue: { flexShrink: 1, textAlign: 'right', maxWidth: '50%', color: Palette.ink, fontSize: 17, fontVariant: ['tabular-nums'], fontWeight: '600' },
   fact: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, paddingHorizontal: 18, paddingVertical: 16 },
   factDot: { borderRadius: 5, height: 10, marginTop: 7, width: 10 },
   factText: { color: Palette.inkMuted, flex: 1, fontSize: 17, lineHeight: 24 },

@@ -107,6 +107,8 @@ export default function RootLayout() {
             <Stack.Screen name="ready" />
             {/* The dashboard is home base once set up: no swipe back into onboarding, which also frees left-edge drags for the content. */}
             <Stack.Screen name="dashboard" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="practice-record" />
+            <Stack.Screen name="athlete-vitals" />
             <Stack.Screen name="setup/coach" />
             <Stack.Screen name="setup/athlete" />
             <Stack.Screen name="athlete/profile" />

@@ -1,13 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { SampleTag } from '@/components/whoop-ui';
-import { Face, Palette } from '@/constants/theme';
+import { ListRow, Rows, SampleTag } from '@/components/whoop-ui';
+import { Segmented } from '@/components/motion/segmented';
+import { ActionButton } from '@/components/ui/action-button';
+import { Palette } from '@/constants/theme';
 import { ACCLIMATIZATION_DAYS } from '@/lib/acclimatization';
-import { enter, settle } from '@/lib/motion';
 import { useAthletes, type AthleteView } from '@/state/athletes';
 
 // The trainer's roster: everyone on the team, searchable, with where each athlete is in heat
@@ -16,57 +16,48 @@ import { useAthletes, type AthleteView } from '@/state/athletes';
 type Filter = 'all' | 'acclimatizing' | 'band' | 'watch';
 const FILTERS: Record<Filter, { label: string; match: (a: AthleteView) => boolean }> = {
   all: { label: 'All', match: () => true },
-  acclimatizing: { label: 'Acclimatizing', match: (a) => a.acclimatizationDay < ACCLIMATIZATION_DAYS },
-  band: { label: 'On band', match: (a) => Boolean(a.live && !a.live.stale) },
-  watch: { label: 'Watch', match: (a) => a.live?.status === 'watch' },
+  acclimatizing: { label: 'Under 14', match: (a) => a.practiceDaysKnown && a.acclimatizationDay < ACCLIMATIZATION_DAYS },
+  band: { label: 'Live', match: (a) => Boolean(a.live && !a.live.stale) },
+  watch: { label: 'Watch', match: (a) => Boolean(a.live && !a.live.stale && a.live.status === 'watch') },
 };
 
-const initials = (name: string) => name.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
-
-function AcclimatizationPill({ day }: { day: number }) {
-  const done = day >= ACCLIMATIZATION_DAYS;
-  const tone = done ? Palette.safe : day < 6 ? Palette.warning : Palette.coral;
-  return (
-    <View accessibilityLabel={done ? 'Acclimatized' : day === 0 ? 'New, acclimatization not started' : `Acclimatization day ${day} of 14`} accessible style={[styles.pill, { borderColor: tone }]}>
-      {done ? (
-        <Svg fill="none" height={12} stroke={tone} strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} viewBox="0 0 24 24" width={12}><Path d="m5 12 5 5L20 7" /></Svg>
-      ) : null}
-      <Text style={[styles.pillText, { color: tone }]}>{done ? 'Ready' : day === 0 ? 'New' : `Day ${day}/14`}</Text>
-    </View>
-  );
+function practiceDayLabel(a: AthleteView) {
+  if (!a.practiceDaysKnown) return '—';
+  const day = a.acclimatizationDay;
+  return day >= ACCLIMATIZATION_DAYS ? '14+ days' : `${day} ${day === 1 ? 'day' : 'days'}`;
 }
 
-function BandMark({ a }: { a: AthleteView }) {
-  const on = Boolean(a.live && !a.live.stale);
-  const tone = !on ? 'rgba(235,235,245,0.25)' : a.live!.status === 'watch' ? Palette.warning : Palette.safe;
-  return (
-    <View accessibilityLabel={on ? (a.live!.status === 'watch' ? 'Band live, slow recovery' : 'Band live') : 'No band signal'} accessible style={styles.band}>
-      <Svg fill="none" height={20} stroke={on ? Palette.ink : 'rgba(235,235,245,0.3)'} strokeWidth={1.8} viewBox="0 0 24 24" width={20}>
-        <Path d="M8 3h8l1 4v10l-1 4H8l-1-4V7z" strokeLinejoin="round" />
-        <Circle cx={12} cy={12} fill={tone} r={2.4} stroke="none" />
-      </Svg>
-    </View>
-  );
+function bandLabel(a: AthleteView) {
+  if (!a.live) return 'No band signal';
+  const state = a.live.stale ? 'Signal stale' : a.live.status === 'watch' ? 'Live · slow recovery' : a.live.status === 'unknown' ? 'Live · recovery unavailable' : 'Band live';
+  return `${a.simulated ? 'Simulated · ' : ''}${state}`;
 }
 
 export function TrainerAthletes({ role = 'trainer', embedded = false }: { role?: 'trainer' | 'coach'; embedded?: boolean }) {
-  const { athletes, pending, sample, loading } = useAthletes(role);
-  const reduced = useReducedMotion();
+  const { athletes, pending, sample, loading, status, vitalsStatus, historyStatus, retry } = useAthletes(role);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const filters = (Object.keys(FILTERS) as Filter[]).filter((key) => {
+    const count = athletes.filter((a) => FILTERS[key].match(a)).length;
+    return key === 'all' || key === filter || (count > 0 && count < athletes.length);
+  });
+  const showSearch = athletes.length >= 8 || Boolean(query);
   const shown = athletes
-    .filter(FILTERS[filter].match)
+    .filter((a) => FILTERS[filter].match(a))
     .filter((a) => a.name.toLowerCase().includes(query.trim().toLowerCase()))
-    .sort((x, y) => x.acclimatizationDay - y.acclimatizationDay || x.name.localeCompare(y.name));
+    .sort((x, y) => Number(y.practiceDaysKnown) - Number(x.practiceDaysKnown) || (x.practiceDaysKnown && y.practiceDaysKnown ? x.acclimatizationDay - y.acclimatizationDay : 0) || x.name.localeCompare(y.name));
 
   return (
     <>
       {sample && !embedded ? <SampleTag /> : null}
-      <View style={styles.search}>
+      {athletes.length ? <Text style={styles.rosterCount}>{athletes.length} {athletes.length === 1 ? 'athlete' : 'athletes'}</Text> : null}
+      {showSearch ? <View style={styles.search}>
         <Svg fill="none" height={18} stroke={Palette.inkMuted} strokeLinecap="round" strokeWidth={2} viewBox="0 0 24 24" width={18}><Circle cx={11} cy={11} r={7} /><Path d="m20 20-3.5-3.5" /></Svg>
         <TextInput
           accessibilityLabel="Search athletes"
+          autoCapitalize="none"
           autoCorrect={false}
+          clearButtonMode="while-editing"
           onChangeText={setQuery}
           placeholder="Search athletes"
           placeholderTextColor={Palette.inkFaint}
@@ -74,38 +65,44 @@ export function TrainerAthletes({ role = 'trainer', embedded = false }: { role?:
           style={styles.searchInput}
           value={query}
         />
-      </View>
+      </View> : null}
 
-      <View style={styles.chips}>
-        {(Object.keys(FILTERS) as Filter[]).map((key) => {
-          const on = filter === key;
-          return (
-            <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} key={key} onPress={() => setFilter(key)} style={[styles.chip, on && styles.chipOn]}>
-              <Text style={[styles.chipText, on && styles.chipTextOn]}>{FILTERS[key].label} {athletes.filter(FILTERS[key].match).length}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {athletes.length > 0 && filters.length > 1 ? <View style={styles.filters}>
+        <Segmented onChange={setFilter} options={filters.map((key) => ({ key, label: `${FILTERS[key].label} ${athletes.filter((a) => FILTERS[key].match(a)).length}` }))} value={filter} />
+      </View> : null}
 
-      {pending.length && !embedded ? <Text style={styles.pending}>{pending.length} waiting for your coach to approve</Text> : null}
+      {pending.length && !embedded ? <Text style={styles.pending}>{pending.length} {pending.length === 1 ? 'request' : 'requests'} awaiting {role === 'coach' ? '' : 'coach '}approval</Text> : null}
+      {athletes.length ? <Text style={styles.recordNote}>{sample ? 'Simulated practice-day counts.' : 'Team practice dates since joining; attendance isn’t verified.'}</Text> : null}
 
-      {loading ? (
+      {athletes.length ? <>
+          {vitalsStatus === 'error' ? <Text accessibilityLiveRegion="polite" style={styles.pending}>Band signals couldn’t load.</Text> : null}
+          {historyStatus === 'error' ? <Text accessibilityLiveRegion="polite" style={styles.pending}>Practice-day history couldn’t load. Counts are unavailable.</Text> : null}
+          {vitalsStatus === 'error' || historyStatus === 'error' ? <ActionButton label="Retry unavailable data" onPress={retry} variant="text" /> : null}
+      </> : null}
+
+      {status === 'error' ? (
+        <View style={styles.emptyState}><Text accessibilityLiveRegion="polite" style={styles.empty}>Couldn’t load the roster. Your team connection may be unavailable.</Text><ActionButton label="Try again" onPress={retry} variant="secondary" /></View>
+      ) : loading ? (
         <Text style={styles.empty}>Loading the roster…</Text>
       ) : shown.length === 0 ? (
-        <Text style={styles.empty}>{athletes.length ? 'No athletes match.' : role === 'coach' ? 'No athletes yet. Share your team code to invite them.' : 'No athletes yet. Once your coach approves athletes, they appear here.'}</Text>
+        <View style={styles.emptyState}>
+          <Text accessibilityLiveRegion="polite" style={styles.empty}>{athletes.length ? filter === 'acclimatizing' && historyStatus === 'loading' ? 'Loading practice-day history…' : 'No athletes in this view.' : status === 'idle' ? 'No team connected.' : role === 'coach' ? 'Share your team code to invite athletes.' : 'Athletes appear here after coach approval.'}</Text>
+          {athletes.length ? <ActionButton label="Show all athletes" onPress={() => { setQuery(''); setFilter('all'); }} variant="secondary" /> : null}
+        </View>
       ) : (
         <View style={styles.list}>
-          {shown.map((a, i) => (
-            <Animated.View entering={enter(i, reduced)} key={a.id} layout={settle(reduced)}>
-              {i > 0 ? <View style={styles.divider} /> : null}
-              <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-                <View style={styles.avatar}><Text style={styles.avatarText}>{initials(a.name)}</Text></View>
-                <Text numberOfLines={1} style={styles.name}>{a.name}</Text>
-                <AcclimatizationPill day={a.acclimatizationDay} />
-                <BandMark a={a} />
-              </Pressable>
-            </Animated.View>
-          ))}
+          <Rows>
+            {shown.map((a) => (
+              <ListRow
+                key={a.id}
+                label={a.name}
+                detail={!a.live && vitalsStatus === 'loading' ? 'Loading band signal…' : !a.live && vitalsStatus === 'error' ? 'Band signal unavailable' : bandLabel(a)}
+                onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })}
+                value={practiceDayLabel(a)}
+                valueTone={a.practiceDaysKnown && a.acclimatizationDay < 6 ? Palette.warning : undefined}
+              />
+            ))}
+          </Rows>
         </View>
       )}
     </>
@@ -113,23 +110,13 @@ export function TrainerAthletes({ role = 'trainer', embedded = false }: { role?:
 }
 
 const styles = StyleSheet.create({
-  pressed: { opacity: 0.7 },
-  search: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 12, flexDirection: 'row', gap: 10, paddingHorizontal: 14 },
+  search: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 12, flexDirection: 'row', gap: 10, marginTop: 14, paddingHorizontal: 14 },
   searchInput: { color: Palette.ink, flex: 1, fontSize: 17, minHeight: 46 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  chip: { borderColor: Palette.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
-  chipOn: { backgroundColor: Palette.ink, borderColor: Palette.ink },
-  chipText: { color: Palette.ink, fontSize: 15, fontWeight: '600' },
-  chipTextOn: { color: '#101416' },
+  rosterCount: { color: Palette.inkMuted, fontSize: 16, marginTop: 8 },
+  filters: { marginTop: 14 },
   pending: { color: Palette.inkMuted, fontSize: 15, marginTop: 14 },
-  empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22, marginTop: 20 },
-  list: { backgroundColor: Palette.surface, borderRadius: 16, marginTop: 14, overflow: 'hidden' },
-  divider: { backgroundColor: 'rgba(255,255,255,0.07)', height: StyleSheet.hairlineWidth, marginLeft: 70 },
-  row: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 64, paddingHorizontal: 16 },
-  avatar: { alignItems: 'center', backgroundColor: 'rgba(235,235,245,0.1)', borderRadius: 20, height: 40, justifyContent: 'center', width: 40 },
-  avatarText: { color: Palette.ink, fontFamily: Face.label, fontSize: 16 },
-  name: { color: Palette.ink, flex: 1, fontSize: 17, fontWeight: '600' },
-  pill: { alignItems: 'center', borderRadius: 999, borderWidth: 1, flexDirection: 'row', gap: 4, paddingHorizontal: 10, paddingVertical: 4 },
-  pillText: { fontSize: 13, fontWeight: '700' },
-  band: { alignItems: 'center', justifyContent: 'center', width: 26 },
+  empty: { color: Palette.inkMuted, fontSize: 17, lineHeight: 24, marginTop: 20 },
+  emptyState: { gap: 16 },
+  recordNote: { color: Palette.inkMuted, fontSize: 14, lineHeight: 20, marginTop: 14 },
+  list: { marginTop: 18 },
 });

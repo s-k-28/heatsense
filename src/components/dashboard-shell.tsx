@@ -1,3 +1,4 @@
+import { useAthleteAppearance, useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { Image } from 'expo-image';
 import Svg, { Circle, Path } from 'react-native-svg';
 import type { ComponentProps } from 'react';
@@ -47,12 +48,15 @@ export type HeaderBand = { label: string; tone: string; accessibilityLabel: stri
 
 /** The band, always in the corner like WHOOP's strap: battery for an athlete, bands live for staff. */
 function BandChip({ band }: { band: HeaderBand }) {
+  const athlete = useAthleteAppearance();
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   return (
     <Pressable accessibilityLabel={band.accessibilityLabel} accessibilityRole="button" hitSlop={4} onPress={band.onPress} style={({ pressed }) => [styles.bandChip, pressed && styles.pressed]}>
-      <Svg fill="none" height={16} stroke={Palette.ink} strokeLinejoin="round" strokeWidth={1.8} viewBox="0 0 24 24" width={16}>
+      {athlete ? <Image contentFit="contain" source={require('@/assets/images/band-views/side.png')} style={{ width: 28, height: 36 }} /> : <Svg fill="none" height={16} stroke={Palette.ink} strokeLinejoin="round" strokeWidth={1.8} viewBox="0 0 24 24" width={16}>
         <Path d="M8 2.5h8l.8 4.5v10l-.8 4.5H8l-.8-4.5V7z" />
         <Circle cx={12} cy={12} fill={band.tone} r={2.6} stroke="none" />
-      </Svg>
+      </Svg>}
       <Text style={styles.bandChipText}>{band.label}</Text>
     </Pressable>
   );
@@ -74,6 +78,8 @@ export function DashboardHeader({
   scrollY: SharedValue<number>;
   title: string;
 }) {
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const backdrop = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.value, [36, 52], [0, 1], 'clamp') }));
   const { unreadNotifications, photoUri, profileName } = usePreferences();
@@ -86,11 +92,9 @@ export function DashboardHeader({
   return (
     <View pointerEvents="box-none" style={[styles.headerWrap, { paddingTop: insets.top }]}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.headerBackdrop, backdrop]} />
-      <View pointerEvents="none" style={[styles.headerTitleWrap, { top: insets.top }]}>
-        <Animated.Text accessibilityElementsHidden importantForAccessibility="no" numberOfLines={1} style={[styles.headerTitle, backdrop]}>{title}</Animated.Text>
-      </View>
     <View style={styles.header}>
       <HeatSenseLogo height={28} />
+      <Animated.Text accessibilityElementsHidden importantForAccessibility="no" numberOfLines={1} style={[styles.headerTitle, backdrop]}>{title}</Animated.Text>
       <View style={styles.headerActions}>
         {band ? <BandChip band={band} /> : null}
         {onAlerts ? (
@@ -110,10 +114,13 @@ export function DashboardHeader({
 }
 
 export function LargeTitle({ title }: { title: string }) {
-  return <Text accessibilityRole="header" style={styles.largeTitle}>{title}</Text>;
+  const styles = useAthleteStyles(baseStyles);
+  const athlete = useAthleteAppearance();
+  return <Text accessibilityRole="header" style={[styles.largeTitle, athlete && title === 'Band' && { fontFamily: 'Inter_700Bold', fontWeight: 'normal' }]}>{title}</Text>;
 }
 
 export function SectionHeader({ action, onActionPress, tight, title }: { action?: string; onActionPress?: () => void; tight?: boolean; title: string }) {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <View style={[styles.sectionHeader, tight && styles.sectionHeaderTight]}>
       <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
@@ -124,6 +131,7 @@ export function SectionHeader({ action, onActionPress, tight, title }: { action?
 
 /** Floating pill with a smaller pill inside it that slides to the selected tab. */
 export function TabBar({ activeTab, onChange, tabs }: { activeTab: string; onChange: (tab: string) => void; tabs: DashboardTab[] }) {
+  const styles = useAthleteStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const [width, setWidth] = useState(0);
@@ -173,6 +181,9 @@ export function TabBar({ activeTab, onChange, tabs }: { activeTab: string; onCha
  * travels with the pill instead of jumping when the press lands.
  */
 function TabItem({ active, index, onPress, tab, tabWidth, x }: { active: boolean; index: number; onPress: () => void; tab: DashboardTab; tabWidth: number; x: SharedValue<number> }) {
+  const athlete = useAthleteAppearance();
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   const lit = useAnimatedStyle(() => {
     if (tabWidth === 0) return { opacity: active ? 1 : 0 };
     const here = index * tabWidth;
@@ -196,25 +207,25 @@ function TabItem({ active, index, onPress, tab, tabWidth, x }: { active: boolean
       accessibilityState={{ selected: active }}
       onPress={onPress}
       style={({ pressed }) => [styles.tab, pressed && !active && styles.tabPressed]}>
-      <Animated.View pointerEvents="none" style={[styles.tabLayer, dim]}>{content(TAB_MUTED, styles.tabLabelMuted)}</Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.tabLayer, dim]}>{content(athlete ? '#FFFFFF' : TAB_MUTED, [styles.tabLabelMuted, athlete && { color: '#FFFFFF' }])}</Animated.View>
       <Animated.View pointerEvents="none" style={[styles.tabLayer, styles.tabLayerLit, lit]}>{content(Palette.coral, styles.tabLabelActive)}</Animated.View>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.55 },
   headerWrap: { left: 0, position: 'absolute', right: 0, top: 0, zIndex: 10 },
   headerBackdrop: { backgroundColor: '#1E2329', borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitleWrap: { alignItems: 'center', height: HEADER_ROW, justifyContent: 'center', left: 0, position: 'absolute', right: 0 },
-  headerTitle: { color: Palette.ink, ...Type.headline },
+  headerTitle: { color: Palette.ink, ...Type.headline, flex: 1, minWidth: 0, marginHorizontal: 12 },
   header: { alignItems: 'center', flexDirection: 'row', height: HEADER_ROW, justifyContent: 'space-between', paddingHorizontal: Spacing.four },
   headerActions: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
-  bandChip: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, flexDirection: 'row', gap: 4, height: 36, paddingHorizontal: 10 },
+  bandChip: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, flexDirection: 'row', gap: 4, minHeight: 44, paddingHorizontal: 10 },
   bandChipText: { color: Palette.ink, fontFamily: Face.label, fontSize: 15 },
   badge: { backgroundColor: Palette.emergency, borderColor: Palette.canvas, borderRadius: 5, borderWidth: 1.5, height: 10, position: 'absolute', right: 10, top: 9, width: 10 },
-  avatar: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, overflow: 'hidden', height: 36, justifyContent: 'center', width: 36 },
+  avatar: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, overflow: 'hidden', height: 44, justifyContent: 'center', width: 44 },
   avatarText: { color: Palette.ink, ...Type.footnote, fontWeight: '600' },
   largeTitle: { color: Palette.ink, ...Type.largeTitle, marginTop: Spacing.one },
   sectionHeader: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.two, marginTop: Spacing.seven },

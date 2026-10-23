@@ -1,7 +1,8 @@
+import { ActionButton } from '@/components/ui/action-button';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeatIcon } from '@/components/heat-icon';
@@ -38,8 +39,30 @@ const EQUIPMENT: Equipment[] = ['on', 'breaks', 'off'];
 export default function PlanEditorScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { active, plans } = usePracticePlans();
-  const source = plans.find((plan) => plan.id === params.id);
+  const { active, plans, status, retry } = usePracticePlans();
+  const source = plans.find(plan => plan.id === params.id);
+  const close = () => (router.canGoBack() ? router.back() : router.replace('/dashboard?role=coach&tab=plan'));
+  if (status !== 'ready' || (params.id && !source)) return (
+    <View style={styles.screen}>
+      <StatusBar style="light" />
+      <View style={[styles.bar, { paddingTop: insets.top + Spacing.two }]}>
+        <TextLink label="Cancel" onPress={close} />
+        <Text accessibilityRole="header" style={styles.barTitle}>Practice plan</Text>
+        <View style={styles.barEnd} />
+      </View>
+      <View accessibilityLiveRegion="polite" style={styles.pending}>
+        {status === 'loading' ? <ActivityIndicator accessibilityLabel="Loading saved plans" color={Palette.inkMuted} /> : <>
+          <Text style={styles.checkEmpty}>{status === 'error' ? 'Couldn’t load saved plans. Your current plans have not been replaced.' : 'This plan is no longer available.'}</Text>
+          <ActionButton label={status === 'error' ? 'Try again' : 'Back to plans'} onPress={status === 'error' ? retry : () => router.replace('/dashboard?role=coach&tab=plan')} variant="secondary" />
+        </>}
+      </View>
+    </View>
+  );
+  return <PlanEditorForm active={active} key={source?.id ?? 'new'} source={source} />;
+}
+
+function PlanEditorForm({ active, source }: { active: PracticePlan; source?: PracticePlan }) {
+  const insets = useSafeAreaInsets();
   // A new plan starts from today's timings; an existing one from its own.
   const [plan, setPlan] = useState<PracticePlan>(() => (source ? { ...source } : { ...active, builtIn: undefined, id: '', name: '' }));
   const editing = Boolean(source && !source.builtIn);
@@ -76,13 +99,14 @@ export default function PlanEditorScreen() {
       <StatusBar style="light" />
       <View style={[styles.bar, { paddingTop: insets.top + Spacing.two }]}>
         <TextLink label="Cancel" onPress={close} />
-        <Text style={styles.barTitle}>{source ? (editing ? 'Edit plan' : 'New from standard') : 'New plan'}</Text>
+        <Text accessibilityRole="header" style={styles.barTitle}>{source ? (editing ? 'Edit plan' : 'New from standard') : 'New plan'}</Text>
         <View style={styles.barEnd} />
       </View>
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.eight }]} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.eight }]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
           <Text style={styles.label}>Plan name</Text>
           <TextInput
+            accessibilityLabel="Plan name"
             onChangeText={(text) => set('name', text)}
             placeholder="e.g. Hot afternoon, varsity"
             placeholderTextColor={Palette.inkFaint}
@@ -123,23 +147,15 @@ export default function PlanEditorScreen() {
 
           <ZoneCheck onFix={(fix) => setPlan((current) => ({ ...current, ...fix }))} plan={plan} />
 
-          <Pressable accessibilityRole="button" onPress={useToday} style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
-            <Text style={styles.primaryText}>Use for today</Text>
-          </Pressable>
+          <ActionButton label="Use for today" onPress={useToday} variant="primary" style={styles.primary} />
           <View style={styles.secondaryRow}>
-            <Pressable accessibilityRole="button" onPress={save} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
-              <Text style={styles.secondaryText}>{editing ? 'Save changes' : 'Save plan'}</Text>
-            </Pressable>
+            <ActionButton label={editing ? 'Save changes' : 'Save plan'} onPress={save} variant="secondary" style={styles.secondary} />
             {editing ? (
-              <Pressable accessibilityRole="button" onPress={saveCopy} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
-                <Text style={styles.secondaryText}>Save as copy</Text>
-              </Pressable>
+              <ActionButton label="Save as copy" onPress={saveCopy} variant="secondary" style={styles.secondary} />
             ) : null}
           </View>
           {editing ? (
-            <Pressable accessibilityRole="button" hitSlop={8} onPress={remove} style={({ pressed }) => [styles.delete, pressed && styles.pressed]}>
-              <Text style={styles.deleteText}>Delete plan</Text>
-            </Pressable>
+            <ActionButton label="Delete plan" onPress={remove} variant="danger" style={styles.delete} />
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -154,6 +170,7 @@ export default function PlanEditorScreen() {
 function ZoneCheck({ plan, onFix }: { plan: PracticePlan; onFix: (fix: Partial<PracticePlan>) => void }) {
   const data = useCoachData('coach');
   const zone = data?.readings.at(-1)?.zone ?? null;
+  if (!data) return <><Text style={styles.label}>Today’s zone</Text><View style={styles.card}><Text style={styles.checkEmpty}>Practice data is unavailable. This plan has not been checked against a field reading.</Text></View></>;
   if (!zone) {
     return (
       <>
@@ -182,9 +199,7 @@ function ZoneCheck({ plan, onFix }: { plan: PracticePlan; onFix: (fix: Partial<P
           </View>
         ))}
         {fix ? (
-          <Pressable accessibilityRole="button" onPress={() => onFix(fix)} style={({ pressed }) => [styles.fix, pressed && styles.pressed]}>
-            <Text style={styles.fixText}>Fix to meet UIL</Text>
-          </Pressable>
+          <ActionButton label="Fix to meet UIL" onPress={() => onFix(fix)} variant="secondary" style={styles.fix} />
         ) : !outdoor ? <Text style={styles.checkEmpty}>Move practice indoors or wait for the WBGT to drop.</Text> : null}
       </View>
     </>
@@ -192,52 +207,60 @@ function ZoneCheck({ plan, onFix }: { plan: PracticePlan; onFix: (fix: Partial<P
 }
 
 function Stepper({ format, label, last, max, min, onChange, step, value }: { format: (value: number) => string; label: string; last?: boolean; max: number; min: number; onChange: (value: number) => void; step: number; value: number }) {
+  const { width, fontScale } = useWindowDimensions();
+  const stacked = width < 390 || fontScale > 1.2;
   const shown = format(value);
   return (
-    <View accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} accessibilityLabel={`${label}, ${shown}`} accessibilityRole="adjustable" accessible onAccessibilityAction={(event) => onChange(Math.max(min, Math.min(max, value + (event.nativeEvent.actionName === 'increment' ? step : -step))))} style={[styles.stepper, !last && styles.stepperDivider]}>
-      <View style={styles.flex}>
+    <View accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} accessibilityLabel={`${label}, ${shown}`} accessibilityRole="adjustable" accessibilityValue={{ min, max, now: value, text: shown }} accessible onAccessibilityAction={(event) => onChange(Math.max(min, Math.min(max, value + (event.nativeEvent.actionName === 'increment' ? step : -step))))} style={[styles.stepper, stacked && styles.stepperStacked, !last && styles.stepperDivider]}>
+      <View style={styles.stepLabelCopy}>
         <Text style={styles.stepLabel}>{label}</Text>
       </View>
-      <Pressable accessibilityElementsHidden disabled={value <= min} hitSlop={6} onPress={() => onChange(Math.max(min, value - step))} style={({ pressed }) => [styles.round, value <= min && styles.roundOff, pressed && styles.pressed]}>
-        <HeatIcon name={minus} size={14} tintColor={Palette.ink} weight="bold" />
-      </Pressable>
-      <Text style={styles.stepValue}>{shown}</Text>
-      <Pressable accessibilityElementsHidden disabled={value >= max} hitSlop={6} onPress={() => onChange(Math.min(max, value + step))} style={({ pressed }) => [styles.round, value >= max && styles.roundOff, pressed && styles.pressed]}>
-        <HeatIcon name={plus} size={14} tintColor={Palette.ink} weight="bold" />
-      </Pressable>
+      <View style={styles.stepControls}>
+        <Pressable accessibilityElementsHidden importantForAccessibility="no-hide-descendants" disabled={value <= min} hitSlop={6} onPress={() => onChange(Math.max(min, value - step))} style={({ pressed }) => [styles.round, value <= min && styles.roundOff, pressed && styles.pressed]}>
+          <HeatIcon name={minus} size={14} tintColor={Palette.ink} weight="bold" />
+        </Pressable>
+        <Text style={styles.stepValue}>{shown}</Text>
+        <Pressable accessibilityElementsHidden importantForAccessibility="no-hide-descendants" disabled={value >= max} hitSlop={6} onPress={() => onChange(Math.min(max, value + step))} style={({ pressed }) => [styles.round, value >= max && styles.roundOff, pressed && styles.pressed]}>
+          <HeatIcon name={plus} size={14} tintColor={Palette.ink} weight="bold" />
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  pending: { gap: 16, padding: Spacing.four },
   screen: { backgroundColor: Palette.canvas, flex: 1 },
   flex: { flex: 1 },
   pressed: { opacity: 0.6 },
   bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.three, paddingHorizontal: Spacing.four },
-  barTitle: { color: Palette.ink, ...Type.headline },
+  barTitle: { flex: 1, textAlign: 'center', color: Palette.ink, ...Type.headline },
   barEnd: { width: 56 },
   content: { gap: Spacing.two, paddingHorizontal: Spacing.four },
   label: { color: Palette.inkMuted, ...Type.label, fontSize: 13, marginTop: Spacing.four },
   input: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, color: Palette.ink, ...Type.body, minHeight: 50, paddingHorizontal: Spacing.four },
   card: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: Spacing.four, paddingVertical: Spacing.two },
   stepper: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 60 },
+  stepperStacked: { alignItems: 'stretch', flexDirection: 'column', gap: 8, paddingVertical: 12 },
+  stepLabelCopy: { flexGrow: 1, flexShrink: 1 },
+  stepControls: { alignItems: 'center', alignSelf: 'flex-end', flexDirection: 'row', flexWrap: 'wrap', gap: 8, maxWidth: '100%' },
   stepperDivider: { borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
   stepLabel: { color: Palette.ink, ...Type.body },
-  stepValue: { color: Palette.ink, ...Type.figure, fontSize: 20, lineHeight: 24, minWidth: 74, textAlign: 'center' },
-  round: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: 16, height: 32, justifyContent: 'center', width: 32 },
+  stepValue: { flexShrink: 1, color: Palette.ink, ...Type.figure, fontSize: 20, lineHeight: 24, minWidth: 74, textAlign: 'center' },
+  round: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: 22, height: 44, justifyContent: 'center', width: 44 },
   roundOff: { opacity: 0.35 },
   preview: { marginTop: Spacing.four },
   breaks: { color: Palette.inkMuted, ...Type.footnote, marginBottom: Spacing.two, marginTop: Spacing.three },
   primary: { alignItems: 'center', backgroundColor: Palette.coral, borderCurve: 'continuous', borderRadius: 14, justifyContent: 'center', marginTop: Spacing.six, minHeight: 54 },
   primaryText: { color: '#1A0E07', ...Type.label, fontSize: 17 },
-  secondaryRow: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one },
-  secondary: { alignItems: 'center', backgroundColor: Palette.fill, borderCurve: 'continuous', borderRadius: 14, flex: 1, justifyContent: 'center', minHeight: 50 },
+  secondaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
+  secondary: { alignItems: 'center', backgroundColor: Palette.fill, borderCurve: 'continuous', borderRadius: 14, flexGrow: 1, flexBasis: 180, justifyContent: 'center', minHeight: 50 },
   secondaryText: { color: Palette.ink, ...Type.headline },
   checkEmpty: { color: Palette.inkMuted, ...Type.footnote, paddingVertical: Spacing.two },
   checkHead: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two, paddingBottom: Spacing.two, paddingTop: Spacing.two },
   checkDot: { borderRadius: 5, height: 10, width: 10 },
-  checkTitle: { color: Palette.ink, ...Type.headline },
-  checkRow: { alignItems: 'center', borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.two, minHeight: 46 },
+  checkTitle: { flexShrink: 1, color: Palette.ink, ...Type.headline },
+  checkRow: { alignItems: 'center', flexWrap: 'wrap', paddingVertical: 8, borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.two, minHeight: 46 },
   checkMark: { fontSize: 16, fontWeight: '700', width: 18 },
   checkLabel: { color: Palette.ink, flex: 1, ...Type.body },
   checkPlan: { color: Palette.ink, ...Type.figure, fontSize: 18 },

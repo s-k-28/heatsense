@@ -1,9 +1,14 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
+import { useState, type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 
+import { Fill } from '@/components/motion/fill';
 import { BarChart, LineChart } from '@/components/ui/charts';
 import { Face, Palette } from '@/constants/theme';
+import { swap } from '@/lib/motion';
 import { HISTORY_STEP_SEC } from '@/state/demo-team';
+import { useTemperature } from '@/state/preferences';
 
 // The band's five signals, each drawn the way it's best read, like an activity's analysis page:
 // heart rate as a trend plus time in zones, skin temperature against its usual range, sweat as
@@ -11,7 +16,7 @@ import { HISTORY_STEP_SEC } from '@/state/demo-team';
 // band didn't send has no card rather than an invented value.
 
 /** One band sample: the simulator's always has every signal, a real band's may not. */
-export type VitalSample = { heartRate: number; skinTempF: number | null; sweat: number | null; movement: number; spo2: number | null };
+export type VitalSample = { heartRate: number; skinTempF: number | null; sweat: number | null; movement: number; spo2: number | null; sampledAt?: Date };
 type Vitals = VitalSample;
 const complete = (values: (number | null)[]): values is number[] => values.length > 1 && values.every((v) => v !== null);
 
@@ -23,6 +28,7 @@ const whole = (v: number) => String(Math.round(v));
 
 /** A few figures side by side, smaller than a page's headline stats. */
 function Figures({ items }: { items: { label: string; value: string; unit?: string }[] }) {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <View style={styles.figures}>
       {items.map((item) => (
@@ -36,14 +42,16 @@ function Figures({ items }: { items: { label: string; value: string; unit?: stri
 }
 
 function VitalCard({ title, now, unit, children }: { title: string; now: string; unit: string; children: ReactNode }) {
+  const styles = useAthleteStyles(baseStyles);
+  const reduced = useReducedMotion();
   return (
-    <View style={styles.card}>
+    <Animated.View entering={swap(reduced)} style={styles.card}>
       <View accessible accessibilityLabel={`${title}, now ${now} ${unit}`} style={styles.head}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.now}>{now}<Text style={styles.nowUnit}>{unit}</Text></Text>
       </View>
       {children}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -56,7 +64,9 @@ const ZONES = [
   { name: 'Z1', label: 'Recovery', min: 0, color: '#6B7A82' },
 ];
 
-function HeartRate({ history }: { history: Vitals[] }) {
+function HeartRate({ history, startLabel }: { history: Vitals[]; startLabel: string }) {
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   const hr = history.map((v) => v.heartRate);
   const share = ZONES.map((zone, i) => {
     const ceiling = i === 0 ? Infinity : ZONES[i - 1].min;
@@ -65,13 +75,13 @@ function HeartRate({ history }: { history: Vitals[] }) {
   return (
     <VitalCard now={whole(hr.at(-1)!)} title="Heart rate" unit=" bpm">
       <Figures items={[{ label: 'Avg', value: whole(avg(hr)) }, { label: 'Max', value: whole(Math.max(...hr)) }, { label: 'Min', value: whole(Math.min(...hr)) }]} />
-      <LineChart labels={[since(hr.length), 'Now']} max={190} min={60} summary={`Heart rate since ${since(hr.length)}, average ${whole(avg(hr))}`} tone={Palette.coral} values={hr} />
-      <Text style={styles.sub}>Time in zones</Text>
+      <LineChart labels={[startLabel, 'Now']} max={190} min={60} summary={`Heart rate from ${startLabel}, average ${whole(avg(hr))}`} tone={Palette.coral} values={hr} />
+      <Text style={styles.sub}>Time in estimated zones</Text>
       {ZONES.map((zone, i) => (
         <View accessible accessibilityLabel={`${zone.label} zone, ${Math.round(share[i] * 100)} percent`} key={zone.name} style={styles.zoneRow}>
           <Text style={styles.zoneName}>{zone.name}</Text>
           <Text style={styles.zoneLabel}>{zone.label}</Text>
-          <View style={styles.zoneTrack}><View style={[styles.zoneFill, { backgroundColor: zone.color, width: `${Math.max(share[i] > 0 ? 3 : 0, share[i] * 100)}%` }]} /></View>
+          <Fill color={zone.color} delay={i * 50} height={10} progress={Math.max(share[i] > 0 ? 0.03 : 0, share[i])} radius={4} style={styles.zoneBar} />
           <Text style={styles.zonePct}>{Math.round(share[i] * 100)}%</Text>
         </View>
       ))}
@@ -79,40 +89,46 @@ function HeartRate({ history }: { history: Vitals[] }) {
   );
 }
 
-const USUAL_SKIN: [number, number] = [91, 95];
+const SIMULATED_SKIN: [number, number] = [91, 95];
 
-function SkinTemp({ t }: { t: number[] }) {
-  const change = t.at(-1)! - t[0];
+function SkinTemp({ t, simulated, startLabel }: { t: number[]; simulated: boolean; startLabel: string }) {
+  const styles = useAthleteStyles(baseStyles);
+  const temp = useTemperature();
+  const values = t.map((v) => temp.precise(v));
+  const change = values.at(-1)! - values[0];
+  const reference: [number, number] = [temp.precise(SIMULATED_SKIN[0]), temp.precise(SIMULATED_SKIN[1])];
   return (
-    <VitalCard now={one(t.at(-1)!)} title="Skin temp" unit="°F">
-      <Figures items={[{ label: 'Avg', value: one(avg(t)), unit: '°' }, { label: 'Max', value: one(Math.max(...t)), unit: '°' }, { label: 'Change', value: `${change >= 0 ? '+' : ''}${one(change)}`, unit: '°' }]} />
-      <LineChart band={USUAL_SKIN} format={(v) => v.toFixed(0)} labels={[since(t.length), 'Now']} max={97} min={89} summary={`Skin temperature since ${since(t.length)}, now ${one(t.at(-1)!)} degrees`} tone="#FFB347" values={t} />
-      <View style={styles.legend}><View style={styles.legendSwatch} /><Text style={styles.legendText}>Usual range, {USUAL_SKIN[0]}–{USUAL_SKIN[1]}°F</Text></View>
+    <VitalCard now={one(values.at(-1)!)} title="Skin temp" unit={temp.unit}>
+      <Figures items={[{ label: 'Avg', value: one(avg(values)), unit: '°' }, { label: 'Max', value: one(Math.max(...values)), unit: '°' }, { label: 'Change', value: `${change >= 0 ? '+' : ''}${one(change)}`, unit: '°' }]} />
+      <LineChart band={simulated ? reference : undefined} format={(v) => v.toFixed(0)} labels={[startLabel, 'Now']} max={Math.max(temp.precise(97), ...values)} min={Math.min(temp.precise(89), ...values)} summary={`Skin temperature from ${startLabel}, now ${one(values.at(-1)!)} ${temp.unit}`} tone="#FFB347" values={values} />
+      {simulated ? <View style={styles.legend}><View style={styles.legendSwatch} /><Text style={styles.legendText}>Simulation reference, {reference[0]}–{reference[1]}{temp.unit}</Text></View> : <Text style={styles.legendText}>Personal baseline has not been established.</Text>}
     </VitalCard>
   );
 }
 
-function Sweat({ s }: { s: number[] }) {
+function Sweat({ s, startLabel }: { s: number[]; startLabel: string }) {
   // 90-second buckets, so the bars show the sweat response building through work and easing in rest.
   const buckets = Array.from({ length: Math.ceil(s.length / 3) }, (_, i) => avg(s.slice(i * 3, i * 3 + 3)));
   return (
     <VitalCard now={one(s.at(-1)!)} title="Sweat (GSR)" unit=" µS">
       <Figures items={[{ label: 'Avg', value: one(avg(s)) }, { label: 'Peak', value: one(Math.max(...s)) }, { label: 'Low', value: one(Math.min(...s)) }]} />
-      <BarChart labels={[since(s.length), 'Now']} summary={`Sweat level in 90-second steps, now ${one(s.at(-1)!)} microsiemens`} tone="#64D2FF" values={buckets} />
+      <BarChart labels={[startLabel, 'Now']} summary={`Sweat level in groups of three samples, now ${one(s.at(-1)!)} microsiemens`} tone="#64D2FF" values={buckets} />
     </VitalCard>
   );
 }
 
-function Movement({ history }: { history: Vitals[] }) {
+function Movement({ history, simulated, startLabel }: { history: Vitals[]; simulated: boolean; startLabel: string }) {
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   const m = history.map((v) => v.movement);
   const active = m.filter((v) => v >= 40).length * HISTORY_STEP_SEC;
   return (
     <VitalCard now={whole(m.at(-1)!)} title="Movement" unit="%">
-      <Figures items={[{ label: 'Active', value: String(Math.round(active / 60)), unit: ' min' }, { label: 'Resting', value: String(Math.round((m.length * HISTORY_STEP_SEC - active) / 60)), unit: ' min' }, { label: 'Avg', value: whole(avg(m)), unit: '%' }]} />
-      <View accessible accessibilityLabel={`Work and rest since ${since(m.length)}: ${Math.round(active / 60)} minutes active`} style={styles.strip}>
+      <Figures items={[{ label: simulated ? 'Active' : 'Active samples', value: String(simulated ? Math.round(active / 60) : m.filter((v) => v >= 40).length), unit: simulated ? ' min' : undefined }, { label: simulated ? 'Resting' : 'Rest samples', value: String(simulated ? Math.round((m.length * HISTORY_STEP_SEC - active) / 60) : m.filter((v) => v < 40).length), unit: simulated ? ' min' : undefined }, { label: 'Avg', value: whole(avg(m)), unit: '%' }]} />
+      <View accessible accessibilityLabel={`Work and rest samples from ${startLabel}`} style={styles.strip}>
         {m.map((v, i) => <View key={i} style={[styles.stripCell, { backgroundColor: v >= 40 ? Palette.coral : v >= 20 ? 'rgba(255,177,131,0.45)' : 'rgba(235,235,245,0.14)' }]} />)}
       </View>
-      <View style={styles.stripAxis}><Text style={styles.legendText}>{since(m.length)}</Text><Text style={styles.legendText}>Now</Text></View>
+      <View style={styles.stripAxis}><Text style={styles.legendText}>{startLabel}</Text><Text style={styles.legendText}>Now</Text></View>
     </VitalCard>
   );
 }
@@ -120,6 +136,7 @@ function Movement({ history }: { history: Vitals[] }) {
 const GAUGE: [number, number] = [90, 100];
 
 function BloodOxygen({ o }: { o: number[] }) {
+  const styles = useAthleteStyles(baseStyles);
   const lo = Math.min(...o);
   const hi = Math.max(...o);
   const at = (v: number) => `${((v - GAUGE[0]) / (GAUGE[1] - GAUGE[0])) * 100}%` as const;
@@ -140,28 +157,59 @@ function BloodOxygen({ o }: { o: number[] }) {
   );
 }
 
-/** All five signals for one athlete, one card each. */
-export function VitalCards({ history }: { history: Vitals[] }) {
+/** A signal list and one selected analysis, shared by the Band tab and staff detail screen. */
+export type BandSignal = 'heart' | 'skin' | 'sweat' | 'movement' | 'oxygen';
+
+export function VitalCards({ history, simulated = false, selectedSignal, onSignalChange, previewHeartRate = false }: { history: Vitals[]; simulated?: boolean; selectedSignal?: BandSignal; onSignalChange?: (signal: BandSignal) => void; previewHeartRate?: boolean }) {
+  const styles = useAthleteStyles(baseStyles);
+  const [localSelected, setLocalSelected] = useState<BandSignal>('heart');
+  const selected = selectedSignal ?? localSelected;
+  const setSelected = (signal: BandSignal) => { setLocalSelected(signal); onSignalChange?.(signal); };
+  const temp = useTemperature();
   const skin = history.map((v) => v.skinTempF);
   const sweat = history.map((v) => v.sweat);
   const spo2 = history.map((v) => v.spo2 ?? null);
+  const startLabel = history[0]?.sampledAt ? history[0].sampledAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : simulated ? since(history.length) : 'Earlier samples';
+  const latest = history.at(-1);
+  if (!latest) return null;
+  const signals = [
+    { id: 'heart', label: 'Heart rate', value: `${whole(latest.heartRate)} bpm`, available: true },
+    { id: 'skin', label: 'Skin temp', value: latest.skinTempF === null ? '—' : `${one(temp.precise(latest.skinTempF))}${temp.unit}`, available: complete(skin) },
+    { id: 'sweat', label: 'Sweat (GSR)', value: latest.sweat === null ? '—' : `${one(latest.sweat)} µS`, available: complete(sweat) },
+    { id: 'movement', label: 'Movement', value: `${whole(latest.movement)}%`, available: true },
+    { id: 'oxygen', label: 'Blood oxygen', value: latest.spo2 === null ? '—' : `${whole(latest.spo2)}%`, available: complete(spo2) },
+  ].filter((s) => s.available);
+  const active = signals.some((s) => s.id === selected) ? selected : 'heart';
   return (
     <View style={styles.cards}>
-      <HeartRate history={history} />
-      {complete(skin) ? <SkinTemp t={skin} /> : null}
-      {complete(sweat) ? <Sweat s={sweat} /> : null}
-      <Movement history={history} />
-      {complete(spo2) ? <BloodOxygen o={spo2} /> : null}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.signalTabs} accessibilityRole="tablist">
+        {signals.map((signal) => (
+          <Pressable accessibilityRole="tab" accessibilityLabel={`${signal.label}, ${signal.value}`} accessibilityState={{ selected: active === signal.id }} key={signal.id} onPress={() => setSelected(signal.id as BandSignal)} style={({ pressed }) => [styles.signalTab, active === signal.id && styles.signalTabOn, previewHeartRate && signal.id === 'heart' && styles.signalPreview, pressed && { opacity: 0.7 }]}>
+            <Text style={[styles.signalLabel, active === signal.id && styles.signalLabelOn]}>{signal.label === 'Sweat (GSR)' ? 'Sweat' : signal.label}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+      {active === 'heart' ? <HeartRate history={history} startLabel={startLabel} /> : null}
+      {active === 'skin' && complete(skin) ? <SkinTemp simulated={simulated} startLabel={startLabel} t={skin} /> : null}
+      {active === 'sweat' && complete(sweat) ? <Sweat s={sweat} startLabel={startLabel} /> : null}
+      {active === 'movement' ? <Movement history={history} simulated={simulated} startLabel={startLabel} /> : null}
+      {active === 'oxygen' && complete(spo2) ? <BloodOxygen o={spo2} /> : null}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  cards: { gap: 12 },
-  card: { backgroundColor: Palette.surface, borderRadius: 16, padding: 18 },
-  head: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between' },
+const baseStyles = StyleSheet.create({
+  signalPreview: { backgroundColor: Palette.coralSoft, borderColor: Palette.coral, borderRadius: 6 },
+  signalTabs: { gap: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Palette.border },
+  signalTab: { minHeight: 48, minWidth: 44, justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent', paddingVertical: 10 },
+  signalTabOn: { borderBottomColor: Palette.coral },
+  signalLabel: { color: Palette.inkMuted, fontSize: 16, fontWeight: '500' },
+  signalLabelOn: { color: Palette.ink, fontWeight: '600' },
+  cards: { gap: 0 },
+  card: { paddingTop: 20 },
+  head: { alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
   title: { color: Palette.ink, fontSize: 18, fontWeight: '600' },
-  now: { color: Palette.ink, fontFamily: Face.figure, fontSize: 30, lineHeight: 34 },
+  now: { color: Palette.ink, fontFamily: Face.figure, fontSize: 52, lineHeight: 58 },
   nowUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 18 },
   figures: { flexDirection: 'row', gap: 12, marginTop: 10 },
   figure: { flex: 1 },
@@ -172,8 +220,7 @@ const styles = StyleSheet.create({
   zoneRow: { alignItems: 'center', flexDirection: 'row', gap: 10, height: 28 },
   zoneName: { color: Palette.ink, fontFamily: Face.figure, fontSize: 16, width: 24 },
   zoneLabel: { color: Palette.inkMuted, fontSize: 14, width: 66 },
-  zoneTrack: { backgroundColor: 'rgba(235,235,245,0.08)', borderRadius: 4, flex: 1, height: 10, overflow: 'hidden' },
-  zoneFill: { borderRadius: 4, height: 10 },
+  zoneBar: { flex: 1 },
   zonePct: { color: Palette.ink, fontFamily: Face.figure, fontSize: 16, textAlign: 'right', width: 40 },
   legend: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 8 },
   legendSwatch: { backgroundColor: 'rgba(48,209,88,0.35)', borderRadius: 3, height: 10, width: 16 },

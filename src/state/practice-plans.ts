@@ -40,10 +40,10 @@ const STANDARD: PracticePlan = {
   workMinutes: 16,
 };
 
-type Store = { activeId: string; plans: PracticePlan[] };
+type Store = { activeId: string; plans: PracticePlan[]; status: 'loading' | 'ready' | 'error' };
 
 const STORAGE_KEY = 'heatsense.practicePlans.v1';
-let state: Store = { activeId: STANDARD.id, plans: [STANDARD] };
+let state: Store = { activeId: STANDARD.id, plans: [STANDARD], status: 'loading' };
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -54,15 +54,30 @@ function persist() {
   AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ activeId: state.activeId, plans: state.plans.filter((plan) => !plan.builtIn) })).catch(() => {});
 }
 
-AsyncStorage.getItem(STORAGE_KEY)
-  .then((raw) => {
-    if (!raw) return;
-    const saved = JSON.parse(raw) as Partial<Store>;
-    const plans = [STANDARD, ...(saved.plans ?? [])];
-    state = { activeId: plans.some((plan) => plan.id === saved.activeId) ? saved.activeId! : STANDARD.id, plans };
-    emit();
-  })
-  .catch(() => {});
+let loadVersion = 0;
+
+/** Hydration is explicit so an editor never saves a default draft over a late-loading plan. */
+async function loadPlans() {
+  const version = ++loadVersion;
+  state = { ...state, status: 'loading' };
+  emit();
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (version !== loadVersion) return;
+    if (raw) {
+      const saved = JSON.parse(raw) as Partial<Store>;
+      const plans = [STANDARD, ...(saved.plans ?? [])];
+      state = { activeId: plans.some(plan => plan.id === saved.activeId) ? saved.activeId! : STANDARD.id, plans, status: 'ready' };
+    } else state = { ...state, status: 'ready' };
+  } catch {
+    if (version !== loadVersion) return;
+    // Keep current plans intact; a read failure is not an empty plan collection.
+    state = { ...state, status: 'error' };
+  }
+  emit();
+}
+
+void loadPlans();
 
 /** Adds a plan or replaces the saved one with the same id. Returns its id. The built-in plan is never overwritten. */
 export function savePlan(plan: PracticePlan) {
@@ -78,7 +93,7 @@ export function savePlan(plan: PracticePlan) {
 export function deletePlan(id: string) {
   const plan = state.plans.find((item) => item.id === id);
   if (!plan || plan.builtIn) return;
-  state = { activeId: state.activeId === id ? STANDARD.id : state.activeId, plans: state.plans.filter((item) => item.id !== id) };
+  state = { ...state, activeId: state.activeId === id ? STANDARD.id : state.activeId, plans: state.plans.filter((item) => item.id !== id) };
   emit();
   persist();
 }
@@ -101,7 +116,7 @@ function subscribe(listener: () => void) {
 
 export function usePracticePlans() {
   const store = useSyncExternalStore(subscribe, () => state, () => state);
-  return { active: store.plans.find((plan) => plan.id === store.activeId) ?? STANDARD, activeId: store.activeId, plans: store.plans };
+  return { active: store.plans.find((plan) => plan.id === store.activeId) ?? STANDARD, activeId: store.activeId, plans: store.plans, status: store.status, retry: loadPlans };
 }
 
 /* ─────────────────────────────── Schedule ─────────────────────────────── */

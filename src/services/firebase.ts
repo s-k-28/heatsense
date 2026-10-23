@@ -45,6 +45,6 @@ if (process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATORS === '1' && firebaseAuth && fi
 }
 
 export function requireFirebaseAuth(): Auth {
-  if (!firebaseAuth) throw new Error('Google sign in is not configured yet. Add the HeatSense Firebase settings to .env.');
+  if (!firebaseAuth) throw new Error('Sign-in is unavailable in this sample build.');
   return firebaseAuth;
 }

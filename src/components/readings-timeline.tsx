@@ -1,3 +1,4 @@
+import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Line, Polyline, Rect, Text as SvgText } from 'react-native-svg';
@@ -18,6 +19,8 @@ const tone = (zone: Zone) => (zone === 'black' ? '#8E8E93' : ZONES[zone].color);
 const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
 export function ReadingsTimeline({ readings, startedAt, uilClass, now, temp }: { readings: FieldReading[]; startedAt: Date; uilClass: UilClass; now: number; temp: { value: (f: number) => number | string; unit: string } }) {
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   const [width, setWidth] = useState(0);
   const values = readings.map((r) => r.wbgtF);
   const lo = Math.floor(Math.min(76, ...values) - 1);
@@ -77,7 +80,7 @@ export function ReadingsTimeline({ readings, startedAt, uilClass, now, temp }: {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   axisText: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },
   list: { marginTop: 12 },

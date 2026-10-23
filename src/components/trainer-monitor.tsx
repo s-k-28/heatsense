@@ -1,174 +1,176 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useReducedMotion } from 'react-native-reanimated';
 import Svg, { Polyline } from 'react-native-svg';
 
+import { Segmented } from '@/components/motion/segmented';
+import { ActionButton } from '@/components/ui/action-button';
 import { SimulatedTag } from '@/components/vitals';
-import { StatRow } from '@/components/whoop-ui';
+import { ListRow, Rows, StatRow } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
-import { enter, settle } from '@/lib/motion';
+import { enter, leave, settle } from '@/lib/motion';
+import { seg, useOneShotClock } from '@/lib/motion-engine';
 import { ZONES } from '@/lib/practice';
 import { hrPercent, useAthletes, type AthleteView } from '@/state/athletes';
-import { useDemoTeam } from '@/state/demo-team';
-import { useTemperature } from '@/state/preferences';
-import { useCoachData, useNow } from '@/state/team-session';
+import { useCoachDataState, useNow } from '@/state/team-session';
 
-// The trainer's live sideline view, after Polar Team's team screen: who needs attention first, then
-// every athlete as a tile with heart rate, effort (share of max) and its recent trend.
-
-const BAND = require('@/assets/images/heatsense-band-refined.png');
+// One team overview, exceptions, then the live roster. Values stay still as samples arrive;
+// trends trace once and check-ins use the same restrained press feedback as other actions.
 const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const SPARK = { width: 64, height: 24, drawMs: 280 };
+const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
+type AttentionKind = 'signal' | 'recovery' | 'effort' | 'practice-days';
+type CheckIn = { scope: string; kind: AttentionKind; at: Date };
 
-function effortTone(pct: number) {
-  if (pct >= 88) return '#FF453A';
-  if (pct >= 80) return '#FF7A45';
-  if (pct >= 70) return Palette.coral;
-  if (pct >= 60) return '#C9A27E';
-  return '#6B7A82';
-}
-
-function attention(a: AthleteView): string | null {
+function attention(a: AthleteView): { kind: AttentionKind; message: string } | null {
   if (!a.live) return null;
-  if (a.live.stale) return 'No band signal for over 2 min';
-  if (a.live.status === 'watch') return `${a.live.heartRate} bpm and staying high through rest`;
-  if (hrPercent(a.live.heartRate) >= 90) return `${a.live.heartRate} bpm, ${hrPercent(a.live.heartRate)}% of max`;
-  if (a.acclimatizationDay < 6 && a.live.phase === 'work' && hrPercent(a.live.heartRate) >= 80) return `Day ${a.acclimatizationDay} of acclimatization, working hard`;
+  if (a.live.stale) return { kind: 'signal', message: 'No current band signal' };
+  if (a.live.status === 'watch') return { kind: 'recovery', message: `${a.live.heartRate} bpm and staying high through rest` };
+  if (hrPercent(a.live.heartRate) >= 90) return { kind: 'effort', message: `${a.live.heartRate} bpm, ${hrPercent(a.live.heartRate)}% of estimated max` };
+  if (a.practiceDaysKnown && a.acclimatizationDay < 6 && a.live.phase === 'work' && hrPercent(a.live.heartRate) >= 80) return { kind: 'practice-days', message: `${a.acclimatizationDay} recorded practice days; working hard` };
   return null;
 }
 
-function Spark({ values, color }: { values: number[]; color: string }) {
-  if (values.length < 2) return <View style={styles.sparkEmpty} />;
-  const w = 120, h = 30, min = Math.min(...values) - 3, max = Math.max(...values) + 3;
-  const pts = values.map((v, i) => `${(i / (values.length - 1)) * w},${h - ((v - min) / (max - min)) * h}`).join(' ');
-  return <Svg height={h} width="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none"><Polyline fill="none" points={pts} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
+/** A check-in acknowledges this cue, not a different condition that arrives afterward. */
+function checkInCurrent(check: CheckIn | undefined, scope: string, kind: AttentionKind, now: number) {
+  return Boolean(check && check.scope === scope && check.kind === kind && now - check.at.getTime() < 10 * 60_000);
 }
 
-function Tile({ a, role }: { a: AthleteView; role: 'trainer' | 'coach' }) {
+function Spark({ values, color }: { values: number[]; color: string }) {
+  const ready = values.length > 1;
+  const reduced = useReducedMotion();
+  const clock = useOneShotClock(SPARK.drawMs, ready, reduced);
+  const min = ready ? Math.min(...values) - 3 : 0;
+  const max = ready ? Math.max(...values) + 3 : 1;
+  const points = values.map((value, index) => ({ x: (index / Math.max(1, values.length - 1)) * SPARK.width, y: SPARK.height - ((value - min) / (max - min)) * SPARK.height }));
+  const length = points.reduce((sum, point, index) => index ? sum + Math.hypot(point.x - points[index - 1].x, point.y - points[index - 1].y) : sum, 0) || 1;
+  const trace = useAnimatedProps(() => ({ strokeDashoffset: length * (1 - seg(clock.value, 0, SPARK.drawMs)) }));
+  if (!ready) return <View style={styles.spark} />;
+  return (
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.spark}>
+      <Svg height={SPARK.height} width={SPARK.width} viewBox={`0 0 ${SPARK.width} ${SPARK.height}`}>
+        <AnimatedPolyline animatedProps={trace} fill="none" points={points.map((point) => `${point.x},${point.y}`).join(' ')} stroke={color} strokeDasharray={[length, length]} strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+      </Svg>
+    </View>
+  );
+}
+
+function LiveRow({ a, role }: { a: AthleteView; role: 'trainer' | 'coach' }) {
   const live = a.live!;
   const pct = hrPercent(live.heartRate);
-  const tone = live.stale ? Palette.inkFaint : effortTone(pct);
-  const [first, ...rest] = a.name.split(' ');
+  const tone = live.stale ? Palette.inkMuted : live.status === 'watch' ? Palette.warning : Palette.ink;
   return (
     <Pressable
-      accessibilityLabel={`${a.name}, ${live.stale ? 'no recent signal' : `${live.heartRate} beats per minute, ${pct} percent of max`}${live.status === 'watch' ? ', slow recovery' : ''}`}
+      accessibilityLabel={`${a.name}, ${live.stale ? 'no recent signal' : `${live.heartRate} beats per minute, ${pct} percent of estimated max`}${!live.stale && live.status === 'watch' ? ', slow recovery' : !live.stale && live.status === 'unknown' ? ', recovery unavailable' : ''}${a.simulated ? ', simulated' : ''}${!live.stale && live.phase ? `, ${live.phase}` : ''}`}
       accessibilityRole="button"
       onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })}
-      style={({ pressed }) => [styles.tile, live.status === 'watch' && styles.tileWatch, pressed && styles.pressed]}>
-      <View style={styles.tileTop}>
-        <Text numberOfLines={1} style={styles.tileName}>{first} {rest.map((p) => p[0]).join('')}</Text>
-        <View style={[styles.dot, { backgroundColor: live.stale ? Palette.inkFaint : live.status === 'watch' ? Palette.warning : Palette.safe }]} />
+      style={({ pressed }) => [styles.liveRow, pressed && styles.pressed]}>
+      <View style={styles.liveCopy}>
+        <Text style={styles.liveName}>{a.name}</Text>
+        <Text style={[styles.liveMeta, (live.stale || live.status === 'watch') && { color: tone }]}>
+          {live.stale ? 'Signal lost' : live.status === 'watch' ? 'Slow recovery' : live.status === 'unknown' ? `${pct}% of estimated max · recovery unavailable` : `${pct}% of estimated max`}{!live.stale && live.phase ? ` · ${live.phase === 'work' ? 'Work' : 'Rest'}` : ''}
+        </Text>
       </View>
-      <Text style={[styles.tileHr, live.stale && { color: Palette.inkMuted }]}>{live.stale ? '--' : live.heartRate}<Text style={styles.tileUnit}> bpm</Text></Text>
-      <View style={styles.bar}><View style={[styles.barFill, { backgroundColor: tone, width: `${Math.min(100, pct)}%` }]} /></View>
-      <View style={styles.tileFoot}>
-        <Text style={[styles.tilePct, { color: tone }]}>{pct}%</Text>
-        <Text style={styles.tileMeta}>{live.phase ? (live.phase === 'work' ? 'Work' : 'Rest') : a.acclimatizationDay < 14 ? `Day ${a.acclimatizationDay}` : ''}</Text>
+      <View style={styles.liveSignal}>
+        {live.stale ? <View style={styles.spark} /> : <Spark color={live.status === 'watch' ? Palette.warning : Palette.inkMuted} values={live.history} />}
+        <Text style={[styles.heartRate, { color: tone }]}>{live.stale ? '—' : live.heartRate}<Text style={styles.unit}> bpm</Text></Text>
       </View>
-      <Spark color={tone} values={live.history} />
     </Pressable>
   );
 }
 
 export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach' }) {
-  const data = useCoachData(role);
-  const temp = useTemperature();
-  const { athletes, sample } = useAthletes(role);
-  const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
+  const team = useCoachDataState(role);
+  const data = team.data;
+  const { athletes, sample, loading, status, vitalsStatus, retry } = useAthletes(role);
   const now = useNow(5_000);
   const reduced = useReducedMotion();
   const [sort, setSort] = useState<'effort' | 'name'>('effort');
-  const [checked, setChecked] = useState<Record<string, Date>>({});
+  const [checked, setChecked] = useState<Record<string, CheckIn>>({});
+  const [showCheckIns, setShowCheckIns] = useState(false);
 
   const onBand = athletes.filter((a) => a.live);
+  const failed = !sample && (team.status === 'error' || status === 'error' || vitalsStatus === 'error');
+  const waiting = !sample && (loading || team.status === 'loading' || vitalsStatus === 'loading');
   if (!onBand.length) {
     return (
       <View style={styles.empty}>
-        <Image accessibilityIgnoresInvertColors contentFit="contain" source={BAND} style={styles.emptyBand} />
-        <Text style={styles.emptyTitle}>No bands live</Text>
-        <Text style={styles.emptyBody}>During practice, every athlete wearing a HeatSense Band shows up here with heart rate and recovery.</Text>
+        <Text accessibilityLiveRegion="polite" style={styles.emptyTitle}>{failed ? 'Band data unavailable' : waiting ? 'Loading band data…' : data && !data.teamId && !data.sample ? 'No team connected' : !data?.session ? 'No practice in progress' : 'No band samples yet'}</Text>
+        <Text style={styles.emptyBody}>{failed ? 'Couldn’t load your team’s current signals. Try connecting again.' : waiting ? 'Looking for your team’s band signals.' : data && !data.teamId && !data.sample ? 'Join your team and wait for coach approval to view its athletes.' : 'Band signals appear during practice. Field readings are on Home.'}</Text>
+        {failed ? <ActionButton label="Try again" onPress={() => { team.retry(); retry(); }} variant="secondary" /> : null}
       </View>
     );
   }
 
   const latest = data?.readings.at(-1) ?? null;
-  // Checked-in athletes drop out of the attention list for 10 minutes.
-  const flagged = onBand
-    .map((a) => ({ a, why: attention(a) }))
-    .filter(({ a, why }) => why && !(checked[a.id] && now - checked[a.id].getTime() < 10 * 60_000));
-  // Effort sorts by 10%-of-max bands, then name, so tiles hold still while heart rates wobble and
-  // only move when someone really works harder or eases off.
+  const scope = `${role}:${sample ? 'sample' : data?.teamId ?? 'none'}:${data?.session?.id ?? 'none'}`;
+  const currentChecks = Object.entries(checked).filter(([, check]) => check.scope === scope);
+  // A different cue (for example a lost signal after a recovery check-in) must still appear.
+  const flagged = onBand.flatMap((a) => {
+    const cue = attention(a);
+    return cue && !checkInCurrent(checked[a.id], scope, cue.kind, now) ? [{ a, cue }] : [];
+  });
+  // Bucket effort so a tiny change in heart rate doesn't shuffle the list on every sample.
   const band = (a: AthleteView) => Math.floor(hrPercent(a.live!.heartRate) / 10);
-  const sorted = [...onBand].sort((x, y) => (sort === 'name' ? x.name.localeCompare(y.name) : band(y) - band(x) || x.name.localeCompare(y.name)));
+  const sorted = [...onBand].sort((x, y) => (sort === 'name' ? x.name.localeCompare(y.name) : Number(x.live!.stale) - Number(y.live!.stale) || band(y) - band(x) || x.name.localeCompare(y.name)));
   const hrs = onBand.filter((a) => !a.live!.stale).map((a) => a.live!.heartRate);
-  const cycle = 30 * 60, into = ((demo.seconds % cycle) + cycle) % cycle;
-  const blockLeft = demo.enabled ? Math.ceil(((into < 20 * 60 ? 20 * 60 : cycle) - into) / 60) : null;
+  // The simulator has its own rhythm, separate from the coach's selected plan. Read the
+  // actual signal's phase rather than calculating a competing work/rest countdown here.
+  const simulatedPhase = sample ? onBand.find((a) => a.simulated && !a.live!.stale)?.live?.phase : null;
 
   return (
     <>
       {sample || onBand.some((a) => a.simulated) ? <SimulatedTag /> : null}
-      <View accessible style={styles.strip}>
-        <View style={[styles.stripEdge, { backgroundColor: latest ? (latest.zone === 'black' ? '#8E8E93' : ZONES[latest.zone].color) : Palette.inkFaint }]} />
-        <View style={styles.stripCopy}>
-          <Text style={[styles.stripZone, latest && { color: ZONES[latest.zone].text }]}>{latest ? `${ZONES[latest.zone].label} · ${temp.value(latest.wbgtF)}${temp.unit}` : 'No field reading yet'}</Text>
-          <Text style={styles.stripMeta}>{onBand.length} on band{data?.session ? ` · practice ${Math.round((now - data.session.startedAt.getTime()) / 60_000)} min in` : ''}</Text>
+      <View style={styles.overview}>
+        <View accessible accessibilityLabel={`${hrs.length} of ${athletes.length} athletes reporting band signals`} style={styles.liveCount}>
+          <Text style={styles.count}>{hrs.length}<Text style={styles.countUnit}>/{athletes.length}</Text></Text>
+          <Text style={styles.countLabel}>athletes reporting</Text>
         </View>
-        {blockLeft !== null ? (
-          <View style={styles.block}>
-            <Text style={styles.blockValue}>{blockLeft}<Text style={styles.blockUnit}> min</Text></Text>
-            <Text style={styles.blockLabel}>{into < 20 * 60 ? 'Work left' : 'Rest left'}</Text>
-          </View>
-        ) : null}
+        <View style={styles.practice}>
+          <Text style={[styles.practiceZone, latest && { color: ZONES[latest.zone].text }]}>{latest ? ZONES[latest.zone].label : 'No field reading'}</Text>
+          {simulatedPhase ? <Text style={styles.practiceMeta}>Simulated {simulatedPhase === 'work' ? 'work' : 'rest'} block</Text> : data?.session ? <Text style={styles.practiceMeta}>Practice {Math.max(0, Math.round((now - data.session.startedAt.getTime()) / 60_000))} min in</Text> : null}
+        </View>
       </View>
 
       {flagged.length ? (
         <>
-          <Text accessibilityRole="header" style={styles.section}>Needs attention</Text>
+          <Text accessibilityRole="header" style={styles.section}>Needs a check · {flagged.length}</Text>
           <View style={styles.flags}>
-            {flagged.map(({ a, why }, i) => (
-              <Animated.View entering={enter(i, reduced)} key={a.id} layout={settle(reduced)} style={styles.flag}>
-                <View style={styles.flagEdge} />
-                <View style={styles.flagCopy}>
+            {flagged.map(({ a, cue }) => (
+              <Animated.View entering={enter(0, reduced)} exiting={leave(reduced)} key={a.id} layout={settle(reduced)} style={styles.flag}>
+                <Pressable accessibilityRole="button" accessibilityHint="Opens athlete vitals" onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })} style={({ pressed }) => [styles.flagCopy, pressed && styles.pressed]}>
                   <Text style={styles.flagName}>{a.name}</Text>
-                  <Text style={styles.flagWhy}>{why}</Text>
-                  <View style={styles.flagActions}>
-                    <Pressable accessibilityRole="button" onPress={() => setChecked({ ...checked, [a.id]: new Date() })} style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
-                      <Text style={styles.primaryText}>Checked in</Text>
-                    </Pressable>
-                    <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
-                      <Text style={styles.secondaryText}>Vitals</Text>
-                    </Pressable>
-                  </View>
-                </View>
+                  <Text style={styles.flagWhy}>{cue.message}</Text>
+                </Pressable>
+                <ActionButton accessibilityLabel={`Mark ${a.name} checked in`} label="Mark checked in" onPress={() => setChecked((previous) => ({ ...previous, [a.id]: { scope, kind: cue.kind, at: new Date() } }))} style={styles.checkIn} variant="text" />
               </Animated.View>
             ))}
           </View>
         </>
       ) : null}
-      {Object.keys(checked).length ? (
-        <Text style={styles.checked}>Checked in: {Object.entries(checked).map(([id, at]) => `${athletes.find((a) => a.id === id)?.name.split(' ')[0] ?? 'Athlete'} ${time(at)}`).join(' · ')}</Text>
+      {currentChecks.length ? (
+        <View style={styles.checked}>
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCheckIns }} onPress={() => setShowCheckIns(!showCheckIns)} style={({ pressed }) => [styles.checkedToggle, pressed && styles.pressed]}>
+            <Text style={styles.checkedLabel}>{currentChecks.length} checked in</Text>
+            <Text style={styles.checkedLabel}>{showCheckIns ? 'Hide' : 'View'}</Text>
+          </Pressable>
+          {showCheckIns ? <Animated.View entering={enter(0, reduced)} exiting={leave(reduced)}>
+            <Rows>{currentChecks.map(([id, { at }]) => <ListRow key={id} label={athletes.find((athlete) => athlete.id === id)?.name ?? 'Athlete'} value={time(at)} />)}</Rows>
+          </Animated.View> : null}
+        </View>
       ) : null}
 
-      <View style={styles.gridHead}>
-        <Text accessibilityRole="header" style={styles.sectionInline}>Right now</Text>
-        <View accessibilityRole="tablist" style={styles.sort}>
-          {(['effort', 'name'] as const).map((key) => (
-            <Pressable accessibilityRole="tab" accessibilityState={{ selected: sort === key }} key={key} onPress={() => setSort(key)} style={[styles.sortItem, sort === key && styles.sortOn]}>
-              <Text style={[styles.sortText, sort === key && styles.sortTextOn]}>{key === 'effort' ? 'Effort' : 'A–Z'}</Text>
-            </Pressable>
-          ))}
-        </View>
+      <View style={styles.listHead}>
+        <Text accessibilityRole="header" style={styles.sectionInline}>Band signals</Text>
+        {onBand.length > 1 ? <Segmented itemWidth={64} onChange={setSort} options={[{ key: 'effort', label: 'Effort' }, { key: 'name', label: 'A–Z' }]} size="sm" value={sort} /> : null}
       </View>
-      <View style={styles.grid}>
-        {sorted.map((a) => <View key={a.id} style={styles.cell}><Tile a={a} role={role} /></View>)}
-      </View>
+      <Rows>{sorted.map((a) => <LiveRow a={a} key={a.id} role={role} />)}</Rows>
 
       <View style={styles.team}>
         <StatRow stats={[
-          { label: 'Team avg', value: hrs.length ? String(Math.round(hrs.reduce((s, v) => s + v, 0) / hrs.length)) : '--', unit: ' bpm' },
-          { label: 'Highest', value: hrs.length ? String(Math.max(...hrs)) : '--', unit: ' bpm' },
-          { label: 'Watch', value: String(onBand.filter((a) => a.live!.status === 'watch').length), tone: onBand.some((a) => a.live!.status === 'watch') ? Palette.warning : undefined },
+          { label: 'Average heart rate', value: hrs.length ? String(Math.round(hrs.reduce((s, v) => s + v, 0) / hrs.length)) : '—', unit: ' bpm' },
+          { label: 'Highest', value: hrs.length ? String(Math.max(...hrs)) : '—', unit: ' bpm' },
         ]} />
       </View>
     </>
@@ -176,54 +178,37 @@ export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach
 }
 
 const styles = StyleSheet.create({
-  pressed: { opacity: 0.75 },
-  empty: { alignItems: 'center', gap: 10, marginTop: 8 },
-  emptyBand: { height: 200, width: 200 },
+  pressed: { opacity: 0.7 },
+  empty: { gap: 10, marginTop: 28 },
   emptyTitle: { color: Palette.ink, fontSize: 24, fontWeight: '700' },
-  emptyBody: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22, maxWidth: 320, textAlign: 'center' },
-  strip: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 16, flexDirection: 'row', gap: 14, overflow: 'hidden', paddingRight: 18 },
-  stripEdge: { alignSelf: 'stretch', width: 6 },
-  stripCopy: { flex: 1, gap: 2, paddingVertical: 14 },
-  stripZone: { color: Palette.ink, fontSize: 18, fontWeight: '700' },
-  stripMeta: { color: Palette.inkMuted, fontSize: 15 },
-  block: { alignItems: 'flex-end' },
-  blockValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 30, lineHeight: 34 },
-  blockUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 17 },
-  blockLabel: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },
-  section: { color: Palette.ink, fontSize: 22, fontWeight: '700', marginBottom: 12, marginTop: 26 },
-  flags: { gap: 10 },
-  flag: { backgroundColor: 'rgba(255,159,10,0.1)', borderColor: 'rgba(255,159,10,0.35)', borderRadius: 16, borderWidth: 1, flexDirection: 'row', overflow: 'hidden' },
-  flagEdge: { backgroundColor: Palette.warning, width: 4 },
-  flagCopy: { flex: 1, gap: 2, padding: 14 },
-  flagName: { color: Palette.ink, fontSize: 17, fontWeight: '700' },
-  flagWhy: { color: Palette.inkMuted, fontSize: 15 },
-  flagActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  primary: { backgroundColor: Palette.warning, borderRadius: 10, justifyContent: 'center', minHeight: 40, paddingHorizontal: 16 },
-  primaryText: { color: '#101416', fontSize: 15, fontWeight: '700' },
-  secondary: { backgroundColor: 'rgba(235,235,245,0.1)', borderRadius: 10, justifyContent: 'center', minHeight: 40, paddingHorizontal: 16 },
-  secondaryText: { color: Palette.ink, fontSize: 15, fontWeight: '600' },
-  checked: { color: Palette.inkMuted, fontSize: 14, marginTop: 10 },
-  gridHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, marginTop: 26 },
-  sectionInline: { color: Palette.ink, fontSize: 22, fontWeight: '700' },
-  sort: { backgroundColor: 'rgba(235,235,245,0.08)', borderRadius: 9, flexDirection: 'row', padding: 3 },
-  sortItem: { borderRadius: 7, paddingHorizontal: 10, paddingVertical: 6 },
-  sortOn: { backgroundColor: 'rgba(235,235,245,0.16)' },
-  sortText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '600' },
-  sortTextOn: { color: Palette.ink },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  cell: { width: '48.4%' },
-  tile: { backgroundColor: Palette.surface, borderColor: 'transparent', borderRadius: 16, borderWidth: 1, gap: 6, padding: 14 },
-  tileWatch: { borderColor: 'rgba(255,159,10,0.6)' },
-  tileTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  tileName: { color: Palette.ink, flex: 1, fontSize: 16, fontWeight: '600' },
-  dot: { borderRadius: 5, height: 10, width: 10 },
-  tileHr: { color: Palette.ink, fontFamily: Face.figure, fontSize: 44, lineHeight: 48 },
-  tileUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 18 },
-  bar: { backgroundColor: 'rgba(235,235,245,0.08)', borderRadius: 3, height: 6, overflow: 'hidden' },
-  barFill: { borderRadius: 3, height: 6 },
-  tileFoot: { flexDirection: 'row', justifyContent: 'space-between' },
-  tilePct: { fontFamily: Face.figure, fontSize: 16 },
-  tileMeta: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },
-  sparkEmpty: { height: 30 },
-  team: { backgroundColor: Palette.surface, borderRadius: 16, marginTop: 14, padding: 16 },
+  emptyBody: { color: Palette.inkMuted, fontSize: 17, lineHeight: 24 },
+  overview: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 16, marginBottom: 2, marginTop: 8 },
+  liveCount: { alignItems: 'baseline', flexBasis: 180, flexGrow: 1, flexDirection: 'row', flexWrap: 'wrap', columnGap: 10 },
+  count: { color: Palette.ink, fontFamily: Face.figure, fontSize: 60, lineHeight: 66 },
+  countUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 30 },
+  countLabel: { color: Palette.inkMuted, fontSize: 16 },
+  practice: { alignItems: 'flex-end', flexBasis: 130, flexGrow: 1, flexShrink: 1, gap: 4 },
+  practiceZone: { color: Palette.inkMuted, fontSize: 16, fontWeight: '600' },
+  practiceMeta: { color: Palette.inkMuted, fontSize: 14, textAlign: 'right' },
+  section: { color: Palette.ink, fontSize: 20, fontWeight: '700', marginBottom: 8, marginTop: 26 },
+  flags: { borderLeftColor: Palette.warning, borderLeftWidth: 3, paddingLeft: 14 },
+  flag: { alignItems: 'stretch', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingVertical: 10 },
+  flagCopy: { flexBasis: 160, flexGrow: 1, gap: 4, minHeight: 48, justifyContent: 'center' },
+  flagName: { color: Palette.ink, fontSize: 17, fontWeight: '600' },
+  flagWhy: { color: Palette.inkMuted, fontSize: 15, lineHeight: 20 },
+  checkIn: { alignSelf: 'flex-start', flexShrink: 1, maxWidth: '100%' },
+  checked: { marginTop: 10 },
+  checkedToggle: { alignItems: 'center', flexDirection: 'row', gap: 12, justifyContent: 'space-between', minHeight: 48 },
+  checkedLabel: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
+  listHead: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8, marginBottom: 12, marginTop: 28 },
+  sectionInline: { color: Palette.ink, flexShrink: 1, fontSize: 20, fontWeight: '700' },
+  liveRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 12, minHeight: 84, paddingHorizontal: 16, paddingVertical: 12 },
+  liveCopy: { flexBasis: 140, flexGrow: 1, flexShrink: 1, gap: 4, minWidth: 0 },
+  liveSignal: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginLeft: 'auto', maxWidth: '100%' },
+  liveName: { color: Palette.ink, fontSize: 17, fontWeight: '600' },
+  liveMeta: { color: Palette.inkMuted, fontSize: 13 },
+  spark: { width: SPARK.width, height: SPARK.height },
+  heartRate: { color: Palette.ink, fontFamily: Face.figure, fontSize: 32, minWidth: 72, textAlign: 'right' },
+  unit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 16 },
+  team: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, marginTop: 24, paddingTop: 18 },
 });
