@@ -76,7 +76,8 @@ For coach preview and verification:
 
 ```bash
 npm run web
-node --test scripts/check-coach-countdown.mjs
+node scripts/check-uil-wbgt.ts
+node scripts/check-band-simulator.ts
 ```
 
 Open `/dashboard?role=coach`. The existing 84°F / Orange sample classification and 20/10-minute practice adjustments are unchanged. All current values are explicitly sample data; no live weather, wearable, or school policy service is connected. `npm install` and `npm run web` copy the installed Skia CanvasKit file into `public/` automatically.
