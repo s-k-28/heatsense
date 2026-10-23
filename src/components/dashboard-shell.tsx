@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
@@ -8,6 +9,7 @@ import { GlassSurface } from '@/components/glass-surface';
 import { HeatIcon } from '@/components/heat-icon';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { TextLink } from '@/components/ui/list';
+import { PersonGlyph } from '@/components/whoop-ui';
 import { Palette, Spacing, Type } from '@/constants/theme';
 import { markNotificationsRead, usePreferences } from '@/state/preferences';
 
@@ -56,7 +58,8 @@ export function DashboardHeader({
 }) {
   const insets = useSafeAreaInsets();
   const backdrop = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.value, [36, 52], [0, 1], 'clamp') }));
-  const { unreadNotifications } = usePreferences();
+  const { unreadNotifications, photoUri, profileName } = usePreferences();
+  const shownName = profileName?.trim() || name;
   const openAlerts = () => {
     markNotificationsRead();
     onAlerts?.();
@@ -77,8 +80,8 @@ export function DashboardHeader({
             {unreadNotifications > 0 ? <View style={styles.badge} /> : null}
           </Pressable>
         ) : null}
-        <Pressable accessibilityLabel={`${name}, account`} accessibilityRole="button" onPress={onProfile} style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}>
-          <Text style={styles.avatarText}>{initialsOf(name)}</Text>
+        <Pressable accessibilityLabel={shownName ? `${shownName}, account` : 'Account'} accessibilityRole="button" onPress={onProfile} style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}>
+          {photoUri ? <Image accessibilityIgnoresInvertColors contentFit="cover" source={{ uri: photoUri }} style={StyleSheet.absoluteFill} /> : shownName ? <Text style={styles.avatarText}>{initialsOf(shownName)}</Text> : <PersonGlyph size={22} />}
         </Pressable>
       </View>
 
@@ -190,7 +193,7 @@ const styles = StyleSheet.create({
   headerActions: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   badge: { backgroundColor: Palette.emergency, borderColor: Palette.canvas, borderRadius: 5, borderWidth: 1.5, height: 10, position: 'absolute', right: 10, top: 9, width: 10 },
-  avatar: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, height: 36, justifyContent: 'center', width: 36 },
+  avatar: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, overflow: 'hidden', height: 36, justifyContent: 'center', width: 36 },
   avatarText: { color: Palette.ink, ...Type.footnote, fontWeight: '600' },
   largeTitle: { color: Palette.ink, ...Type.largeTitle, marginTop: Spacing.one },
   sectionHeader: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.two, marginTop: Spacing.seven },

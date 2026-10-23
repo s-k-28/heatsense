@@ -1,21 +1,18 @@
 import { router } from 'expo-router';
-import { signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
-import { Card, CapsLabel, Facts, ListRow, Rows, SampleTag, SectionTitle, StatRow } from '@/components/whoop-ui';
+import { Card, Facts, ListRow, Rows, SampleTag, SectionTitle, StatRow } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION } from '@/lib/uil-wbgt';
-import { firebaseAuth } from '@/services/firebase';
 import type { FieldReading } from '@/services/practice-sessions';
 import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
-import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
+import { useTemperature } from '@/state/preferences';
 import { clockTime, usePracticePlans } from '@/state/practice-plans';
-import { useAuthSession } from '@/state/auth-session';
 import { LiveVitalsRows, TeamVitalsRows } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
-import { useCoachData, useMembership, useNow, useRoster, useTeamVitals, useTrainers, type SessionRole } from '@/state/team-session';
+import { useCoachData, useMembership, useNow, useRoster, useTeamVitals, type SessionRole } from '@/state/team-session';
 
 // Team, Plan and Profile, decluttered after WHOOP: one heading per section, small caps groups,
 // full-width rows and metric tiles. Every number comes from the team's real data or the UIL chart.
@@ -206,68 +203,6 @@ export function ZoneRules({ latest, uilClass, hideSummary = false }: { latest: F
         </Rows>
       </View>
 
-    </>
-  );
-}
-
-/* ─────────────────────────────── Profile ─────────────────────────────── */
-
-export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Athlete' }) {
-  const { user } = useAuthSession();
-  const member = useCoachData(role === 'Athlete' ? 'athlete' : role === 'Athletic trainer' ? 'trainer' : 'coach');
-  const trainers = useTrainers(role === 'Athlete' ? member?.teamId ?? null : null);
-  const mine = useMyTeam();
-  const membership = useMembership(role !== 'Coach');
-  const { bandConnected, celsius, demoTeam, practiceLiveActivity } = usePreferences();
-  // Coaches read their own team; athletes and trainers their membership, which may still await approval.
-  const teamName = role === 'Coach' ? mine?.team.teamName : membership?.status === 'declined' ? undefined : membership?.team?.teamName;
-  const teamValue = teamName ? (membership?.status === 'pending' ? `${teamName} · waiting` : teamName) : 'None yet';
-  const name = user?.displayName?.trim() || 'Your profile';
-  const initials = name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
-
-  const confirmSignOut = () =>
-    Alert.alert('Log out of HeatSense?', undefined, [
-      { style: 'cancel', text: 'Cancel' },
-      { onPress: () => { if (firebaseAuth) signOut(firebaseAuth).catch(() => {}); router.replace('/welcome'); }, style: 'destructive', text: 'Log out' },
-    ]);
-
-  return (
-    <>
-      <View style={styles.identity}>
-        <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
-        <View style={styles.flex}>
-          <Text style={styles.identityName}>{name}</Text>
-          <Text style={styles.identityMeta}>{role}{teamName && membership?.status !== 'pending' ? ` · ${teamName}` : ''}</Text>
-        </View>
-      </View>
-
-      <CapsLabel>Account</CapsLabel>
-      <Rows>
-        <ListRow label="Team" onPress={role === 'Coach' && mine === null ? () => router.push('/team/create') : undefined} value={teamValue} />
-        {role !== 'Coach' && !member?.teamId && membership?.status !== 'pending' ? <ListRow label="Join a team" onPress={() => router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')} /> : null}
-        {role === 'Athlete' ? <ListRow label="Athletic trainer" value={trainers.length ? trainers.map((t) => t.displayName ?? 'Trainer').join(', ') : 'None yet'} /> : null}
-        {role === 'Athlete' ? (
-          <ListRow label="HeatSense Band" onPress={() => router.push('/pair-band')} value={bandConnected ? 'Connected' : 'Not paired'} valueTone={bandConnected ? Palette.safe : Palette.inkMuted} />
-        ) : null}
-      </Rows>
-
-      <CapsLabel>App settings</CapsLabel>
-      <Rows>
-        <ListRow label="Sample athletes" trailing={<Switch accessibilityLabel="Show the simulated demo team" onValueChange={(value) => setPreference('demoTeam', value)} trackColor={{ true: Palette.coral }} value={demoTeam} />} />
-        <ListRow label="Temperatures in °C" trailing={<Switch accessibilityLabel="Show temperatures in Celsius" onValueChange={(value) => setPreference('celsius', value)} trackColor={{ true: Palette.coral }} value={celsius} />} />
-        <ListRow label="Lock Screen practice clock" trailing={<Switch accessibilityLabel="Show practice on the Dynamic Island and Lock Screen" onValueChange={(value) => setPreference('practiceLiveActivity', value)} trackColor={{ true: Palette.coral }} value={practiceLiveActivity} />} />
-      </Rows>
-
-      <CapsLabel>Support</CapsLabel>
-      <Rows>
-        <ListRow label="UIL heat chart" onPress={() => Linking.openURL(UIL_SOURCE_URL)} />
-        <ListRow label="Data permissions" onPress={() => Alert.alert('Data permissions', role === 'Athlete' ? 'Your coach sees your name, team and whether your band is connected. Health answers and emergency contacts stay private to you.' : 'You see athletes on your roster and the practice records your team creates. Athletes’ health answers and emergency contacts stay private to them.')} />
-        <ListRow label="Safety and limitations" onPress={() => Alert.alert('Safety and limitations', 'HeatSense supports, but doesn’t replace, your district’s emergency action plan or an athletic trainer’s judgment. It doesn’t diagnose heat illness.')} />
-      </Rows>
-
-      <Pressable accessibilityRole="button" onPress={confirmSignOut} style={({ pressed }) => [styles.logout, pressed && { opacity: 0.7 }]}>
-        <Text style={styles.logoutText}>Log out</Text>
-      </Pressable>
     </>
   );
 }

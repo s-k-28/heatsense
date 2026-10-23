@@ -27,6 +27,11 @@ export function CapsLabel({ children }: { children: string }) {
   return <Text accessibilityRole="header" style={styles.caps}>{children}</Text>;
 }
 
+/** Stands in for a profile picture or initials before someone has a name. */
+export function PersonGlyph({ size = 44 }: { size?: number }) {
+  return <Svg fill="none" height={size} stroke={Palette.inkMuted} strokeLinecap="round" strokeWidth={1.8} viewBox="0 0 24 24" width={size}><Path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20a7.5 7.5 0 0 1 15 0" /></Svg>;
+}
+
 const Chevron = () => (
   <Svg fill="none" height={18} stroke={Palette.inkMuted} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={18}><Path d="m9 6 6 6-6 6" /></Svg>
 );

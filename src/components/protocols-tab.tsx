@@ -372,7 +372,7 @@ function SweatRate() {
           <View key={f.label} style={styles.calcField}>
             <Text style={styles.fieldLabel}>{f.label}</Text>
             <View style={styles.calcInputRow}>
-              <TextInput accessibilityLabel={`${f.label} in ${f.unit}`} keyboardType="decimal-pad" onBlur={() => setEditing(false)} onFocus={() => setEditing(true)} onChangeText={f.set} placeholder="0" placeholderTextColor={Palette.inkFaint} style={styles.calcInput} value={f.value} />
+              <TextInput accessibilityLabel={`${f.label} in ${f.unit}`} keyboardType="decimal-pad" onBlur={() => setEditing(false)} onFocus={() => setEditing(true)} onChangeText={f.set} placeholder="–" placeholderTextColor={Palette.inkFaint} style={styles.calcInput} value={f.value} />
               <Text style={styles.calcUnit}>{f.unit}</Text>
             </View>
           </View>

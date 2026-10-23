@@ -48,7 +48,14 @@
           "locationWhenInUsePermission": "HeatSense uses your location to show the city and field where your team practices."
         }
       ],
-      "expo-maps"
+      "expo-maps",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "HeatSense uses your photos so you can choose a profile picture.",
+          "cameraPermission": "HeatSense uses the camera so you can take a profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

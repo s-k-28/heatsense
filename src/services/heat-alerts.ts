@@ -41,8 +41,8 @@ export async function scheduleRecheck(dueAt: number | null) {
   ]);
 }
 
-/** Announces that the latest reading put the field in a new zone. */
-export async function alertZoneChange(title: string, body: string) {
+/** Shows an alert right away: a zone change, an athlete's slow recovery, or a test from Profile. */
+export async function notifyNow(title: string, body: string) {
   if (!(await allowed())) return;
   await Notifications.scheduleNotificationAsync({ content: { title, body }, trigger: null });
 }
