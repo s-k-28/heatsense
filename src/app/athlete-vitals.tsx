@@ -4,9 +4,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
+import { AcclimatizationCard } from '@/components/acclimatization-card';
 import { SimulatedTag, VitalsDetail } from '@/components/vitals';
 import { ListRow, Rows } from '@/components/whoop-ui';
 import { Face, MaxContentWidth, Palette } from '@/constants/theme';
+import { useAthletes } from '@/state/athletes';
 import { useDemoTeam } from '@/state/demo-team';
 import { useCoachData, useRoster, useTeamVitals, type SessionRole } from '@/state/team-session';
 
@@ -22,6 +24,7 @@ export default function AthleteVitalsScreen() {
   // A real athlete: their name from the roster and their latest band sample from this practice.
   const roster = useRoster(data?.teamId ?? null);
   const live = useTeamVitals(data?.session ?? null).find((r) => r.athleteUid === id) ?? null;
+  const athlete = useAthletes(role === 'trainer' ? 'trainer' : 'coach').athletes.find((a) => a.id === id) ?? null;
   const name = member ? member.athlete.name : roster?.find((m) => m.userId === id)?.displayName ?? 'Athlete';
 
   return (
@@ -39,10 +42,12 @@ export default function AthleteVitalsScreen() {
           {member ? (
             <>
               <Text style={styles.position}>{member.athlete.position}</Text>
+              <View style={styles.accl}><AcclimatizationCard day={member.athlete.acclimatizationDay} /></View>
               <VitalsDetail member={member} />
             </>
           ) : live ? (
             <>
+              {athlete ? <View style={styles.accl}><AcclimatizationCard day={athlete.acclimatizationDay} /></View> : null}
               {live.source === 'simulated' ? <SimulatedTag /> : null}
               <View style={styles.liveHero}>
                 <Text style={styles.liveHr}>{live.heartRate}</Text>
@@ -58,7 +63,10 @@ export default function AthleteVitalsScreen() {
               </Rows>
             </>
           ) : (
+            <>
+            {athlete ? <View style={styles.accl}><AcclimatizationCard day={athlete.acclimatizationDay} /></View> : null}
             <Text style={styles.empty}>No band data from {name.split(' ')[0]} yet. Vitals appear during practice once their HeatSense Band is paired and their app is open.</Text>
+            </>
           )}
         </View>
       </ScrollView>
@@ -78,5 +86,6 @@ const styles = StyleSheet.create({
   content: { alignItems: 'center', paddingTop: 8 },
   column: { maxWidth: MaxContentWidth, paddingHorizontal: 16, width: '100%' },
   position: { color: Palette.inkMuted, fontSize: 15, marginBottom: 12, textAlign: 'center' },
+  accl: { marginBottom: 20 },
   empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22, marginTop: 40, textAlign: 'center' },
 });
