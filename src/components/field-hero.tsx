@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CoachPalette, CoachRadius } from '@/constants/coach-theme';
 import { Palette, Spacing } from '@/constants/theme';
 import { SAMPLE_HOURLY_WBGT, ZONES } from '@/lib/practice';
 import { zoneThresholds, type UilClass, type Zone } from '@/lib/uil-wbgt';
@@ -125,22 +126,22 @@ export function FieldHero({ data, onAction, readOnly = false }: { data: CoachDat
 }
 
 const baseStyles = StyleSheet.create({
-  card: { backgroundColor: Palette.surface, borderCurve: 'continuous', borderRadius: 20, marginTop: Spacing.three, overflow: 'hidden' },
+  card: { backgroundColor: CoachPalette.surface, borderCurve: 'continuous', borderRadius: CoachRadius.card, marginTop: Spacing.three, minHeight: 400, overflow: 'hidden' },
   top: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', padding: Spacing.three },
   tag: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, flexDirection: 'row', flexShrink: 1, gap: 6, paddingHorizontal: 9, paddingVertical: 5 },
   dot: { borderRadius: 4, height: 8, width: 8 },
   tagText: { color: Palette.white, flexShrink: 1, fontSize: 13, fontWeight: '600' },
   venue: { color: 'rgba(255,255,255,0.8)', flexShrink: 1, fontSize: 13, marginLeft: 12 },
-  body: { gap: 2, paddingBottom: 36, paddingHorizontal: Spacing.four, paddingTop: 64 },
+  body: { flex: 1, gap: 2, justifyContent: 'flex-end', paddingBottom: 28, paddingHorizontal: Spacing.five, paddingTop: 64 },
   label: { color: 'rgba(255,255,255,0.75)', fontSize: 15, fontWeight: '600' },
   readingRow: { alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  value: { color: Palette.white, fontSize: 56, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -1.5 },
+  value: { color: Palette.white, fontSize: 68, fontVariant: ['tabular-nums'], fontWeight: '800', letterSpacing: -1.8 },
   unit: { color: 'rgba(255,255,255,0.75)', fontSize: 22, fontWeight: '600', letterSpacing: 0 },
   rate: { color: Palette.white, fontSize: 17, fontVariant: ['tabular-nums'], fontWeight: '600' },
   headroom: { color: 'rgba(255,255,255,0.85)', fontSize: 15 },
   actionRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 14 },
-  button: { backgroundColor: Palette.coral, borderRadius: 999, flexShrink: 1, justifyContent: 'center', maxWidth: '100%', minHeight: 48, paddingHorizontal: 20, paddingVertical: 12 },
-  buttonText: { color: '#1A0E07', fontSize: 15, fontWeight: '700' },
+  button: { backgroundColor: CoachPalette.peach, borderRadius: 999, flexShrink: 1, justifyContent: 'center', maxWidth: '100%', minHeight: 52, paddingHorizontal: 23, paddingVertical: 12 },
+  buttonText: { color: CoachPalette.peachInk, fontSize: 16, fontWeight: '800' },
   measured: { color: 'rgba(255,255,255,0.7)', flexShrink: 1, fontSize: 13 },
   pressed: { opacity: 0.7 },
 });
