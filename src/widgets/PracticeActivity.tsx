@@ -24,8 +24,8 @@ export type PracticeActivityProps = {
 //
 // All clear: the logo on the left of the island, and on the right the zone's dot beside the time
 // left in practice; holding it shows the zone, WBGT and both clocks.
-// During an incident it carries no words at all: the athlete's band with a red
-// dot, their name, and their heart rate beside a heart.
+// During an incident it leads with the athlete: their band with a red dot, their name and their
+// heart rate beside a heart, and the practice clock still counting down beside the band.
 //
 // Alignment rules, so nothing drifts: every expanded region uses the same 4pt inset, and every clock
 // has a fixed width. A SwiftUI timer text otherwise stretches to fill its row, which is what pushed
@@ -104,12 +104,15 @@ const PracticeActivity = (props: PracticeActivityProps) => {
 
   return {
     banner: warning ? (
-      <HStack spacing={12} modifiers={[padding({ all: 14 })]}>
-        {band(44)}
-        <Text modifiers={[font({ size: 20, weight: 'semibold' }), foregroundStyle('#FFFFFF'), lineLimit(1)]}>{props.athlete}</Text>
-        <Spacer />
-        {heartRate(30)}
-      </HStack>
+      <VStack alignment="leading" spacing={10} modifiers={[padding({ all: 14 })]}>
+        <HStack spacing={12}>
+          {band(44)}
+          <Text modifiers={[font({ size: 20, weight: 'semibold' }), foregroundStyle('#FFFFFF'), lineLimit(1)]}>{props.athlete}</Text>
+          <Spacer />
+          {heartRate(30)}
+        </HStack>
+        {clocks(18)}
+      </VStack>
     ) : (
       <VStack alignment="leading" spacing={10} modifiers={[padding({ all: 14 })]}>
         <HStack spacing={10}>
@@ -123,7 +126,12 @@ const PracticeActivity = (props: PracticeActivityProps) => {
       </VStack>
     ),
 
-    compactLeading: warning ? band(24) : picture(props.logoUri, 22),
+    compactLeading: warning ? (
+      <HStack spacing={4}>
+        {band(20)}
+        {clock(ends, 12, 'leading', 58)}
+      </HStack>
+    ) : picture(props.logoUri, 22),
     compactTrailing: warning ? (
       heartRate(15)
     ) : (
@@ -157,7 +165,7 @@ const PracticeActivity = (props: PracticeActivityProps) => {
       </VStack>
     ),
     expandedBottom: warning ? (
-      <Spacer modifiers={[frame({ height: 2 })]} />
+      <VStack modifiers={[padding({ leading: inset, trailing: inset, top: 6 })]}>{clocks(20)}</VStack>
     ) : (
       <VStack modifiers={[padding({ leading: inset, trailing: inset, top: 6 })]}>{clocks(22)}</VStack>
     ),

@@ -78,13 +78,16 @@ export default function DashboardScreen() {
   const { celsius, incidentAcknowledged, practiceLiveActivity, practiceStartedAt } = usePreferences();
   const { active: plan } = usePracticePlans();
 
-  // The Dynamic Island / Lock Screen practice activity follows the Profile switch and the unit choice.
-  useEffect(() => {
-    if (practiceLiveActivity) startPracticeActivity({ celsius, incidentOpen: !incidentAcknowledged, startedAt: practiceStartedAt });
-    else endPracticeActivity();
-  }, [celsius, incidentAcknowledged, plan, practiceLiveActivity, practiceStartedAt]);
-
   const role = normalizeRole(params.role);
+
+  // The Dynamic Island / Lock Screen practice activity is the coach's: it carries the practice clock
+  // and athlete warnings, so athlete and trainer accounts never start it. It follows the Profile
+  // switch and the unit choice.
+  useEffect(() => {
+    if (role === 'coach' && practiceLiveActivity) startPracticeActivity({ celsius, incidentOpen: !incidentAcknowledged, startedAt: practiceStartedAt });
+    else endPracticeActivity();
+  }, [celsius, incidentAcknowledged, plan, practiceLiveActivity, practiceStartedAt, role]);
+
   const tabs = roleTabs[role];
   const requestedTab = tabs.some((item) => item.id === params.tab) ? params.tab! : 'home';
   const [manualSelection, setManualSelection] = useState({ role, sourceTab: requestedTab, value: requestedTab });

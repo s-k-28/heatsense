@@ -47,7 +47,15 @@
           "locationWhenInUsePermission": "HeatSense uses your location to show the city and field where your team practices."
         }
       ],
-      "expo-maps"
+      "expo-maps",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [],
+          "bluetoothAlwaysPermission": "HeatSense uses Bluetooth to connect to your HeatSense Band and show your heart rate during practice."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

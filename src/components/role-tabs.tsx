@@ -10,7 +10,8 @@ import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
 import { SOURCE_LABEL } from '@/services/practice-sessions';
 import { usePreferences, useTemperature } from '@/state/preferences';
-import { SimulatedTag, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
+import { LiveBandVitals, SimulatedTag, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
+import { useBand } from '@/state/band-ble';
 import { useDemoTeam } from '@/state/demo-team';
 import { useCoachData, useTrainers } from '@/state/team-session';
 
@@ -69,9 +70,12 @@ function SpeakUp() {
 /** The athlete's own band: their vitals in depth. The app centres on them, not the team. */
 export function AthleteBand() {
   const { bandConnected } = usePreferences();
+  const band = useBand();
   const data = useCoachData('athlete');
   const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
   const me = demo.members[0];
+  // A real band paired on this phone comes first: its live data replaces the simulated stream.
+  if (band.device && (band.status === 'connected' || band.reading)) return <LiveBandVitals />;
   if (demo.enabled && me) {
     return (
       <>
