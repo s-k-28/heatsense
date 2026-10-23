@@ -3,7 +3,7 @@ import { aspectRatio, fixedSize, font, foregroundStyle, frame, lineLimit, monosp
 import { createLiveActivity } from 'expo-widgets';
 
 export type PracticeActivityProps = {
-  zone: 'green' | 'yellow' | 'orange' | 'red' | 'black';
+  zone: 'green' | 'yellow' | 'orange' | 'red' | 'black' | 'none';
   zoneLabel: string;
   wbgt: string;
   startedAt: string;
@@ -32,7 +32,7 @@ export type PracticeActivityProps = {
 // the second clock into the middle.
 const PracticeActivity = (props: PracticeActivityProps) => {
   'widget';
-  const zoneColors = { green: '#30D158', yellow: '#FFD60A', orange: '#FF9F0A', red: '#FF453A', black: '#000000' };
+  const zoneColors = { green: '#30D158', yellow: '#FFD60A', orange: '#FF9F0A', red: '#FF453A', black: '#000000', none: '#8E8E93' };
   const color = zoneColors[props.zone];
   const started = new Date(props.startedAt);
   const ends = new Date(props.endsAt);
