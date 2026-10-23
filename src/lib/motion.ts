@@ -31,4 +31,3 @@ export function leave(reduced: boolean) {
 export function settle(reduced: boolean) {
   return reduced ? undefined : LinearTransition.duration(260).easing(EASE_OUT);
 }
-

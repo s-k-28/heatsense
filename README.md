@@ -826,7 +826,6 @@ heatsense/
 │   ├── check-band-simulator.ts  Self-check for the band signal model and recovery check
 │   ├── test-team-invites.mjs    Emulator test suite: teams, codes, joining, roles, sessions, readings (47 tests)
 │   ├── check-auth-config.mjs    Checks Google sign-in configuration (npm run check:auth)
-│   ├── check-coach-countdown.mjs Checks the recheck countdown math
 │   ├── capture-screen.sh        Screenshot one route on the iOS Simulator
 │   ├── capture-manifest.mjs     Screenshot every route in design/screen-manifest.json
 │   └── reset-project.js         Expo starter reset script
