@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useBandSpot } from '@/components/band-journey';
+import { WRISTBAND_ASPECT, WRISTBAND_HERO } from '@/components/wristband-asset';
 
 // The HeatSense band as a product image: the official three-quarter render (cut out,
 // cleaned of background haze, with a faint peach rim on its lit edge), a pre-drawn
@@ -24,10 +25,7 @@ import { useBandSpot } from '@/components/band-journey';
 //   settle  one short entrance on a calm screen, then still
 // It is a flat render, so it never spins: depth comes from the float and the shadow.
 
-export const WRISTBAND_HERO = require('@/assets/images/wristband-hero.webp');
 const SHADOW = require('@/assets/images/wristband-shadow.png');
-/** Width per unit of height of the hero render. */
-export const WRISTBAND_ASPECT = 794 / 1142;
 
 export type WristbandMotion = 'float' | 'reveal' | 'settle' | 'none';
 

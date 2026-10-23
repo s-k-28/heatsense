@@ -5,7 +5,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, makeMutable, useAnimatedStyle, useReducedMotion, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { WRISTBAND_ASPECT, WRISTBAND_HERO } from '@/components/wristband';
+import { WRISTBAND_ASPECT, WRISTBAND_HERO } from '@/components/wristband-asset';
 
 // The band's journey through onboarding: one band that travels from screen to screen
 // instead of each screen drawing its own. Every onboarding screen marks where the band
