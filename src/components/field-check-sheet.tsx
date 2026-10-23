@@ -317,14 +317,14 @@ function History({ readings, temp }: { readings: FieldReading[]; temp: Temp }) {
       <Text style={styles.planTitle}>Today’s readings</Text>
       <Group>
         {rows.map(({ reading, previous }) => {
-          const delta = previous ? reading.wbgtF - previous.wbgtF : null;
-          const zoneChange = previous && previous.zone !== reading.zone ? ` · ${ZONES[previous.zone].label.replace(' zone', '')} → ${ZONES[reading.zone].label.replace(' zone', '')}` : '';
-          const change = delta === null ? 'First reading' : `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} °F${zoneChange}`;
+          // One line: the reading and its zone (with the change when the zone moved), then the time.
+          const zone = ZONES[reading.zone].label.replace(' zone', '');
+          const zones = previous && previous.zone !== reading.zone ? `${ZONES[previous.zone].label.replace(' zone', '')} → ${zone}` : zone;
           return (
             <Row
               key={reading.id}
-              title={`${time(reading.measuredAt)} · ${temp.value(reading.wbgtF)}${temp.unit} · ${ZONES[reading.zone].label}`}
-              value={`${change}${reading.acknowledgedAt ? '' : ' · not acknowledged'}`}
+              title={`${temp.value(reading.wbgtF)}${temp.unit} · ${zones}`}
+              value={`${time(reading.measuredAt)}${reading.acknowledgedAt ? '' : ' · pending'}`}
             />
           );
         })}
