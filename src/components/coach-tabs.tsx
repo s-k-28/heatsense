@@ -13,9 +13,9 @@ import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, watchMyMembership
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
 import { buildSchedule, clockTime, usePracticePlans } from '@/state/practice-plans';
 import { useAuthSession } from '@/state/auth-session';
-import { SimulatedTag, TeamVitalsRows } from '@/components/vitals';
+import { LiveVitalsRows, SimulatedTag, TeamVitalsRows } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
-import { useCoachData, useRoster, useTrainers, type SessionRole } from '@/state/team-session';
+import { useCoachData, useNow, useRoster, useTeamVitals, useTrainers, type SessionRole } from '@/state/team-session';
 
 // Team, Plan and Profile, decluttered after WHOOP: one heading per section, small caps groups,
 // full-width rows and metric tiles. Every number comes from the team's real data or the UIL chart.
@@ -52,6 +52,8 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
   const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
   const staff = roster?.filter((m) => m.status === 'active' && m.role === 'trainer') ?? [];
   const active = roster?.filter((m) => m.status === 'active' && m.role === 'athlete') ?? [];
+  const live = useTeamVitals(data?.session ?? null);
+  const now = useNow(15_000);
 
   const respond = async (uid: string, approve: boolean) => {
     if (!data?.teamId) return;
@@ -124,6 +126,13 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
       ) : demo.enabled ? null : (
         <Text style={styles.empty}>{roster === null && data?.teamId ? 'Loading roster…' : mine === null ? 'Create your team, then share its code to invite athletes.' : 'No athletes yet. Share your team code to invite them.'}</Text>
       )}
+
+      {live.length ? (
+        <>
+          <SectionTitle title={`Live vitals · ${live.length}`} />
+          <LiveVitalsRows now={now} records={live} roster={roster} />
+        </>
+      ) : null}
 
       {demo.enabled ? (
         <>

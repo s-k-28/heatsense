@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { SAMPLE_READING } from '@/lib/practice';
+import { watchTeamVitals, type VitalsRecord } from '@/services/band-vitals';
 import { watchActiveSession, watchReadings, type FieldReading, type PracticeSession } from '@/services/practice-sessions';
 import { firebaseAuth, firestore } from '@/services/firebase';
 import { getMyTeamInvite, watchMyMembership } from '@/services/team-invites';
@@ -82,6 +83,17 @@ export function useCoachData(role: SessionRole = 'coach'): CoachData | null {
   }
   if (team.status === 'no-team') return { sample: false, teamId: null, session: null, readings: [] };
   return null;
+}
+
+/** Coach and trainers: every athlete's latest band sample in the open practice, live. Empty without one. */
+export function useTeamVitals(session: PracticeSession | null) {
+  const [records, setRecords] = useState<VitalsRecord[]>([]);
+  const open = session && !session.endedAt ? session : null;
+  useEffect(() => {
+    if (!open || !firestore) return;
+    return watchTeamVitals(open, setRecords, () => setRecords([]));
+  }, [open]);
+  return open ? records : [];
 }
 
 /** Everyone who asked to join or was approved, live. Null while loading or without a team. */

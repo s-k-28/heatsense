@@ -6,6 +6,8 @@ import { LineChart } from '@/components/ui/charts';
 import { ListRow, MetricTile, Rows, Tiles } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { swap } from '@/lib/motion';
+import type { VitalsRecord } from '@/services/band-vitals';
+import type { RosterMember } from '@/services/team-roster';
 import type { DemoMember } from '@/state/demo-team';
 import { DEMO_SPEED } from '@/state/demo-team';
 
@@ -38,6 +40,30 @@ export function TeamVitalsRows({ members, role = 'coach' }: { members: DemoMembe
           trailing={<View style={styles.statusRow}><Text style={styles.bpm}>{m.vitals.heartRate}<Text style={styles.bpmUnit}> bpm</Text></Text><View style={[styles.statusDot, { backgroundColor: statusTone(m) }]} /></View>}
         />
       ))}
+    </Rows>
+  );
+}
+
+const STALE_MS = 2 * 60_000;
+
+/** Real athletes' latest band samples during practice. A sample older than two minutes reads as no signal. */
+export function LiveVitalsRows({ records, roster, now }: { records: VitalsRecord[]; roster: RosterMember[] | null; now: number }) {
+  const name = (uid: string) => roster?.find((m) => m.userId === uid)?.displayName ?? 'Athlete';
+  return (
+    <Rows>
+      {records.map((r) => {
+        const stale = !r.updatedAt || now - r.updatedAt.getTime() > STALE_MS;
+        const tone = stale ? Palette.inkFaint : r.recovery === 'watch' ? Palette.warning : Palette.safe;
+        const state = stale ? 'No recent signal' : r.recovery === 'watch' ? 'Slow recovery' : 'Usual range';
+        return (
+          <ListRow
+            detail={`${r.source === 'simulated' ? 'Simulated band' : 'Band'} · ${state}`}
+            key={r.athleteUid}
+            label={name(r.athleteUid)}
+            trailing={<View style={styles.statusRow}><Text style={[styles.bpm, stale && { color: Palette.inkMuted }]}>{r.heartRate}<Text style={styles.bpmUnit}> bpm</Text></Text><View style={[styles.statusDot, { backgroundColor: tone }]} /></View>}
+          />
+        );
+      })}
     </Rows>
   );
 }

@@ -11,9 +11,9 @@ import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
 import { recentSessions, SOURCE_LABEL, type SessionSummary } from '@/services/practice-sessions';
 import { usePreferences, useTemperature } from '@/state/preferences';
-import { SimulatedTag, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
+import { LiveVitalsRows, SimulatedTag, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
-import { useCoachData, useTrainers } from '@/state/team-session';
+import { useCoachData, useNow, useRoster, useTeamVitals, useTrainers } from '@/state/team-session';
 
 // Athlete and athletic-trainer tabs on the same WHOOP-style kit as the coach's. Athletes see their
 // team's real field reading (Firestore lets approved members read it). Band signals don't exist yet,
@@ -203,6 +203,12 @@ export function TrainerHome() {
 export function TrainerMonitor() {
   const data = useCoachData('trainer');
   const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
+  const live = useTeamVitals(data?.session ?? null);
+  const roster = useRoster(data?.teamId ?? null);
+  const now = useNow(15_000);
+  if (live.length) {
+    return <LiveVitalsRows now={now} records={live} roster={roster} />;
+  }
   if (demo.enabled) {
     return (
       <>
