@@ -32,7 +32,7 @@ export function EntryScreen({ children, background, backgroundDelay, backgroundD
         <StatusBar style="light" />
         {backdrop}
         {background ? <OnboardingBackground variant={background} delay={backgroundDelay} draw={backgroundDraw} drawIn={backgroundDrawIn} /> : null}
-        <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={[entryStyles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
+        <ScrollView automaticallyAdjustKeyboardInsets bounces={false} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={[entryStyles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
           {children(height > 0 && height < 760)}
         </ScrollView>
       </View>
