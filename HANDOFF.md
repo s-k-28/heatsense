@@ -160,6 +160,7 @@ npm run check:auth               # auth config sanity
   3. Open screens with deep links such as `heatsenseapp://dashboard?role=coach&tab=home`. Roles are `coach`, `athlete` and `trainer`. Tabs include `home`, `plan`, `team`, `alerts`, `profile`, `band`, `sessions`, `learn`, `monitor`, `athletes` and `protocols`.
   4. Put `.env` back when done.
 - **Emulator mode:** in `.env.local`, set `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=1` and `EXPO_PUBLIC_USE_AUTH_EMULATOR=1`, then run `npm run emulators`. Remove `.env.local` to return to real Firebase.
+- **Seeded emulator data:** `node scripts/seed-emulator.mjs` (add `--live` to keep band samples moving) creates a coach, trainer and three athletes (one pending), three weeks of practices, today's open practice and live vitals. The emulator-only sign-in details are in the script's header. Turn off Profile → Sample athletes to see the real team.
 - **Firestore rules:** after a rules change, deploy with `npx -y firebase-tools@14 deploy --only firestore:rules`, and run `npm run test:invites` first.
 
 ## 5. Open work
@@ -175,6 +176,7 @@ npm run check:auth               # auth config sanity
 | 7 | README team names + AI-use disclosure | blocked | Required by the contest; the team must supply the wording. |
 | 8 | Live sign-in test on a real account | blocked | The user does it (no automated real-credential entry). |
 | 9 | Real band over Bluetooth | future | Replace the simulator in `useBandUplink` with BLE packets (marked `ponytail:` there). The Firestore path and the UI stay. |
+| 13 | Real-team smoke test | done | Oct 23 on the emulators with seeded data: trainer (Monitor, Athletes, Protocols writes), athlete (Learn reads the plan, Home), coach (Team roster, approve, heat history, Alerts). Found and fixed a cached-team bug when switching accounts. |
 | 11 | Share Protocols data with staff | done | Team docs: `safety/eap` (everyone reads; athletes see it on Learn), `incidents` and `readiness/{day}` (staff only). Phone-local only in sample mode. |
 | 12 | Profile photo for teammates | future | Stored on the phone only (Firebase Storage needs the Blaze plan). |
 | 10 | Server push for zone changes | future | Needs Cloud Functions (Blaze plan). Today, zone alerts fire only when the phone sees the new reading. |
