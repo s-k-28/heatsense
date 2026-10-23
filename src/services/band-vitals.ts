@@ -15,6 +15,8 @@ export type VitalsSample = {
   skinTempF: number | null;
   sweat: number | null;
   movement: number;
+  /** Blood oxygen, %. Optional: older app versions don't send it. */
+  spo2?: number | null;
   recovery: 'usual' | 'watch' | 'unknown';
   source: VitalsSource;
   serial: string | null;
@@ -63,6 +65,7 @@ export function watchTeamVitals(session: PracticeSession, onChange: (records: Vi
         skinTempF: data.skinTempF ?? null,
         sweat: data.sweat ?? null,
         movement: data.movement,
+        spo2: data.spo2 ?? null,
         recovery: data.recovery,
         source: data.source,
         serial: data.serial ?? null,

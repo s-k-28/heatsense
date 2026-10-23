@@ -1,6 +1,5 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ZoneRules } from '@/components/coach-tabs';
@@ -9,10 +8,10 @@ import { Card, Facts, ListRow, Rows, SampleTag, SectionTitle, StatRow } from '@/
 import { Face, Palette } from '@/constants/theme';
 import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
-import { recentSessions, type SessionSummary } from '@/services/practice-sessions';
 import { usePreferences, useTemperature } from '@/state/preferences';
 import { LiveVitalsRows, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
 import { useDemoTeam, useOwnBand } from '@/state/demo-team';
+import { usePastSessions } from '@/state/past-sessions';
 import { useCoachData, useMembership, useNow, useRoster, useTeamVitals, useTrainers } from '@/state/team-session';
 
 // Athlete and athletic-trainer tabs on the same WHOOP-style kit as the coach's. Athletes see their
@@ -105,34 +104,6 @@ export function AthleteBand() {
       </Rows>
     </>
   );
-}
-
-// Shown in sample mode only, under the SAMPLE DATA tag, so the history has something to show.
-const SAMPLE_HISTORY: { daysAgo: number; venue: string; minutes: number; readingCount: number; wbgtF: number; zone: Zone }[] = [
-  { daysAgo: 1, venue: 'Memorial Stadium', minutes: 95, readingCount: 5, wbgtF: 86.2, zone: 'yellow' },
-  { daysAgo: 2, venue: 'Memorial Stadium', minutes: 60, readingCount: 4, wbgtF: 88.4, zone: 'orange' },
-  { daysAgo: 4, venue: 'Practice field 2', minutes: 110, readingCount: 6, wbgtF: 80.9, zone: 'green' },
-];
-
-/** The team's finished practices: real ones from the team, sample ones in sample mode. */
-function usePastSessions(teamId: string | null, sample: boolean) {
-  const [past, setPast] = useState<SessionSummary[] | null>(null);
-  useEffect(() => {
-    if (!teamId || sample) return;
-    let live = true;
-    recentSessions(teamId).then((list) => { if (live) setPast(list); }).catch(() => { if (live) setPast([]); });
-    return () => { live = false; };
-  }, [sample, teamId]);
-  if (!sample) return teamId ? past : [];
-  const day = 86_400_000;
-  return SAMPLE_HISTORY.map((h, i) => {
-    const startedAt = new Date(new Date().setHours(16, 0, 0, 0) - h.daysAgo * day);
-    return {
-      session: { id: `sample-${i}`, teamId: 'sample', venue: h.venue, uilClass: 3 as const, recheckMinutes: 30, startedAt, endedAt: new Date(startedAt.getTime() + h.minutes * 60_000) },
-      readingCount: h.readingCount,
-      peak: { wbgtF: h.wbgtF, zone: h.zone },
-    };
-  });
 }
 
 /** Strava-style week: one bar per day, as tall as that day's peak WBGT and coloured by its zone. */
@@ -271,21 +242,6 @@ export function TrainerMonitor() {
       <Text style={styles.bandState}>No band signals yet</Text>
       <Text style={styles.bandNote}>When athletes pair a HeatSense Band and choose to share, their heart-rate recovery and skin-temperature trends appear here during practice.</Text>
     </View>
-  );
-}
-
-export function ProtocolsTab() {
-  return (
-    <>
-      <SectionTitle title="Emergency" />
-      <Facts items={[
-        { title: 'Collapse or confusion', body: 'Activate the emergency action plan and call 911.', tone: Palette.emergency },
-        { title: 'Cool first, transport second', body: 'Cold-water immersion on site, then transport. Keep the tub ready in Yellow and above.' },
-        { title: 'Heat exhaustion', body: 'Stop activity, move to shade, remove equipment, give fluids, and monitor.' },
-      ]} />
-      <SectionTitle title="UIL zones (Class 3)" />
-      <Facts items={zoneFacts()} />
-    </>
   );
 }
 

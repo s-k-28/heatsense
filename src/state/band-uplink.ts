@@ -30,6 +30,7 @@ export function useBandUplink(enabled: boolean) {
         skinTempF: Math.round(v.skinTempF * 10) / 10,
         sweat: Math.round(v.sweat * 10) / 10,
         movement: Math.round(v.movement),
+        spo2: v.spo2,
         recovery: recoveryStatus(SELF, t, zone),
         source: 'simulated',
         serial: PAIRED_SERIAL,

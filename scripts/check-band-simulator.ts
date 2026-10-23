@@ -18,6 +18,7 @@ for (const zone of ['green', 'yellow', 'orange', 'red', 'black'] as const) {
       assert.ok(v.skinTempF >= 90 && v.skinTempF <= 97, `skin ${v.skinTempF}`);
       assert.ok(v.sweat >= 0 && v.sweat <= 25, `sweat ${v.sweat}`);
       assert.ok(v.movement >= 0 && v.movement <= 100, `movement ${v.movement}`);
+      assert.ok(v.spo2 >= 94 && v.spo2 <= 100, `spo2 ${v.spo2}`);
     }
   }
 }

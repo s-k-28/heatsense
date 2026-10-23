@@ -1,6 +1,6 @@
 // Simulated HeatSense Band signals for the demo team. There is no band firmware yet (see README,
 // "HeatSense Band"), so this stands in for it: the same signals the band is designed to stream
-// (MAX30102 heart rate, skin temperature, GSR sweat level, MPU6050 movement), shaped by the
+// (MAX30102 heart rate and blood oxygen, skin temperature, GSR sweat level, MPU6050 movement), shaped by the
 // practice's work/rest rhythm and the field's heat. Every screen that shows these labels them
 // SIMULATED. Deterministic for a given time, so the demo is repeatable; free of app imports so
 // `node scripts/check-band-simulator.ts` can test it.
@@ -22,6 +22,7 @@ export type Vitals = {
   skinTempF: number; // °F
   sweat: number; // GSR, microsiemens
   movement: number; // 0–100, share of max activity
+  spo2: number; // blood oxygen, %, from the MAX30102's red/IR channels
   phase: 'work' | 'rest';
 };
 
@@ -75,6 +76,8 @@ export function vitalsAt(athlete: DemoAthlete, t: number, zone: DemoZone, workSe
     skinTempF: Math.round((skin + wobble(seed + 1, t, 0.15)) * 10) / 10,
     sweat: Math.round((sweat + wobble(seed + 2, t, 0.4)) * 10) / 10,
     movement: Math.max(0, Math.min(100, Math.round(move + wobble(seed + 3, t, 8)))),
+    // Healthy athletes sit at 95–99%; hard work and heat shave off a point or two.
+    spo2: Math.round(98.2 - heat * 1.2 - (phase === 'work' ? 0.8 : 0) + wobble(seed + 4, t, 0.6)),
     phase,
   };
 }

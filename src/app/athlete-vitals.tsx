@@ -53,6 +53,7 @@ export default function AthleteVitalsScreen() {
                 <ListRow label="Skin temp" value={live.skinTempF ? `${live.skinTempF.toFixed(1)}°F` : '--'} />
                 <ListRow label="Sweat (GSR)" value={live.sweat ? `${live.sweat.toFixed(1)} µS` : '--'} />
                 <ListRow label="Movement" value={`${Math.round(live.movement)}%`} />
+                <ListRow label="Blood oxygen" value={live.spo2 ? `${live.spo2}%` : '--'} />
                 <ListRow label="Band" value={live.serial ?? '--'} />
               </Rows>
             </>
