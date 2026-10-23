@@ -21,6 +21,7 @@ import {
   type PracticeSession,
   type ReadingSource,
 } from '@/services/practice-sessions';
+import { askForHeatAlerts } from '@/services/heat-alerts';
 import { useTeamDraft } from '@/state/onboarding';
 import { endPractice, startPractice, useTemperature } from '@/state/preferences';
 
@@ -119,6 +120,8 @@ function StartForm({ teamId }: { teamId: string }) {
     setError(null);
     try {
       await startSession(teamId, { venue, uilClass, recheckMinutes: recheck });
+      // Starting practice is when recheck reminders start to matter.
+      askForHeatAlerts().catch(() => {});
     } catch {
       setError('Couldn’t start the session. Check your connection and try again.');
     } finally {

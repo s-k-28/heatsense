@@ -19,6 +19,7 @@ import {
 import { MaxContentWidth, Palette, Spacing } from '@/constants/theme';
 import { endPracticeActivity, startPracticeActivity } from '@/lib/practice-activity';
 import { useAuthSession } from '@/state/auth-session';
+import { useHeatAlerts } from '@/state/heat-alerts';
 import { markRefreshed, usePreferences } from '@/state/preferences';
 import { usePracticePlans } from '@/state/practice-plans';
 
@@ -85,6 +86,7 @@ export default function DashboardScreen() {
   }, [celsius, incidentAcknowledged, plan, practiceLiveActivity, practiceStartedAt]);
 
   const role = normalizeRole(params.role);
+  useHeatAlerts(role);
   const tabs = roleTabs[role];
   const requestedTab = tabs.some((item) => item.id === params.tab) ? params.tab! : 'home';
   const [manualSelection, setManualSelection] = useState({ role, sourceTab: requestedTab, value: requestedTab });

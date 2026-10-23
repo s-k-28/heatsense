@@ -5,15 +5,15 @@ import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reani
 import { BandSpot } from '@/components/band-journey';
 import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { Entry } from '@/constants/entry-theme';
+import { askForHeatAlerts } from '@/services/heat-alerts';
 
 // Heat alerts, asked for at the moment they make sense: right after pairing the band.
-// ponytail: explains alerts only. Requesting OS permission needs expo-notifications, which isn't
-// installed yet; add it with the first real push (zone changes, overdue rechecks).
+// Continue asks iOS for permission; Not now skips it (Settings can turn alerts on later).
 
 const EXAMPLES = [
   'The field moved into the Orange zone',
-  'A WBGT recheck is due in 5 minutes',
-  'Practice ends in 10 minutes',
+  'WBGT recheck in 5 minutes',
+  'WBGT recheck is due',
 ];
 
 export default function NotificationsScreen() {
@@ -40,7 +40,7 @@ export default function NotificationsScreen() {
       </View>
       <View style={[styles.open, styles.bandRoom]}><BandSpot height={compact ? 110 : 150} id="notifications" /></View>
       <Animated.View entering={rise(950)} style={styles.actions}>
-        <EntryButton label="Continue" onPress={done} />
+        <EntryButton label="Turn on heat alerts" onPress={() => { askForHeatAlerts().catch(() => false).finally(done); }} />
         <EntryLink label="Not now" onPress={done} />
       </Animated.View>
     </>}</EntryScreen>
