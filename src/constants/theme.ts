@@ -3,23 +3,23 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 export const Palette = {
-  // Dashboard colors follow iOS dark-mode system colors: a true-black ground, elevated
-  // grouped surfaces, and system label tones. Brand orange is the tint and is only used
-  // on things you can tap; status colors are reserved for status.
-  canvas: '#000000',
-  grouped: '#000000',
-  surface: '#1C1C1E',
-  surfaceMuted: '#2C2C2E',
-  ink: '#FFFFFF',
-  inkMuted: 'rgba(235,235,245,0.62)',
-  inkFaint: 'rgba(235,235,245,0.32)',
-  border: 'rgba(84,84,88,0.65)',
-  outline: 'rgba(255,255,255,0.85)',
-  fill: 'rgba(120,120,128,0.24)',
-  coral: '#FF996B',
-  coralDark: '#FF996B',
-  coralSoft: 'rgba(255,153,107,0.14)',
-  peach: '#F4B29F',
+  // The dashboard shares the onboarding's palette (constants/entry-theme.ts): a deep blue-black
+  // canvas, slightly raised surfaces, warm off-white ink, and peach as the one accent, used only on
+  // things you can tap. Status colors (below) are reserved for status.
+  canvas: '#101416',
+  grouped: '#101416',
+  surface: '#1A2024',
+  surfaceMuted: '#242D32',
+  ink: '#F6F3EC',
+  inkMuted: '#B0BAC0',
+  inkFaint: '#7D898F',
+  border: '#354147',
+  outline: 'rgba(246,243,236,0.85)',
+  fill: 'rgba(176,186,192,0.16)',
+  coral: '#FFB183',
+  coralDark: '#FFB183',
+  coralSoft: 'rgba(255,177,131,0.14)',
+  peach: '#FFB183',
   sage: '#96A99C',
   safe: '#30D158',
   caution: '#FFD60A',
@@ -27,9 +27,8 @@ export const Palette = {
   emergency: '#FF453A',
   info: '#0A84FF',
   white: '#FFFFFF',
-  // Dashboard cards sit on a slate gradient, so they're a light veil over it rather than a flat gray.
-  card: 'rgba(255,255,255,0.07)',
-  cardEdge: 'rgba(255,255,255,0.07)',
+  card: '#1A2024',
+  cardEdge: '#242D32',
   zoneOrangeDeep: '#7A3A16',
   zoneYellowDeep: '#7A5C0E',
   zoneRedDeep: '#6E1C14',
@@ -45,8 +44,9 @@ export const Face = {
 } as const;
 
 export const Type = {
-  label: { fontWeight: '600', fontSize: 15, lineHeight: 18, letterSpacing: 1.3, textTransform: 'uppercase' },
-  labelSmall: { fontWeight: '600', fontSize: 12, lineHeight: 15, letterSpacing: 1.1, textTransform: 'uppercase' },
+  // Group labels read as words, not as spaced-out capitals.
+  label: { fontWeight: '600', fontSize: 15, lineHeight: 20 },
+  labelSmall: { fontWeight: '500', fontSize: 14, lineHeight: 18 },
   figure: { fontWeight: '700', fontSize: 30, lineHeight: 33, letterSpacing: 0.2 },
   largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: '700', letterSpacing: 0.37 },
   title2: { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: 0.35 },

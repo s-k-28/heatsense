@@ -95,8 +95,8 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
                 label={m.displayName ?? 'Athlete'}
                 trailing={
                   <View style={styles.decide}>
-                    <Pressable accessibilityLabel={`Decline ${m.displayName ?? 'athlete'}`} accessibilityRole="button" disabled={busy === m.userId} onPress={() => respond(m.userId, false)} style={styles.decline}><Text style={styles.declineText}>DECLINE</Text></Pressable>
-                    <Pressable accessibilityLabel={`Approve ${m.displayName ?? 'athlete'}`} accessibilityRole="button" disabled={busy === m.userId} onPress={() => respond(m.userId, true)} style={styles.approve}><Text style={styles.approveText}>APPROVE</Text></Pressable>
+                    <Pressable accessibilityLabel={`Decline ${m.displayName ?? 'athlete'}`} accessibilityRole="button" disabled={busy === m.userId} onPress={() => respond(m.userId, false)} style={styles.decline}><Text style={styles.declineText}>Decline</Text></Pressable>
+                    <Pressable accessibilityLabel={`Approve ${m.displayName ?? 'athlete'}`} accessibilityRole="button" disabled={busy === m.userId} onPress={() => respond(m.userId, true)} style={styles.approve}><Text style={styles.approveText}>Approve</Text></Pressable>
                   </View>
                 }
               />
@@ -260,7 +260,7 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
       </Rows>
 
       <Pressable accessibilityRole="button" onPress={confirmSignOut} style={({ pressed }) => [styles.logout, pressed && { opacity: 0.7 }]}>
-        <Text style={styles.logoutText}>LOG OUT</Text>
+        <Text style={styles.logoutText}>Log out</Text>
       </Pressable>
     </>
   );
@@ -272,9 +272,9 @@ const styles = StyleSheet.create({
   teamMeta: { color: Palette.inkMuted, fontSize: 16, marginTop: 4 },
   decide: { flexDirection: 'row', gap: 8 },
   approve: { backgroundColor: Palette.coral, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  approveText: { color: '#1A0E07', fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  approveText: { color: '#1A0E07', fontSize: 15, fontWeight: '600' },
   decline: { borderColor: Palette.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
-  declineText: { color: Palette.inkMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  declineText: { color: Palette.inkMuted, fontSize: 15, fontWeight: '600' },
   empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22 },
   planHead: { alignItems: 'center', flexDirection: 'row', gap: 14 },
   zoneDot: { borderRadius: 12, height: 24, width: 24 },
@@ -288,5 +288,5 @@ const styles = StyleSheet.create({
   identityName: { color: Palette.ink, fontSize: 24, fontWeight: '700' },
   identityMeta: { color: Palette.inkMuted, fontSize: 15, marginTop: 2 },
   logout: { alignItems: 'center', alignSelf: 'center', borderColor: Palette.border, borderRadius: 999, borderWidth: 1, marginTop: 32, paddingHorizontal: 40, paddingVertical: 14 },
-  logoutText: { color: Palette.ink, fontSize: 14, fontWeight: '800', letterSpacing: 1.4 },
+  logoutText: { color: Palette.emergency, fontSize: 17, fontWeight: '600' },
 });

@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -141,8 +140,6 @@ export default function DashboardScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      {/* Slate at the top fading to black, so cards read as layers over it rather than gray boxes on black. */}
-      <LinearGradient colors={['#2A3139', '#161A1F', '#0A0B0D']} locations={[0, 0.38, 0.75]} pointerEvents="none" style={StyleSheet.absoluteFill} />
       <Animated.ScrollView
         contentContainerStyle={[
           styles.scrollContent,
