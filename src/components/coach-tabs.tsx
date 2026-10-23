@@ -9,7 +9,7 @@ import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, zoneRange } from '@/lib/uil-wbgt';
 import { firebaseAuth } from '@/services/firebase';
 import type { FieldReading } from '@/services/practice-sessions';
-import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
+import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, watchMyMembership, type Membership, type TeamInvite, type TeamSummary } from '@/services/team-invites';
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
 import { buildSchedule, clockTime, usePracticePlans } from '@/state/practice-plans';
 import { useAuthSession } from '@/state/auth-session';
@@ -28,6 +28,17 @@ function useMyTeam() {
     return () => { live = false; };
   }, []);
   return mine;
+}
+
+/** An athlete's or trainer's own membership, live: approved, waiting, or none. */
+function useMembership(enabled: boolean) {
+  const { user } = useAuthSession();
+  const [membership, setMembership] = useState<Membership | null>(null);
+  useEffect(() => {
+    if (!enabled || !user) return;
+    return watchMyMembership(user.uid, setMembership, () => setMembership(null));
+  }, [enabled, user]);
+  return enabled ? membership : null;
 }
 
 /* ─────────────────────────────── Team ─────────────────────────────── */
@@ -55,17 +66,21 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
     <>
       {data?.sample ? <SampleTag /> : null}
       <Text style={styles.teamName}>{mine?.team.teamName ?? 'Your team'}</Text>
-      <Text style={styles.teamMeta}>{mine ? [mine.team.school, mine.team.sport, mine.team.level].filter(Boolean).join(' · ') : 'Create a team in setup to invite athletes.'}</Text>
+      <Text style={styles.teamMeta}>{mine ? [mine.team.school, mine.team.sport, mine.team.level].filter(Boolean).join(' · ') : mine === null ? 'Not set up yet.' : ' '}</Text>
 
       {readOnly ? null : <>
       <CapsLabel>Getting started</CapsLabel>
       <Rows>
-        <ListRow
-          detail="Athletes enter it after they sign in"
-          label="Team code"
-          onPress={code ? () => Share.share({ message: `Join ${mine!.team.teamName} on HeatSense with the code ${code}.` }) : undefined}
-          value={code ? code.replace(/(\d{3})(\d{3})/, '$1 $2') : '------'}
-        />
+        {mine === null ? (
+          <ListRow detail="Your team code appears here once the team exists" label="Create your team" onPress={() => router.push('/team/create')} />
+        ) : (
+          <ListRow
+            detail="Athletes enter it after they sign in. Tap to share."
+            label="Team code"
+            onPress={code ? () => Share.share({ message: `Join ${mine!.team.teamName} on HeatSense with the code ${code}.` }) : undefined}
+            value={code ? code.replace(/(\d{3})(\d{3})/, '$1 $2') : '…'}
+          />
+        )}
       </Rows>
       </>}
 
@@ -99,20 +114,20 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
         </>
       ) : null}
 
-      <SectionTitle title={`Athletes${active.length ? ` · ${active.length}` : ''}`} />
+      {active.length || !demo.enabled ? <SectionTitle title={`Athletes${active.length ? ` · ${active.length}` : ''}`} /> : null}
       {active.length ? (
         <Rows>
           {active.map((m) => (
             <ListRow detail="No band data yet" key={m.userId} label={m.displayName ?? 'Athlete'} onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: m.userId, role: role === 'trainer' ? 'trainer' : 'coach' } })} />
           ))}
         </Rows>
-      ) : (
-        <Text style={styles.empty}>{roster === null && data?.teamId ? 'Loading roster…' : 'No athletes yet. Share your team code to invite them.'}</Text>
+      ) : demo.enabled ? null : (
+        <Text style={styles.empty}>{roster === null && data?.teamId ? 'Loading roster…' : mine === null ? 'Create your team, then share its code to invite athletes.' : 'No athletes yet. Share your team code to invite them.'}</Text>
       )}
 
       {demo.enabled ? (
         <>
-          <SectionTitle title="Live vitals" />
+          <SectionTitle title={`Sample athletes · ${demo.members.length}`} />
           <SimulatedTag />
           <TeamVitalsRows members={demo.members} role={role === 'trainer' ? 'trainer' : 'coach'} />
         </>
@@ -196,7 +211,11 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
   const member = useCoachData(role === 'Athlete' ? 'athlete' : role === 'Athletic trainer' ? 'trainer' : 'coach');
   const trainers = useTrainers(role === 'Athlete' ? member?.teamId ?? null : null);
   const mine = useMyTeam();
+  const membership = useMembership(role !== 'Coach');
   const { bandConnected, celsius, demoTeam, practiceLiveActivity } = usePreferences();
+  // Coaches read their own team; athletes and trainers their membership, which may still await approval.
+  const teamName = role === 'Coach' ? mine?.team.teamName : membership?.status === 'declined' ? undefined : membership?.team?.teamName;
+  const teamValue = teamName ? (membership?.status === 'pending' ? `${teamName} · waiting` : teamName) : 'None yet';
   const name = user?.displayName?.trim() || 'Your profile';
   const initials = name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
@@ -212,14 +231,14 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
         <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
         <View style={styles.flex}>
           <Text style={styles.identityName}>{name}</Text>
-          <Text style={styles.identityMeta}>{role}{mine?.team ? ` · ${mine.team.teamName}` : ''}</Text>
+          <Text style={styles.identityMeta}>{role}{teamName && membership?.status !== 'pending' ? ` · ${teamName}` : ''}</Text>
         </View>
       </View>
 
       <CapsLabel>Account</CapsLabel>
       <Rows>
-        <ListRow label="Team" value={mine?.team.teamName ?? '--'} />
-        {role !== 'Coach' && !member?.teamId ? <ListRow detail="Enter the code from your coach" label="Join a team" onPress={() => router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')} /> : null}
+        <ListRow label="Team" onPress={role === 'Coach' && mine === null ? () => router.push('/team/create') : undefined} value={teamValue} />
+        {role !== 'Coach' && !member?.teamId && membership?.status !== 'pending' ? <ListRow detail="Enter the code from your coach" label="Join a team" onPress={() => router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')} /> : null}
         {role === 'Athlete' ? <ListRow label="Athletic trainer" value={trainers.length ? trainers.map((t) => t.displayName ?? 'Trainer').join(', ') : 'None yet'} /> : null}
         {role === 'Athlete' ? (
           <ListRow label="HeatSense Band" onPress={() => router.push('/pair-band')} value={bandConnected ? 'Connected' : 'Not paired'} valueTone={bandConnected ? Palette.safe : Palette.inkMuted} />

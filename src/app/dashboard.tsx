@@ -155,7 +155,7 @@ export default function DashboardScreen() {
           {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent onNavigate={select} role={role} tab={activeTab} />}
         </View>
       </Animated.ScrollView>
-      <DashboardHeader name={accountName} onProfile={() => select('profile')} scrollY={scrollY} title={title} />
+      <DashboardHeader name={accountName} onAlerts={role === 'coach' ? () => select('alerts') : role === 'trainer' ? () => select('monitor') : undefined} onProfile={() => select('profile')} scrollY={scrollY} title={title} />
       <TabBar activeTab={activeTab} onChange={select} tabs={tabs} />
     </View>
   );

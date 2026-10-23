@@ -24,6 +24,8 @@ import { AuthSessionContext } from '@/state/auth-session';
 import { hydrateOnboardingRole } from '@/state/onboarding';
 
 SplashScreen.preventAutoHideAsync();
+// The launch screen is the HeatSense H where the welcome intro assembles it; fading out hands over to that intro.
+SplashScreen.setOptions({ duration: 350, fade: true });
 const tamaguiConfig = createTamagui(defaultConfig);
 
 export default function RootLayout() {
