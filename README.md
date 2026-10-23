@@ -115,7 +115,7 @@ We want to be clear about what is real and what is not yet.
 | | Feature | Notes |
 |---|---|---|
 | 🟢 **Works today** | Field check: WBGT reading → UIL zone → guidance → acknowledge → recheck → history → share | See [How it works](#how-it-works). The readings are entered by hand |
-| 🟢 **Works today** | Firestore rules recompute the UIL zone and keep readings append-only | `firebase/firestore.rules`. 47/47 emulator tests pass (`npm run test:invites`) |
+| 🟢 **Works today** | Firestore rules recompute the UIL zone and keep readings append-only | `firebase/firestore.rules`. 48/48 emulator tests pass (`npm run test:invites`) |
 | 🟢 **Works today** | Sign-in with Google, or email and password (with password reset), through Firebase Auth | Android Google sign-in still needs release setup and device testing ([auth setup](docs/engineering/auth-setup.md)) |
 | 🟢 **Works today** | Coach creates a team and gets a six-digit invite code; an athlete or athletic trainer joins; coach approves | Enforced by `firebase/firestore.rules`, with no server code (free Firebase plan) |
 | 🟢 **Works today** | Athlete profile onboarding (profile → body → safety) | Profile saved to Firestore; health and contact answers are **not** saved in production yet |
@@ -165,7 +165,7 @@ Some decisions we made on purpose:
 - **The server checks the math.** The app computes the zone, but `firebase/firestore.rules` has its own copy of the UIL thresholds. It recomputes the zone from `wbgtF` and the session's class, and rejects any reading whose zone doesn't match.
 - **Readings are append-only.** Once saved, a reading can't be edited or deleted. The only allowed change is the coach's one-time acknowledgment. Sessions can only be ended, never edited.
 - **Every reading records its source.** Each session stores the policy version (`uil-wbgt@2025-26`). Each reading stores the entered value and unit, the source, the time measured, and who recorded it.
-- **Tested both ways.** `scripts/check-uil-wbgt.ts` checks the classifier against the chart, including the zone boundaries. The emulator suite (`npm run test:invites`, 47/47 passing) covers invites, access rules, and session/reading rules.
+- **Tested both ways.** `scripts/check-uil-wbgt.ts` checks the classifier against the chart, including the zone boundaries. The emulator suite (`npm run test:invites`, 48/48 passing) covers invites, access rules, and session/reading rules.
 
 ## Heat alerts
 
@@ -837,7 +837,7 @@ heatsense/
 │   ├── check-uil-wbgt.ts        Self-check for the UIL classifier (node scripts/check-uil-wbgt.ts)
 │   ├── check-plan-check.ts      Self-check: practice plans against UIL zone rules
 │   ├── check-band-simulator.ts  Self-check for the band signal model and recovery check
-│   ├── test-team-invites.mjs    Emulator test suite: teams, codes, joining, roles, sessions, readings (47 tests)
+│   ├── test-team-invites.mjs    Emulator test suite: teams, codes, joining, roles, sessions, readings (48 tests)
 │   ├── check-auth-config.mjs    Checks Google sign-in configuration (npm run check:auth)
 │   ├── capture-screen.sh        Screenshot one route on the iOS Simulator
 │   ├── capture-manifest.mjs     Screenshot every route in design/screen-manifest.json
@@ -962,7 +962,7 @@ npm run web        # web browser
 npm run test:invites
 ```
 
-This starts local Firebase emulators (Auth + Firestore), runs 47 tests against the real security rules, and shuts them down.
+This starts local Firebase emulators (Auth + Firestore), runs 48 tests against the real security rules, and shuts them down.
 
 ✅ The last line reads `47 passed, 0 failed`.
 
