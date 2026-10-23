@@ -3,7 +3,6 @@ import { getApp, getApps, initializeApp } from 'firebase/app';
 import * as FirebaseAuth from 'firebase/auth';
 import { connectAuthEmulator, getAuth, initializeAuth, type Auth, type Persistence } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore';
-import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase/functions';
 import { Platform } from 'react-native';
 
 const config = {
@@ -35,16 +34,14 @@ function createAuth(): Auth | null {
 
 export const firebaseAuth = createAuth();
 export const firestore: Firestore | null = firebaseApp ? getFirestore(firebaseApp) : null;
-export const cloudFunctions: Functions | null = firebaseApp ? getFunctions(firebaseApp) : null;
 
 // Local development against the Firebase Emulator Suite (`npm run emulators`):
 // set EXPO_PUBLIC_USE_FIREBASE_EMULATORS=1 in .env.local. Sign-in stays real Google
-// (the Functions emulator verifies real ID tokens) unless EXPO_PUBLIC_USE_AUTH_EMULATOR=1.
-if (process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATORS === '1' && firebaseAuth && firestore && cloudFunctions) {
+// unless EXPO_PUBLIC_USE_AUTH_EMULATOR=1.
+if (process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATORS === '1' && firebaseAuth && firestore) {
   const host = process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST || '127.0.0.1';
   if (process.env.EXPO_PUBLIC_USE_AUTH_EMULATOR === '1') connectAuthEmulator(firebaseAuth, `http://${host}:9099`, { disableWarnings: true });
   connectFirestoreEmulator(firestore, host, 8080);
-  connectFunctionsEmulator(cloudFunctions, host, 5001);
 }
 
 export function requireFirebaseAuth(): Auth {

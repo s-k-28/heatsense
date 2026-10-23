@@ -57,9 +57,9 @@ We want to be clear about what is real and what is not yet.
 | | Feature | Notes |
 |---|---|---|
 | 🟢 **Works today** | Field check: WBGT reading → UIL zone → guidance → acknowledge → recheck → history → share | See [How it works](#how-it-works). The readings are entered by hand |
-| 🟢 **Works today** | Firestore rules recompute the UIL zone and keep readings append-only | `firebase/firestore.rules`. 45/45 emulator tests pass (`npm run test:invites`) |
+| 🟢 **Works today** | Firestore rules recompute the UIL zone and keep readings append-only | `firebase/firestore.rules`. 44/44 emulator tests pass (`npm run test:invites`) |
 | 🟢 **Works today** | Google sign-in through Firebase Auth (iOS, web) | Android sign-in still needs release setup and device testing ([auth setup](docs/engineering/auth-setup.md)) |
-| 🟢 **Works today** | Coach creates a team and gets a six-digit invite code; athlete joins; coach approves | Cloud Functions in `functions/src/index.ts` |
+| 🟢 **Works today** | Coach creates a team and gets a six-digit invite code; an athlete or athletic trainer joins; coach approves | Enforced by `firebase/firestore.rules`, with no server code (free Firebase plan) |
 | 🟢 **Works today** | Athlete profile onboarding (profile → body → safety) | Profile saved to Firestore; health and contact answers are **not** saved in production yet |
 | 🟡 **In progress** | iOS Live Activity / Dynamic Island practice widget | Built, but it still shows the built-in **sample** reading |
 | 🟡 **In progress** | Dashboard overview | Its hero reading is still the sample from `src/lib/practice.ts`. Real readings live in the field check |
@@ -116,86 +116,67 @@ flowchart TB
     Widget["iOS Live Activity<br/>Dynamic Island widget<br/>expo-widgets"]
     Auth["Firebase Auth<br/>Google sign-in"]
     FS[("Cloud Firestore<br/>+ security rules")]
-    Fn["Cloud Functions v2<br/>team invite callables"]
-    Secret["INVITE_CODE_SECRET<br/>Firebase secret"]
     Band["HeatSense Band<br/>in development"]
 
     iOS --> Widget
     Client -- "sign in" --> Auth
-    Client -- "read team data, write own profile,<br/>write sessions + readings as coach" --> FS
-    Client -- "httpsCallable" --> Fn
-    Fn -- "verifies caller" --> Auth
-    Fn -- "admin writes:<br/>teams, invites, memberships" --> FS
-    Fn --> Secret
+    Client -- "every read and write, checked by the rules:<br/>teams, invite codes, join requests,<br/>sessions + readings, own profile" --> FS
     Band -.->|"BLE, planned"| Client
 ```
 
-Team, invite, and membership documents can only be written by Cloud Functions, which check who is calling. The client writes three things directly, and the security rules check each one field by field: the athlete's own profile, practice sessions and readings (coach only), and, on emulators only, the athlete's private health and safety answers.
+HeatSense has no server code: it runs on Firebase's free plan, and the app writes to Firestore directly. The security rules are the only gatekeeper, and they check every write field by field: who is a team's coach, which invite codes are live, that joining only ever creates a *pending* request, that only the coach approves it, and that every field reading carries the zone the rules calculate themselves.
 
 ## Team invites
 
-A team invite is only a six-digit code, so we treated it as something people might try to guess.
+A team invite is a six-digit code. Joining with it never grants access by itself: it files a *pending* request that only the team's coach can approve.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Coach
-    actor Athlete
-    participant Fn as Cloud Functions
-    participant DB as Firestore
+    actor Athlete as Athlete or trainer
+    participant DB as Firestore + security rules
 
-    Coach->>Fn: ensureTeamInvite(team details)
-    Fn->>DB: create team + coach membership (one team per coach)
-    Fn->>Fn: random 6-digit code (CSPRNG)
-    Fn->>DB: store HMAC hash + AES-GCM ciphertext, expires in 7 days
-    Fn-->>Coach: code + expiry
+    Coach->>DB: create teams/{id} (rules: coachUid must be the signed-in coach)
+    Coach->>DB: create inviteCodes/{6-digit code}, expires in 7 days
+    Note over DB: Rules: only that team's coach, never over an existing code, at most 8 days
 
-    Athlete->>Fn: lookupInvite(code)
-    Fn->>DB: check rate limits (account + hashed IP)
-    alt locked out
-        Fn-->>Athlete: rate-limited, retry after N seconds
-    else wrong, revoked, or expired code
-        Fn->>DB: record miss (5 per account / 20 per IP per 10 min)
-        Fn-->>Athlete: not-found or expired
-    else valid code
-        Fn-->>Athlete: team preview (name, school, sport)
+    Athlete->>DB: get inviteCodes/{code} (exact code only, listing is denied)
+    alt unknown, revoked, or expired
+        DB-->>Athlete: not found or expired
+    else live code
+        DB-->>Athlete: team preview (name, school, sport)
     end
 
-    Athlete->>Fn: requestToJoinTeam(code)
-    Fn->>DB: re-check code in a transaction, create PENDING membership
-    Fn-->>Athlete: status pending
+    Athlete->>DB: create teamMembers/{teamId}_{uid}, status pending
+    Note over DB: Rules: own request only, live code for that team, not your own team
 
-    Coach->>Fn: respondToJoinRequest(athlete, approve or decline)
-    Fn->>DB: membership becomes active or declined
-    Note over Athlete,DB: Only an active membership lets an athlete read the team and its sessions.
+    Coach->>DB: update status to active or declined
+    Note over Athlete,DB: Only an active membership can read the team and its practice record.
 
     opt Coach rotates the code
-        Coach->>Fn: regenerateInvite(teamId)
-        Fn->>DB: revoke old invite, issue a new code
+        Coach->>DB: revoke the old code, create a new one
     end
 ```
 
-What the code in `functions/src/index.ts` actually does:
+What `firebase/firestore.rules` enforces (each one is tested in `scripts/test-team-invites.mjs`):
 
-- **Codes are never stored in plain text.** Lookups use an HMAC keyed with `INVITE_CODE_SECRET`, so nobody can precompute all 1,000,000 codes from the database. The coach's own code is stored AES-256-GCM encrypted so it can be shown again without rotating it.
-- **Codes expire after 7 days** and can be revoked. A revoked code loses its index entry and reads as "not found."
-- **No two active teams share a code.** `inviteCodeIndex` acts as a uniqueness lock inside a transaction, and the server retries if two codes collide.
-- **Guessing is rate-limited.** After 5 misses per account or 20 per hashed IP within 10 minutes, the caller is locked out. Each lockout doubles the next one (10 min → 20 → 40 … up to 24 hours).
-- **A code alone never grants access.** Joining creates a *pending* membership, and only the coach's approval makes it active.
-- App Check enforcement is built in but currently **off** (`ENFORCE_APP_CHECK = false`) until the app registers a provider.
+- **Only a team's coach makes or revokes its codes.** A code can't overwrite another live code, and lasts at most 8 days.
+- **Codes can't be listed.** The app can look up one exact code, never browse them.
+- **A join request must be your own, pending, and use a live code for that team.** You can't approve yourself, join as someone else, pick a role other than athlete or trainer, or join your own team.
+- **Only the coach approves or declines.** A declined person can ask again with a live code.
+- **The trade-off of having no server:** the rules can't count attempts, so code guesses aren't rate-limited. A correct guess still only creates a pending request that the coach must approve. If the project moves to the paid Blaze plan, a server lookup or App Check can add rate limiting.
 
 ## Data model
 
-These are the collections defined in `firebase/firestore.rules` and `functions/src/index.ts`.
+These are the collections defined in `firebase/firestore.rules`.
 
 ```mermaid
 erDiagram
     TEAMS ||--o{ TEAM_MEMBERS : "has"
-    TEAMS ||--o{ TEAM_INVITES : "issues"
+    TEAMS ||--o{ INVITE_CODES : "issues"
     TEAMS ||--o{ SESSIONS : "teams/id/sessions"
     SESSIONS ||--o{ READINGS : "sessions/id/readings"
-    TEAM_INVITES ||--o| INVITE_CODE_INDEX : "indexed by codeHash"
-    COACH_TEAMS ||--|| TEAMS : "points to"
     ATHLETES }o--o| TEAMS : "teamId"
     ATHLETES ||--o{ ATHLETE_PRIVATE : "private/health, private/safety"
 
@@ -206,7 +187,7 @@ erDiagram
         string level
         string coachUid
         string status
-        string activeInviteId
+        string activeCode "current invite code"
     }
     SESSIONS {
         string venue
@@ -234,35 +215,18 @@ erDiagram
         string id PK "teamId_uid"
         string teamId FK
         string userId
-        string role "coach or athlete"
+        string role "athlete or trainer"
         string status "pending, active, declined"
-        string inviteId
+        string inviteCode
         timestamp requestedAt
         timestamp joinedAt
     }
-    TEAM_INVITES {
+    INVITE_CODES {
+        string code PK "6 digits"
         string teamId FK
-        string codeHash "HMAC, never the code"
-        string codeCipher "AES-GCM"
-        string status "active or revoked"
-        timestamp expiresAt
-        number usageCount
-    }
-    INVITE_CODE_INDEX {
-        string codeHash PK
-        string inviteId FK
-        string teamId FK
-        timestamp expiresAt
-    }
-    COACH_TEAMS {
-        string uid PK
-        string teamId FK
-    }
-    RATE_LIMITS {
-        string key PK "uid_ or hashed ip_"
-        list misses
-        number lockedUntil
-        number lockouts
+        map team "name, school, sport preview"
+        timestamp expiresAt "max 8 days"
+        bool revoked
     }
     ATHLETES {
         string uid PK
@@ -283,11 +247,11 @@ erDiagram
 
 | Collection | Who can read it from the app | Who can write it |
 |---|---|---|
-| `teams` | The coach, and approved (active) members | Cloud Functions only |
+| `teams` | The coach, and approved (active) members | The coach creates their own; edits only details and the active code |
 | `teams/{id}/sessions` | The coach, and approved members | Coach creates; coach can only set `endedAt` once; no deletes |
 | `teams/{id}/sessions/{id}/readings` | The coach, and approved members | Coach adds to an open session; zone must match the rules' own UIL calculation; only a one-time acknowledgment afterward; no edits or deletes |
-| `teamMembers` | The athlete themselves, and the team's coach | Cloud Functions only |
-| `teamInvites`, `inviteCodeIndex`, `coachTeams`, `rateLimits` | Nobody | Cloud Functions only |
+| `teamMembers` | The person themselves, the team's coach, approved trainers; athletes can see their team's trainers | Anyone files their own pending request with a live code; only the coach approves or declines |
+| `inviteCodes` | Anyone signed in, one exact code at a time (no listing) | The team's coach creates or revokes |
 | `athletes/{uid}` | The athlete, and their coach once the athlete is approved | The athlete (every field validated) |
 | `athletes/{uid}/private/*` | The athlete only, never the coach | The athlete only (production storage is off for now) |
 
@@ -535,10 +499,10 @@ heatsense/
 │   │   ├── practice.ts          Zone colors and the built-in sample reading
 │   │   └── practice-activity.ts Starts and updates the iOS Live Activity
 │   ├── services/                Talking to Firebase
-│   │   ├── firebase.ts          Firebase app, Auth, Firestore, Functions (and emulator hookup)
+│   │   ├── firebase.ts          Firebase app, Auth, Firestore (and emulator hookup)
 │   │   ├── google-auth.ts       Native Google sign-in (.web.ts for the browser)
 │   │   ├── practice-sessions.ts Firestore sessions + append-only readings, recheck status, text report
-│   │   ├── team-invites.ts      Calls the invite Cloud Functions; watches memberships
+│   │   ├── team-invites.ts      Teams, invite codes, join requests and approvals, straight to Firestore
 │   │   ├── team-roster.ts       Reads the team's members
 │   │   └── athlete-*.ts         Athlete profile, health, and safety data (health storage off in production)
 │   ├── state/                   App state: auth session, onboarding, preferences, practice day and plans
@@ -546,9 +510,6 @@ heatsense/
 │   ├── constants/               Theme, colors, type scale, sports list, dev flags
 │   ├── widgets/                 PracticeActivity.tsx: iOS Live Activity / Dynamic Island layout
 │   └── types/                   Small type declarations
-│
-├── functions/                   Firebase Cloud Functions (TypeScript, Node)
-│   └── src/index.ts             Team invites: create team, issue/rotate codes, look up, request to join, approve
 │
 ├── firebase/                    Firebase rules (referenced from firebase.json)
 │   ├── firestore.rules          Security rules, including the server-side UIL zone check
@@ -585,7 +546,7 @@ heatsense/
 | Navigation | [Expo Router](https://docs.expo.dev/router/introduction/) (file-based routes, typed routes) |
 | Auth | Firebase Auth with Google sign-in (`@react-native-google-signin/google-signin` on native) |
 | Database | Cloud Firestore with field-level validation and a server-side UIL zone check in security rules |
-| Backend | Firebase Cloud Functions v2 (callable functions, Node `crypto` for HMAC / AES-GCM) |
+| Backend | None: the free Firebase plan. Firestore security rules enforce every write |
 | iOS extras | Live Activity / Dynamic Island widget via `expo-widgets` |
 | Location | `expo-location` and `expo-maps` for the team's practice location |
 | UI & motion | React Native Reanimated 4 (with Reduce Motion support), Skia, React Native SVG, Gifted Charts, Atkinson Hyperlegible Next |
@@ -613,11 +574,9 @@ npm run web        # run in the browser
 ### Run the backend locally
 
 ```bash
-npm run emulators     # builds functions, starts Auth + Firestore + Functions emulators
+npm run emulators     # starts the Auth + Firestore emulators
 npm run test:invites  # runs the emulator test suite (invites, access rules, sessions, readings)
 ```
-
-The invite functions need an `INVITE_CODE_SECRET` of at least 32 characters, or they refuse to issue codes.
 
 ### Checks before pushing
 
@@ -635,7 +594,7 @@ npm run test:invites
 - **Coaches can't see health answers.** Even when storage is on, `athletes/{uid}/private/*` can be read only by the athlete. The rules enforce this, not just the UI.
 - **Readings can't be quietly changed.** Field readings are append-only, and the server checks every zone.
 - **Band data will need consent first.** Under the planned design, band data stays on the athlete's phone unless they consent, and even then only a summary is shared.
-- **Rate-limit records store a hash of the IP address**, never the raw address.
+- **No server, no stored IP addresses.** The app talks only to Firebase Auth and Firestore.
 
 ## Roadmap
 
