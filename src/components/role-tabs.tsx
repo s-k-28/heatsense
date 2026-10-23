@@ -9,10 +9,10 @@ import { Face, Palette } from '@/constants/theme';
 import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
 import { usePreferences, useTemperature } from '@/state/preferences';
-import { LiveVitalsRows, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
+import { VitalsDetail } from '@/components/vitals';
 import { useDemoTeam, useOwnBand } from '@/state/demo-team';
 import { usePastSessions } from '@/state/past-sessions';
-import { useCoachData, useMembership, useNow, useRoster, useTeamVitals, useTrainers } from '@/state/team-session';
+import { useCoachData, useMembership, useTrainers } from '@/state/team-session';
 
 // Athlete and athletic-trainer tabs on the same WHOOP-style kit as the coach's. Athletes see their
 // team's real field reading (Firestore lets approved members read it). Band signals don't exist yet,
@@ -220,29 +220,6 @@ export function LearnTab() {
 
 export function TrainerHome() {
   return <CoachToday readOnly role="trainer" />;
-}
-
-export function TrainerMonitor() {
-  const data = useCoachData('trainer');
-  const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
-  const live = useTeamVitals(data?.session ?? null);
-  const roster = useRoster(data?.teamId ?? null);
-  const now = useNow(15_000);
-  if (live.length) {
-    return <LiveVitalsRows now={now} records={live} roster={roster} />;
-  }
-  if (demo.enabled) {
-    return (
-      <TeamVitalsRows members={demo.members} role="trainer" />
-    );
-  }
-  return (
-    <View style={styles.bandHero}>
-      <Image accessibilityIgnoresInvertColors contentFit="contain" source={BAND} style={styles.band} />
-      <Text style={styles.bandState}>No band signals yet</Text>
-      <Text style={styles.bandNote}>When athletes pair a HeatSense Band and choose to share, their heart-rate recovery and skin-temperature trends appear here during practice.</Text>
-    </View>
-  );
 }
 
 const styles = StyleSheet.create({

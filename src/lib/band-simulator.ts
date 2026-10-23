@@ -15,6 +15,8 @@ export type DemoAthlete = {
   restingHr: number;
   /** How quickly heart rate falls back during rest: 1 = typical, lower = slower. */
   recovery: number;
+  /** Practice days so far in the heat (acclimatization runs 14). */
+  acclimatizationDay: number;
 };
 
 export type Vitals = {
@@ -29,11 +31,11 @@ export type Vitals = {
 export type RecoveryStatus = 'usual' | 'watch';
 
 export const DEMO_TEAM: DemoAthlete[] = [
-  { id: 'demo-1', name: 'Jordan Reyes', position: 'Midfielder', restingHr: 62, recovery: 1 },
-  { id: 'demo-2', name: 'Ava Thompson', position: 'Forward', restingHr: 58, recovery: 1.15 },
+  { id: 'demo-1', name: 'Jordan Reyes', position: 'Midfielder', restingHr: 62, recovery: 1, acclimatizationDay: 14 },
+  { id: 'demo-2', name: 'Ava Thompson', position: 'Forward', restingHr: 58, recovery: 1.15, acclimatizationDay: 9 },
   // Recovers slowly: heart rate stays high through breaks, so the trainer's view has something to catch.
-  { id: 'demo-3', name: 'Marcus Lee', position: 'Defender', restingHr: 66, recovery: 0.45 },
-  { id: 'demo-4', name: 'Sofia Patel', position: 'Goalkeeper', restingHr: 60, recovery: 0.95 },
+  { id: 'demo-3', name: 'Marcus Lee', position: 'Defender', restingHr: 66, recovery: 0.45, acclimatizationDay: 3 },
+  { id: 'demo-4', name: 'Sofia Patel', position: 'Goalkeeper', restingHr: 60, recovery: 0.95, acclimatizationDay: 14 },
 ];
 
 const HEAT_LOAD: Record<DemoZone, number> = { green: 0, yellow: 0.35, orange: 0.6, red: 0.85, black: 1 };
