@@ -3,13 +3,13 @@ import { useSyncExternalStore } from 'react';
 
 import { firestore } from '@/services/firebase';
 
-// Dashboard preferences. The two switches persist on the device; the unread count is session-only
-// until notifications come from a server.
-type Preferences = { demoTeam: boolean; compactRoster: boolean; celsius: boolean; bandConnected: boolean; practiceLiveActivity: boolean; unreadNotifications: number; refreshedAt: number | null; incidentAcknowledged: boolean; practiceStartedAt: number | null };
+// Dashboard preferences: switches, notification choices, the profile photo and name persist on the
+// device; the unread count is session-only until notifications come from a server.
+type Preferences = { demoTeam: boolean; compactRoster: boolean; celsius: boolean; bandConnected: boolean; practiceLiveActivity: boolean; alertRecheck: boolean; alertZone: boolean; alertBand: boolean; photoUri: string | null; profileName: string | null; unreadNotifications: number; refreshedAt: number | null; incidentAcknowledged: boolean; practiceStartedAt: number | null };
 
 const STORAGE_KEY = 'heatsense.preferences.v1';
 // The simulated demo team starts on in builds without Firebase (reviews, the simulator) and off otherwise.
-let state: Preferences = { demoTeam: firestore === null, compactRoster: false, celsius: false, bandConnected: false, practiceLiveActivity: true, unreadNotifications: 0, refreshedAt: null, incidentAcknowledged: false, practiceStartedAt: null };
+let state: Preferences = { demoTeam: firestore === null, compactRoster: false, celsius: false, bandConnected: false, practiceLiveActivity: true, alertRecheck: true, alertZone: true, alertBand: true, photoUri: null, profileName: null, unreadNotifications: 0, refreshedAt: null, incidentAcknowledged: false, practiceStartedAt: null };
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -20,15 +20,35 @@ AsyncStorage.getItem(STORAGE_KEY)
   .then((raw) => {
     if (!raw) return;
     const saved = JSON.parse(raw) as Partial<Preferences>;
-    state = { ...state, demoTeam: saved.demoTeam ?? state.demoTeam, compactRoster: Boolean(saved.compactRoster), celsius: Boolean(saved.celsius), bandConnected: saved.bandConnected ?? false, practiceLiveActivity: saved.practiceLiveActivity ?? true };
+    state = { ...state, demoTeam: saved.demoTeam ?? state.demoTeam, compactRoster: Boolean(saved.compactRoster), celsius: Boolean(saved.celsius), bandConnected: saved.bandConnected ?? false, practiceLiveActivity: saved.practiceLiveActivity ?? true, alertRecheck: saved.alertRecheck ?? true, alertZone: saved.alertZone ?? true, alertBand: saved.alertBand ?? true, photoUri: saved.photoUri ?? null, profileName: saved.profileName ?? null };
     emit();
   })
   .catch(() => {});
 
-export function setPreference(key: 'demoTeam' | 'compactRoster' | 'celsius' | 'bandConnected' | 'practiceLiveActivity', value: boolean) {
+type Saved = Pick<Preferences, 'demoTeam' | 'compactRoster' | 'celsius' | 'bandConnected' | 'practiceLiveActivity' | 'alertRecheck' | 'alertZone' | 'alertBand' | 'photoUri' | 'profileName'>;
+
+function persist() {
+  const { demoTeam, compactRoster, celsius, bandConnected, practiceLiveActivity, alertRecheck, alertZone, alertBand, photoUri, profileName } = state;
+  const saved: Saved = { demoTeam, compactRoster, celsius, bandConnected, practiceLiveActivity, alertRecheck, alertZone, alertBand, photoUri, profileName };
+  AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(saved)).catch(() => {});
+}
+
+export function setPreference(key: 'demoTeam' | 'compactRoster' | 'celsius' | 'bandConnected' | 'practiceLiveActivity' | 'alertRecheck' | 'alertZone' | 'alertBand', value: boolean) {
   state = { ...state, [key]: value };
   emit();
-  AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ demoTeam: state.demoTeam, compactRoster: state.compactRoster, celsius: state.celsius, bandConnected: state.bandConnected, practiceLiveActivity: state.practiceLiveActivity })).catch(() => {});
+  persist();
+}
+
+/** The profile picture (a file in the app's documents) and a display-name override, kept on this phone. */
+export function setProfile(change: { photoUri?: string | null; profileName?: string | null }) {
+  state = { ...state, ...change };
+  emit();
+  persist();
+}
+
+/** For code outside React (notifications) that needs the current settings. */
+export function getPreferences() {
+  return state;
 }
 
 /** The coach has acknowledged the open incident, so the Dynamic Island goes back to normal. */
