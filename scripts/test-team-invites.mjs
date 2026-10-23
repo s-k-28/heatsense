@@ -1,21 +1,22 @@
-// End-to-end test of the team invitation backend against the Firebase Emulator Suite.
+// End-to-end test of the team backend against the Firebase Emulator Suite (free plan: no Cloud
+// Functions). The app writes to Firestore directly and the security rules enforce every check.
 //
 //   npm run test:invites
 //
-// That starts the Auth, Firestore and Functions emulators and runs this file with
-// real signed-in accounts (coach, athlete, a stranger), the real callables and the
-// real security rules. Admin access is used only to set up edge cases (expiry, a
-// leading-zero code) and to inspect what was stored.
-import { createCipheriv, createHmac, hkdfSync, randomBytes } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+// That starts the Auth and Firestore emulators and runs this file with real signed-in accounts
+// (coach, athlete, a stranger, a trainer) and the real security rules. Each account's `call()` does
+// exactly what src/services/team-invites.ts does. Admin access is used only to set up edge cases
+// (an expired code) and to inspect what was stored.
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { deleteApp, initializeApp } from 'firebase/app';
 import { connectAuthEmulator, createUserWithEmailAndPassword, getAuth, updateProfile } from 'firebase/auth';
-import { collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, onSnapshot, query, where } from 'firebase/firestore';
-import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
+import {
+  addDoc, collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, limit, onSnapshot, query,
+  serverTimestamp, setDoc, Timestamp as ClientTimestamp, updateDoc, where,
+} from 'firebase/firestore';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const projectId = process.env.GCLOUD_PROJECT ?? 'heatsense-aa3c8';
@@ -46,6 +47,85 @@ async function rejects(promise, code, message) {
   throw new Error(`${message}: expected a rejection`);
 }
 
+const DAY = 86_400_000;
+const randomCode = () => String(Math.floor(Math.random() * 1e6)).padStart(6, '0');
+
+/** The app's team-invite service (src/services/team-invites.ts), against one account's Firestore. */
+function service(db, user) {
+  const preview = (t) => ({ teamName: t.name, school: t.school, sport: t.sport });
+  async function issueCode(teamId, team) {
+    const expiresAt = ClientTimestamp.fromMillis(Date.now() + 7 * DAY);
+    for (let tries = 0; tries < 8; tries++) {
+      const code = randomCode();
+      try {
+        await setDoc(doc(db, 'inviteCodes', code), { teamId, team, createdBy: user.uid, createdAt: serverTimestamp(), expiresAt, revoked: false });
+      } catch (error) {
+        if (error.code === 'permission-denied') continue;
+        throw error;
+      }
+      await updateDoc(doc(db, 'teams', teamId), { activeCode: code, updatedAt: serverTimestamp() });
+      return { teamId, code, expiresAt: expiresAt.toDate().toISOString() };
+    }
+    throw new Error('no free code');
+  }
+  async function myTeam() {
+    const snap = (await getDocs(query(collection(db, 'teams'), where('coachUid', '==', user.uid), limit(1)))).docs[0];
+    return snap ? { id: snap.id, data: snap.data() } : null;
+  }
+  async function liveInvite(teamId, code) {
+    if (!code) return null;
+    const invite = (await getDoc(doc(db, 'inviteCodes', code))).data();
+    if (!invite || invite.revoked || invite.expiresAt.toMillis() <= Date.now()) return null;
+    return { teamId, code, expiresAt: invite.expiresAt.toDate().toISOString() };
+  }
+  async function lookupInvite({ code }) {
+    if (!/^\d{6}$/.test(code)) return { status: 'not-found' };
+    const invite = (await getDoc(doc(db, 'inviteCodes', code))).data();
+    if (!invite) return { status: 'not-found' };
+    if (invite.revoked || invite.expiresAt.toMillis() <= Date.now()) return { status: 'expired' };
+    return { status: 'valid', teamId: invite.teamId, team: invite.team };
+  }
+  return {
+    async ensureTeamInvite({ details }) {
+      const fields = { name: details.teamName, school: details.school, sport: details.sport, level: details.level };
+      const existing = await myTeam();
+      if (existing) {
+        await updateDoc(doc(db, 'teams', existing.id), { ...fields, updatedAt: serverTimestamp() });
+        return (await liveInvite(existing.id, existing.data.activeCode)) ?? issueCode(existing.id, preview(fields));
+      }
+      const created = await addDoc(collection(db, 'teams'), { ...fields, coachUid: user.uid, createdBy: user.uid, status: 'active', activeCode: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      return issueCode(created.id, preview(fields));
+    },
+    async getMyTeamInvite() {
+      const existing = await myTeam();
+      if (!existing) return null;
+      return { team: preview(existing.data), invite: (await liveInvite(existing.id, existing.data.activeCode)) ?? (await issueCode(existing.id, preview(existing.data))) };
+    },
+    async regenerateInvite({ teamId }) {
+      const team = (await getDoc(doc(db, 'teams', teamId))).data();
+      if (team.activeCode) await updateDoc(doc(db, 'inviteCodes', team.activeCode), { revoked: true });
+      return issueCode(teamId, preview(team));
+    },
+    async respondToJoinRequest({ teamId, athleteUid, approve }) {
+      await updateDoc(doc(db, 'teamMembers', `${teamId}_${athleteUid}`), { status: approve ? 'active' : 'declined', joinedAt: approve ? serverTimestamp() : null, respondedAt: serverTimestamp(), respondedBy: user.uid });
+      return { status: approve ? 'approved' : 'declined' };
+    },
+    lookupInvite,
+    async requestToJoinTeam({ code, role = 'athlete' }) {
+      const found = await lookupInvite({ code });
+      if (found.status !== 'valid') throw Object.assign(new Error(found.status), { code: found.status });
+      const ref = doc(db, 'teamMembers', `${found.teamId}_${user.uid}`);
+      const existing = (await getDoc(ref)).data();
+      if (existing?.status === 'active') return { teamId: found.teamId, status: 'member' };
+      if (existing?.status === 'pending') return { teamId: found.teamId, status: 'pending' };
+      const request = { role, status: 'pending', inviteCode: code, team: found.team, requestedAt: serverTimestamp() };
+      if (existing) await updateDoc(ref, request);
+      else await setDoc(ref, { ...request, teamId: found.teamId, userId: user.uid, displayName: user.displayName ?? null, email: user.email ?? null, joinedAt: null });
+      return { teamId: found.teamId, status: 'pending' };
+    },
+  };
+}
+
 let userCount = 0;
 async function signUp(label) {
   const app = initializeApp({ apiKey: 'demo-key', projectId, authDomain: `${projectId}.firebaseapp.com` }, `${label}-${++userCount}`);
@@ -53,30 +133,17 @@ async function signUp(label) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   const db = getFirestore(app);
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
-  const functions = getFunctions(app);
-  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
   const { user } = await createUserWithEmailAndPassword(auth, `${label}-${Date.now()}-${userCount}@example.com`, 'password123');
   await updateProfile(user, { displayName: label });
   await user.getIdToken(true);
-  const call = async (name, data) => (await httpsCallable(functions, name)(data)).data;
+  const api = service(db, user);
+  const call = (name, data = {}) => api[name](data);
   return { app, auth, db, uid: user.uid, call };
 }
 
 const details = { school: 'McKinney High', teamName: 'Lions Varsity', sport: 'Football', level: 'Varsity' };
-const ago = (ms) => Timestamp.fromMillis(Date.now() - ms);
 
-// Mirrors the server's key derivation so the test can plant a known leading-zero code.
-const secret = readFileSync(join(root, 'functions', '.secret.local'), 'utf8').match(/INVITE_CODE_SECRET=(.*)/)[1].trim();
-const derive = (info) => Buffer.from(hkdfSync('sha256', secret, 'heatsense-invites', info, 32));
-const hashCode = (code) => createHmac('sha256', derive('code-hmac')).update(code).digest('hex');
-function encryptCode(code) {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', derive('code-cipher'), iv);
-  const body = Buffer.concat([cipher.update(code, 'utf8'), cipher.final()]);
-  return [iv, cipher.getAuthTag(), body].map((part) => part.toString('base64')).join('.');
-}
-
-console.log('\nHeatSense team invites (emulators)\n');
+console.log('\nHeatSense team backend (emulators, free plan)\n');
 
 const coach = await signUp('coach');
 const athlete = await signUp('athlete');
@@ -84,220 +151,115 @@ const stranger = await signUp('stranger');
 let invite;
 
 console.log('Coach creates a team');
-await test('creates the team and returns a 6-digit code', async () => {
+await test('creates the team and a live 6-digit code', async () => {
   invite = await coach.call('ensureTeamInvite', { details });
-  assert(/^\d{6}$/.test(invite.code), `code ${invite.code} is not 6 digits`);
-  assert(new Date(invite.expiresAt).getTime() > Date.now(), 'expiry is in the past');
-});
-await test('stores team, coach membership and a hashed invite (no plain-text code)', async () => {
+  assert(/^\d{6}$/.test(invite.code), `code ${invite.code}`);
   const team = (await admin.doc(`teams/${invite.teamId}`).get()).data();
   equal(team.coachUid, coach.uid, 'coachUid');
-  equal(team.createdBy, coach.uid, 'createdBy');
-  equal(team.name, details.teamName, 'name');
-  equal(team.status, 'active', 'status');
-  const member = (await admin.doc(`teamMembers/${invite.teamId}_${coach.uid}`).get()).data();
-  equal(member.role, 'coach', 'coach membership role');
-  const stored = (await admin.doc(`teamInvites/${team.activeInviteId}`).get()).data();
-  equal(stored.codeHash, hashCode(invite.code), 'codeHash');
-  equal(stored.status, 'active', 'invite status');
-  equal(stored.usageCount, 0, 'usageCount');
-  assert(!JSON.stringify(stored).includes(`"${invite.code}"`), 'invite record contains the plain code');
-  assert(!JSON.stringify(team).includes(invite.code), 'team record contains the plain code');
+  equal(team.activeCode, invite.code, 'activeCode');
+  equal((await admin.doc(`inviteCodes/${invite.code}`).get()).data().teamId, invite.teamId, 'code points at the team');
 });
-await test('retrying and "refreshing" return the same team and code', async () => {
+await test('retrying returns the same team and code', async () => {
   const again = await coach.call('ensureTeamInvite', { details });
-  equal(again.code, invite.code, 'code after retry');
-  equal(again.teamId, invite.teamId, 'teamId after retry');
-  const mine = await coach.call('getMyTeamInvite', {});
-  equal(mine.invite.code, invite.code, 'code from getMyTeamInvite');
-  equal(mine.team.teamName, details.teamName, 'team name from getMyTeamInvite');
-  const teams = await admin.collection('teams').where('coachUid', '==', coach.uid).get();
-  equal(teams.size, 1, 'teams for this coach');
+  equal(again.teamId, invite.teamId, 'teamId');
+  equal(again.code, invite.code, 'code');
 });
-await test('parallel first-time requests create exactly one team and one code', async () => {
-  const fresh = await signUp('coach-parallel');
-  const results = await Promise.all(Array.from({ length: 6 }, () => fresh.call('ensureTeamInvite', { details: { ...details, teamName: 'Parallel' } })));
-  equal(new Set(results.map((r) => r.teamId)).size, 1, 'distinct teams');
-  equal(new Set(results.map((r) => r.code)).size, 1, 'distinct codes');
-  const invites = await admin.collection('teamInvites').where('teamId', '==', results[0].teamId).get();
-  equal(invites.size, 1, 'invite records');
+await test('bad team details and impersonated coaches are refused', async () => {
+  const base = { name: 'X', school: 'Y', sport: 'Soccer', level: 'JV', coachUid: stranger.uid, createdBy: stranger.uid, status: 'active', activeCode: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  await rejects(addDoc(collection(stranger.db, 'teams'), { ...base, name: '' }), 'permission-denied', 'blank name');
+  await rejects(addDoc(collection(stranger.db, 'teams'), { ...base, coachUid: coach.uid }), 'permission-denied', 'someone else as coach');
+  await rejects(addDoc(collection(stranger.db, 'teams'), { ...base, activeCode: '123456' }), 'permission-denied', 'pre-set code');
+  await rejects(updateDoc(doc(stranger.db, 'teams', invite.teamId), { name: 'Hijacked', updatedAt: serverTimestamp() }), 'permission-denied', 'stranger editing the team');
 });
-await test('rejects missing fields and signed-out callers', async () => {
-  await rejects(coach.call('ensureTeamInvite', { details: { ...details, school: ' ' } }), 'functions/invalid-argument', 'blank school');
-  const app = initializeApp({ apiKey: 'demo-key', projectId }, 'signed-out');
-  const functions = getFunctions(app);
-  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
-  await rejects(httpsCallable(functions, 'lookupInvite')({ code: invite.code }), 'functions/unauthenticated', 'signed-out lookup');
-  await rejects(httpsCallable(functions, 'ensureTeamInvite')({ details }), 'functions/unauthenticated', 'signed-out create');
-  await deleteApp(app);
+await test('only the team’s coach can make its codes, and only short-lived ones', async () => {
+  const team = { teamName: details.teamName, school: details.school, sport: details.sport };
+  const soon = ClientTimestamp.fromMillis(Date.now() + DAY);
+  await rejects(setDoc(doc(stranger.db, 'inviteCodes', randomCode()), { teamId: invite.teamId, team, createdBy: stranger.uid, createdAt: serverTimestamp(), expiresAt: soon, revoked: false }), 'permission-denied', 'stranger code');
+  await rejects(setDoc(doc(coach.db, 'inviteCodes', randomCode()), { teamId: invite.teamId, team, createdBy: coach.uid, createdAt: serverTimestamp(), expiresAt: ClientTimestamp.fromMillis(Date.now() + 30 * DAY), revoked: false }), 'permission-denied', '30-day code');
+  await rejects(setDoc(doc(coach.db, 'inviteCodes', randomCode()), { teamId: invite.teamId, team: { ...team, teamName: 'Fake' }, createdBy: coach.uid, createdAt: serverTimestamp(), expiresAt: soon, revoked: false }), 'permission-denied', 'false team preview');
+  await rejects(setDoc(doc(coach.db, 'inviteCodes', 'abc123'), { teamId: invite.teamId, team, createdBy: coach.uid, createdAt: serverTimestamp(), expiresAt: soon, revoked: false }), 'permission-denied', 'non-digit code');
+  await rejects(setDoc(doc(coach.db, 'inviteCodes', invite.code), { teamId: invite.teamId, team, createdBy: coach.uid, createdAt: serverTimestamp(), expiresAt: soon, revoked: false }), 'permission-denied', 'overwriting a live code');
 });
 
-console.log('Athlete joins');
-await test('a valid code shows the right team preview', async () => {
-  const result = await athlete.call('lookupInvite', { code: invite.code });
-  equal(result.status, 'valid', 'status');
-  equal(result.teamId, invite.teamId, 'teamId');
-  equal(result.team.teamName, details.teamName, 'teamName');
-  equal(result.team.school, details.school, 'school');
-  assert(!('inviteId' in result), 'lookup leaked the invite id');
+console.log('Athlete joins with the code');
+await test('a valid code shows only the team preview; codes cannot be listed', async () => {
+  const found = await athlete.call('lookupInvite', { code: invite.code });
+  equal(found.status, 'valid', 'status');
+  equal(found.team.teamName, details.teamName, 'team name');
+  equal((await athlete.call('lookupInvite', { code: '000000' === invite.code ? '111111' : '000000' })).status, 'not-found', 'unknown code');
+  await rejects(getDocs(collection(stranger.db, 'inviteCodes')), 'permission-denied', 'listing codes');
 });
 await test('join creates one pending request; repeats are not duplicated', async () => {
-  const first = await athlete.call('requestToJoinTeam', { code: invite.code });
-  equal(first.status, 'pending', 'first status');
-  const second = await athlete.call('requestToJoinTeam', { code: invite.code });
-  equal(second.status, 'pending', 'second status');
+  equal((await athlete.call('requestToJoinTeam', { code: invite.code })).status, 'pending', 'first request');
+  equal((await athlete.call('requestToJoinTeam', { code: invite.code })).status, 'pending', 'repeat request');
   const member = (await admin.doc(`teamMembers/${invite.teamId}_${athlete.uid}`).get()).data();
   equal(member.status, 'pending', 'stored status');
   equal(member.role, 'athlete', 'stored role');
-  equal(member.userId, athlete.uid, 'stored userId');
-  equal(member.team?.sport, details.sport, 'team preview saved on the request');
-  equal(member.team?.teamName, details.teamName, 'team name saved on the request');
-  assert(member.requestedAt, 'requestedAt missing');
-  const team = (await admin.doc(`teams/${invite.teamId}`).get()).data();
-  equal(member.inviteId, team.activeInviteId, 'inviteId');
-  equal((await admin.doc(`teamInvites/${team.activeInviteId}`).get()).data().usageCount, 1, 'usageCount');
+});
+await test('forged join requests are refused', async () => {
+  const id = `${invite.teamId}_${stranger.uid}`;
+  const base = { teamId: invite.teamId, userId: stranger.uid, role: 'athlete', status: 'pending', inviteCode: invite.code, team: { teamName: details.teamName, school: details.school, sport: details.sport }, displayName: 'stranger', email: null, requestedAt: serverTimestamp(), joinedAt: null };
+  const email = (await admin.collection('teamMembers').doc(`${invite.teamId}_${athlete.uid}`).get()).data().email;
+  assert(email, 'athlete email stored');
+  await rejects(setDoc(doc(stranger.db, 'teamMembers', id), { ...base, status: 'active' }), 'permission-denied', 'self-approved');
+  await rejects(setDoc(doc(stranger.db, 'teamMembers', id), { ...base, role: 'coach' }), 'permission-denied', 'coach role');
+  await rejects(setDoc(doc(stranger.db, 'teamMembers', id), { ...base, inviteCode: '999999' }), 'permission-denied', 'wrong code');
+  await rejects(setDoc(doc(stranger.db, 'teamMembers', `${invite.teamId}_${athlete.uid}`), { ...base, userId: athlete.uid }), 'permission-denied', 'joining as someone else');
 });
 await test('the coach cannot join their own team', async () => {
-  await rejects(coach.call('requestToJoinTeam', { code: invite.code }), 'functions/failed-precondition', 'coach joining own team');
+  await rejects(coach.call('requestToJoinTeam', { code: invite.code }), 'permission-denied', 'coach joining own team');
 });
-
-console.log('Security rules');
 await test('a pending athlete cannot read the team yet, but can read their own request', async () => {
   await rejects(getDoc(doc(athlete.db, 'teams', invite.teamId)), 'permission-denied', 'pending athlete reading team');
-  const own = await getDocs(query(collection(athlete.db, 'teamMembers'), where('userId', '==', athlete.uid)));
-  equal(own.size, 1, 'own memberships');
+  equal((await getDoc(doc(athlete.db, 'teamMembers', `${invite.teamId}_${athlete.uid}`))).data().status, 'pending', 'own request');
 });
-await test('nobody can read or list invites, the code index, or other people’s memberships', async () => {
-  const team = (await admin.doc(`teams/${invite.teamId}`).get()).data();
-  await rejects(getDoc(doc(coach.db, 'teamInvites', team.activeInviteId)), 'permission-denied', 'coach reading invite');
-  await rejects(getDocs(collection(athlete.db, 'teamInvites')), 'permission-denied', 'athlete listing invites');
-  await rejects(getDocs(collection(athlete.db, 'inviteCodeIndex')), 'permission-denied', 'athlete listing code index');
-  await rejects(getDoc(doc(stranger.db, 'teamMembers', `${invite.teamId}_${athlete.uid}`)), 'permission-denied', 'stranger reading membership');
-  await rejects(getDocs(query(collection(stranger.db, 'teamMembers'), where('teamId', '==', invite.teamId))), 'permission-denied', 'stranger listing roster');
-});
-await test('clients cannot write teams, invites or memberships directly', async () => {
-  const { setDoc, updateDoc } = await import('firebase/firestore');
-  await rejects(setDoc(doc(athlete.db, 'teamInvites', 'forged'), { teamId: invite.teamId }), 'permission-denied', 'forging an invite');
-  await rejects(updateDoc(doc(athlete.db, 'teamMembers', `${invite.teamId}_${athlete.uid}`), { status: 'active' }), 'permission-denied', 'self-approval write');
-  await rejects(updateDoc(doc(coach.db, 'teams', invite.teamId), { coachUid: athlete.uid }), 'permission-denied', 'ownership change');
-});
-
-console.log('Approval');
 await test('athletes and strangers cannot approve', async () => {
-  await rejects(athlete.call('respondToJoinRequest', { teamId: invite.teamId, athleteUid: athlete.uid, approve: true }), 'functions/permission-denied', 'self-approval');
-  await rejects(stranger.call('respondToJoinRequest', { teamId: invite.teamId, athleteUid: athlete.uid, approve: true }), 'functions/permission-denied', 'stranger approval');
-  equal((await admin.doc(`teamMembers/${invite.teamId}_${athlete.uid}`).get()).data().status, 'pending', 'status after refused approvals');
+  await rejects(athlete.call('respondToJoinRequest', { teamId: invite.teamId, athleteUid: athlete.uid, approve: true }), 'permission-denied', 'athlete approving self');
+  await rejects(stranger.call('respondToJoinRequest', { teamId: invite.teamId, athleteUid: athlete.uid, approve: true }), 'permission-denied', 'stranger approving');
 });
-await test('the coach sees the pending request live, approves it, and the athlete is updated live', async () => {
-  const pendingSeen = new Promise((resolve, reject) => {
-    const stop = onSnapshot(
-      query(collection(coach.db, 'teamMembers'), where('teamId', '==', invite.teamId), where('role', '==', 'athlete'), where('status', '==', 'pending')),
-      (snap) => { if (snap.docs.some((d) => d.data().userId === athlete.uid)) { stop(); resolve(); } },
-      reject,
-    );
+await test('the coach sees the request live, approves it, and the athlete is updated live', async () => {
+  const seen = new Promise((resolve) => {
+    const stop = onSnapshot(query(collection(coach.db, 'teamMembers'), where('teamId', '==', invite.teamId), where('status', '==', 'pending')), (snap) => {
+      if (snap.docs.some((d) => d.data().userId === athlete.uid)) { stop(); resolve(true); }
+    });
   });
-  await pendingSeen;
-  const approvedSeen = new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('athlete listener never saw approval')), 10_000);
-    const stop = onSnapshot(
-      query(collection(athlete.db, 'teamMembers'), where('userId', '==', athlete.uid)),
-      (snap) => { if (snap.docs.some((d) => d.data().status === 'active')) { clearTimeout(timer); stop(); resolve(); } },
-      reject,
-    );
+  assert(await seen, 'coach saw the request');
+  const approved = new Promise((resolve) => {
+    const stop = onSnapshot(doc(athlete.db, 'teamMembers', `${invite.teamId}_${athlete.uid}`), (snap) => {
+      if (snap.data()?.status === 'active') { stop(); resolve(true); }
+    });
   });
-  const result = await coach.call('respondToJoinRequest', { teamId: invite.teamId, athleteUid: athlete.uid, approve: true });
-  equal(result.status, 'approved', 'approval result');
-  await approvedSeen;
-  const member = (await admin.doc(`teamMembers/${invite.teamId}_${athlete.uid}`).get()).data();
-  equal(member.status, 'active', 'stored status');
-  assert(member.joinedAt, 'joinedAt missing');
+  equal((await coach.call('respondToJoinRequest', { teamId: invite.teamId, athleteUid: athlete.uid, approve: true })).status, 'approved', 'approval');
+  assert(await approved, 'athlete saw the approval');
 });
 await test('the approved athlete can now read the team, and re-joining says "member"', async () => {
-  const team = await getDoc(doc(athlete.db, 'teams', invite.teamId));
-  equal(team.data().name, details.teamName, 'team name');
-  equal((await athlete.call('requestToJoinTeam', { code: invite.code })).status, 'member', 'rejoin status');
-  await rejects(coach.call('respondToJoinRequest', { teamId: invite.teamId, athleteUid: athlete.uid, approve: false }), 'functions/failed-precondition', 'answering twice');
-});
-await test('an approved athlete cannot create a team of their own', async () => {
-  await rejects(athlete.call('ensureTeamInvite', { details }), 'functions/permission-denied', 'athlete creating a team');
+  equal((await getDoc(doc(athlete.db, 'teams', invite.teamId))).data().name, details.teamName, 'team name');
+  equal((await athlete.call('requestToJoinTeam', { code: invite.code })).status, 'member', 're-join');
 });
 
-console.log('Codes');
-await test('regenerating revokes the old code and issues a new one', async () => {
-  const fresh = await coach.call('regenerateInvite', { teamId: invite.teamId });
-  assert(/^\d{6}$/.test(fresh.code), 'new code format');
-  assert(fresh.code !== invite.code, 'code did not change');
-  const reader = await signUp('athlete-revoked');
-  equal((await reader.call('lookupInvite', { code: invite.code })).status, 'not-found', 'old code lookup');
-  equal((await reader.call('lookupInvite', { code: fresh.code })).status, 'valid', 'new code lookup');
-  const old = (await admin.collection('teamInvites').where('teamId', '==', invite.teamId).where('status', '==', 'revoked').get()).docs[0]?.data();
-  assert(old?.revokedAt, 'old invite has no revokedAt');
-  equal((await coach.call('getMyTeamInvite', {})).invite.code, fresh.code, 'code after refresh');
-  invite = fresh;
+console.log('Codes change and expire');
+await test('regenerating revokes the old code; only the coach can', async () => {
+  const old = invite.code;
+  await rejects(stranger.call('regenerateInvite', { teamId: invite.teamId }), 'permission-denied', 'stranger regenerating');
+  invite = await coach.call('regenerateInvite', { teamId: invite.teamId });
+  assert(invite.code !== old, 'new code differs');
+  equal((await stranger.call('lookupInvite', { code: old })).status, 'expired', 'old code');
+  const late = await signUp('late');
+  await rejects(late.call('requestToJoinTeam', { code: old }), 'expired', 'joining with the old code');
+  await rejects(setDoc(doc(late.db, 'teamMembers', `${invite.teamId}_${late.uid}`), { teamId: invite.teamId, userId: late.uid, role: 'athlete', status: 'pending', inviteCode: old, team: { teamName: details.teamName, school: details.school, sport: details.sport }, displayName: 'late', email: null, requestedAt: serverTimestamp(), joinedAt: null }), 'permission-denied', 'forcing a revoked code');
 });
-await test('only the coach can regenerate', async () => {
-  await rejects(stranger.call('regenerateInvite', { teamId: invite.teamId }), 'functions/permission-denied', 'stranger regenerating');
+await test('an expired code says expired and cannot be used; the coach gets a fresh one on return', async () => {
+  await admin.doc(`inviteCodes/${invite.code}`).update({ expiresAt: Timestamp.fromMillis(Date.now() - 1000) });
+  equal((await stranger.call('lookupInvite', { code: invite.code })).status, 'expired', 'lookup');
+  const fresh = await coach.call('getMyTeamInvite');
+  assert(fresh.invite.code !== invite.code, 'fresh code issued');
+  invite = fresh.invite;
 });
-await test('concurrent regenerations leave exactly one active code', async () => {
-  const results = await Promise.all(Array.from({ length: 5 }, () => coach.call('regenerateInvite', { teamId: invite.teamId }).catch((e) => e)));
-  assert(results.some((r) => r.code), 'no regeneration succeeded');
-  const active = await admin.collection('teamInvites').where('teamId', '==', invite.teamId).where('status', '==', 'active').get();
-  equal(active.size, 1, 'active invites');
-  const indexed = await admin.collection('inviteCodeIndex').where('teamId', '==', invite.teamId).get();
-  equal(indexed.size, 1, 'index entries');
-  invite = (await coach.call('getMyTeamInvite', {})).invite;
-  equal(active.docs[0].data().codeHash, hashCode(invite.code), 'active code matches what the coach sees');
-});
-await test('an expired code says expired, and the coach gets a fresh code on return', async () => {
-  const team = (await admin.doc(`teams/${invite.teamId}`).get()).data();
-  const stored = (await admin.doc(`teamInvites/${team.activeInviteId}`).get()).data();
-  await admin.doc(`teamInvites/${team.activeInviteId}`).update({ expiresAt: ago(1000) });
-  await admin.doc(`inviteCodeIndex/${stored.codeHash}`).update({ expiresAt: ago(1000) });
-  const reader = await signUp('athlete-expired');
-  equal((await reader.call('lookupInvite', { code: invite.code })).status, 'expired', 'lookup');
-  await rejects(reader.call('requestToJoinTeam', { code: invite.code }), 'functions/failed-precondition', 'joining with an expired code');
-  const renewed = await coach.call('getMyTeamInvite', {});
-  assert(renewed.invite.code !== invite.code || renewed.invite.expiresAt !== invite.expiresAt, 'expired code was not renewed');
-  equal((await reader.call('lookupInvite', { code: renewed.invite.code })).status, 'valid', 'renewed code');
-  invite = renewed.invite;
-});
-await test('leading-zero codes keep their zeros end to end', async () => {
-  const code = '004821';
-  const team = (await admin.doc(`teams/${invite.teamId}`).get()).data();
-  const current = (await admin.doc(`teamInvites/${team.activeInviteId}`).get()).data();
-  const inviteRef = admin.collection('teamInvites').doc();
-  const expiresAt = Timestamp.fromMillis(Date.now() + 86_400_000);
-  const batch = admin.batch();
-  batch.update(admin.doc(`teamInvites/${team.activeInviteId}`), { status: 'revoked', revokedAt: Timestamp.now() });
-  batch.delete(admin.doc(`inviteCodeIndex/${current.codeHash}`));
-  batch.set(inviteRef, { teamId: invite.teamId, codeHash: hashCode(code), codeCipher: encryptCode(code), status: 'active', createdBy: coach.uid, createdAt: Timestamp.now(), expiresAt, revokedAt: null, usageCount: 0 });
-  batch.set(admin.doc(`inviteCodeIndex/${hashCode(code)}`), { inviteId: inviteRef.id, teamId: invite.teamId, expiresAt });
-  batch.update(admin.doc(`teams/${invite.teamId}`), { activeInviteId: inviteRef.id });
-  await batch.commit();
-  equal((await coach.call('getMyTeamInvite', {})).invite.code, code, 'coach sees');
-  const reader = await signUp('athlete-zero');
-  equal((await reader.call('lookupInvite', { code })).status, 'valid', 'lookup with zeros');
-  equal((await reader.call('lookupInvite', { code: '004 821' })).status, 'valid', 'lookup with a space');
-  equal((await reader.call('lookupInvite', { code: '4821' })).status, 'not-found', 'lookup without zeros');
-});
-await test('wrong formats are rejected', async () => {
-  const reader = await signUp('athlete-format');
-  for (const code of ['12345', '1234567', 'abcdef', '']) equal((await reader.call('lookupInvite', { code })).status, 'not-found', `code "${code}"`);
-});
-
-console.log('Abuse protection');
-await test('repeated wrong codes lock the account out, even for a valid code', async () => {
-  const guesser = await signUp('guesser');
-  const statuses = [];
-  for (let i = 0; i < 6; i++) statuses.push((await guesser.call('lookupInvite', { code: String(100000 + i) })).status);
-  assert(statuses.slice(0, 4).every((s) => s === 'not-found' || s === 'valid'), `early statuses ${statuses}`);
-  equal(statuses[5], 'rate-limited', 'status after five misses');
-  const locked = await guesser.call('lookupInvite', { code: invite.code });
-  equal(locked.status, 'rate-limited', 'valid code while locked');
-  assert(locked.retryAfterSeconds > 0, 'retryAfterSeconds');
-  await rejects(guesser.call('requestToJoinTeam', { code: invite.code }), 'functions/resource-exhausted', 'joining while locked');
-  const limit = (await admin.doc(`rateLimits/uid_${guesser.uid}`).get()).data();
-  equal(limit.lockouts, 1, 'lockouts recorded');
+await test('a declined athlete can ask again with a live code', async () => {
+  const declined = await signUp('declined');
+  await declined.call('requestToJoinTeam', { code: invite.code });
+  await coach.call('respondToJoinRequest', { teamId: invite.teamId, athleteUid: declined.uid, approve: false });
+  equal((await declined.call('requestToJoinTeam', { code: invite.code })).status, 'pending', 'asks again');
 });
 
 console.log('Athlete profile (onboarding page 1)');
@@ -499,7 +461,7 @@ const trainer = await signUp('trainer');
   const { addDoc, serverTimestamp } = await import('firebase/firestore');
 
   await test('a trainer asks to join as staff; an unknown role is rejected', async () => {
-    await rejects(trainer.call('requestToJoinTeam', { code: live.code, role: 'principal' }), 'functions/invalid-argument', 'unknown role');
+    await rejects(trainer.call('requestToJoinTeam', { code: live.code, role: 'principal' }), 'permission-denied', 'unknown role');
     equal((await trainer.call('requestToJoinTeam', { code: live.code, role: 'trainer' })).status, 'pending', 'request status');
     equal((await admin.doc(`teamMembers/${teamId}_${trainer.uid}`).get()).data().role, 'trainer', 'stored role');
   });

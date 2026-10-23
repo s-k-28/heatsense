@@ -66,8 +66,8 @@
     "lint": "expo lint",
     "check:auth": "node scripts/check-auth-config.mjs",
     "check:auth:android": "node scripts/check-auth-config.mjs --android",
-    "test:invites": "npm --prefix functions run build && npx -y firebase-tools@14 emulators:exec --only auth,firestore,functions \"node scripts/test-team-invites.mjs\"",
-    "emulators": "npm --prefix functions run build && npx -y firebase-tools@14 emulators:start --only auth,firestore,functions"
+    "test:invites": "npx -y firebase-tools@14 emulators:exec --only auth,firestore \"node scripts/test-team-invites.mjs\"",
+    "emulators": "npx -y firebase-tools@14 emulators:start --only auth,firestore"
   },
   "private": true
 }
