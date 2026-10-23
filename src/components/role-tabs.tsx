@@ -12,8 +12,7 @@ import { usePreferences, useTemperature } from '@/state/preferences';
 import { AcclimatizationCard } from '@/components/acclimatization-card';
 import { BodyStrip } from '@/components/body-strip';
 import { HeatHistory } from '@/components/heat-calendar';
-import { LiveBandVitals, VitalsDetail } from '@/components/vitals';
-import { useBand } from '@/state/band-ble';
+import { VitalsDetail } from '@/components/vitals';
 import { useDemoTeam, useOwnBand } from '@/state/demo-team';
 import { usePastSessions } from '@/state/past-sessions';
 import { useCoachData, useMembership, useTrainers } from '@/state/team-session';
@@ -102,11 +101,8 @@ function SpeakUp() {
 /** The athlete's own band: their vitals in depth. The app centres on them, not the team. */
 export function AthleteBand() {
   const { bandConnected } = usePreferences();
-  // A real band connected over Bluetooth comes first. Otherwise, with sample athletes on, the demo
-  // athlete stands in, and a band paired in the demo flow shows simulated signals.
+  // Sample athletes on: the demo athlete stands in. Otherwise a paired band shows the athlete's own signals.
   const me = useMyBand();
-  const live = useBand();
-  if (live.device && (live.status === 'connected' || live.reading)) return <LiveBandVitals />;
   if (me) {
     return (
       <>
