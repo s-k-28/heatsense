@@ -146,6 +146,8 @@ export default function DashboardScreen() {
           { paddingBottom: TAB_BAR_HEIGHT + insets.bottom + Spacing.six, paddingTop: insets.top + HEADER_ROW },
         ]}
         key={contentKey}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
         onScroll={onScroll}
         refreshControl={<RefreshControl onRefresh={refresh} progressViewOffset={insets.top + HEADER_ROW} refreshing={refreshing} tintColor={Palette.inkMuted} />}
         scrollEventThrottle={16}
