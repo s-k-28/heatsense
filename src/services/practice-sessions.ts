@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where, type Timestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where, type Timestamp } from 'firebase/firestore';
 
 import { firebaseAuth, firestore } from '@/services/firebase';
 import { UIL_VERSION, celsiusToF, classifyWbgt, type UilClass, type Zone } from '@/lib/uil-wbgt';
@@ -72,6 +72,27 @@ export function watchActiveSession(teamId: string, onChange: (session: PracticeS
       endedAt: toDate(data.endedAt),
     });
   }, onError);
+}
+
+/** A finished practice: how many readings were taken and the hottest one. */
+export type SessionSummary = { session: PracticeSession; readingCount: number; peak: { wbgtF: number; zone: Zone } | null };
+
+/** The team's most recent finished practices, newest first, each with its peak reading. */
+export async function recentSessions(teamId: string, count = 10): Promise<SessionSummary[]> {
+  // One extra, in case the newest is still open. ponytail: a few reads per practice; page this once teams keep a season of history.
+  const snap = await getDocs(query(sessions(teamId), orderBy('startedAt', 'desc'), limit(count + 1)));
+  const ended = snap.docs
+    .map((docSnap) => {
+      const data = docSnap.data();
+      return { id: docSnap.id, teamId, venue: data.venue, uilClass: data.uilClass, recheckMinutes: data.recheckMinutes, startedAt: toDate(data.startedAt) ?? new Date(), endedAt: toDate(data.endedAt) };
+    })
+    .filter((session) => session.endedAt)
+    .slice(0, count);
+  return Promise.all(ended.map(async (session) => {
+    const list = (await getDocs(readings(teamId, session.id))).docs.map((docSnap) => docSnap.data() as { wbgtF: number; zone: Zone });
+    const peak = list.reduce<{ wbgtF: number; zone: Zone } | null>((hottest, r) => (!hottest || r.wbgtF > hottest.wbgtF ? { wbgtF: r.wbgtF, zone: r.zone } : hottest), null);
+    return { session, readingCount: list.length, peak };
+  }));
 }
 
 export async function startSession(teamId: string, input: { venue: string; uilClass: UilClass; recheckMinutes: number }) {

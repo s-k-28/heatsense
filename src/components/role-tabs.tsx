@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ZoneRules } from '@/components/coach-tabs';
@@ -8,7 +9,7 @@ import { CapsLabel, ListRow, Rows, SampleTag, SectionTitle } from '@/components/
 import { Palette } from '@/constants/theme';
 import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
-import { SOURCE_LABEL } from '@/services/practice-sessions';
+import { recentSessions, SOURCE_LABEL, type SessionSummary } from '@/services/practice-sessions';
 import { usePreferences, useTemperature } from '@/state/preferences';
 import { SimulatedTag, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
@@ -96,10 +97,41 @@ export function AthleteBand() {
   );
 }
 
+// Shown in sample mode only, under the SAMPLE DATA tag, so the history has something to show.
+const SAMPLE_HISTORY: { daysAgo: number; venue: string; minutes: number; readingCount: number; wbgtF: number; zone: Zone }[] = [
+  { daysAgo: 1, venue: 'Memorial Stadium', minutes: 95, readingCount: 5, wbgtF: 86.2, zone: 'yellow' },
+  { daysAgo: 2, venue: 'Memorial Stadium', minutes: 60, readingCount: 4, wbgtF: 88.4, zone: 'orange' },
+  { daysAgo: 4, venue: 'Practice field 2', minutes: 110, readingCount: 6, wbgtF: 80.9, zone: 'green' },
+];
+
+/** The team's finished practices: real ones from the team, sample ones in sample mode. */
+function usePastSessions(teamId: string | null, sample: boolean) {
+  const [past, setPast] = useState<SessionSummary[] | null>(null);
+  useEffect(() => {
+    if (!teamId || sample) return;
+    let live = true;
+    recentSessions(teamId).then((list) => { if (live) setPast(list); }).catch(() => { if (live) setPast([]); });
+    return () => { live = false; };
+  }, [sample, teamId]);
+  if (!sample) return teamId ? past : [];
+  const day = 86_400_000;
+  return SAMPLE_HISTORY.map((h, i) => {
+    const startedAt = new Date(new Date().setHours(16, 0, 0, 0) - h.daysAgo * day);
+    return {
+      session: { id: `sample-${i}`, teamId: 'sample', venue: h.venue, uilClass: 3 as const, recheckMinutes: 30, startedAt, endedAt: new Date(startedAt.getTime() + h.minutes * 60_000) },
+      readingCount: h.readingCount,
+      peak: { wbgtF: h.wbgtF, zone: h.zone },
+    };
+  });
+}
+
+const dayLabel = (d: Date) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+
 export function AthleteSessions() {
   const data = useCoachData('athlete');
   const temp = useTemperature();
   const readings = [...(data?.readings ?? [])].reverse();
+  const past = usePastSessions(data?.teamId ?? null, Boolean(data?.sample));
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
@@ -112,6 +144,28 @@ export function AthleteSessions() {
         </Rows>
       ) : (
         <Text style={styles.empty}>No practice readings yet today. Your coach’s field readings show up here as they’re taken.</Text>
+      )}
+
+      <SectionTitle title="Earlier" />
+      {past === null ? (
+        <Text style={styles.empty}>Loading past practices…</Text>
+      ) : past.length ? (
+        <Rows>
+          {past.map(({ session, readingCount, peak }) => {
+            const minutes = session.endedAt ? Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000) : null;
+            return (
+              <ListRow
+                detail={[session.venue, minutes !== null ? `${minutes} min` : null, `${readingCount} reading${readingCount === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
+                key={session.id}
+                label={dayLabel(session.startedAt)}
+                trailing={peak ? <View style={[styles.dot, { backgroundColor: dot(peak.zone) }]} /> : undefined}
+                value={peak ? `Peak ${temp.value(peak.wbgtF)}${temp.unit}` : 'No readings'}
+              />
+            );
+          })}
+        </Rows>
+      ) : (
+        <Text style={styles.empty}>Finished practices show up here with their hottest reading.</Text>
       )}
     </>
   );

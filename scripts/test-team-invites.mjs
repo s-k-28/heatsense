@@ -444,7 +444,7 @@ console.log('Athlete emergency information (onboarding page 3)');
   });
 }
 
-// Athletic trainers: join with the same code as staff, read the team's record, never write it.
+// Athletic trainers: join with the same code as staff, read the team's record, and log readings during a practice the coach started.
 const trainer = await signUp('trainer');
 {
   const teamId = invite.teamId;
@@ -471,9 +471,22 @@ const trainer = await signUp('trainer');
     const roster = await getDocs(query(collection(trainer.db, 'teamMembers'), where('teamId', '==', teamId), where('role', 'in', ['athlete', 'trainer'])));
     assert(roster.docs.some((d) => d.data().userId === athlete.uid), 'trainer sees the athlete');
   });
-  await test('a trainer cannot start sessions or record readings', async () => {
+  const reading = (user, sessionId, extra = {}) => addDoc(collection(user.db, 'teams', teamId, 'sessions', sessionId, 'readings'), { wbgtF: 84, enteredValue: 84, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(), zone: 'yellow', uilClass: 3, recordedBy: user.uid, recordedAt: serverTimestamp(), acknowledgedBy: null, acknowledgedAt: null, ...extra });
+  await test('a trainer cannot start a session or write to an ended one', async () => {
     await rejects(addDoc(sessions(trainer), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: trainer.uid, startedAt: serverTimestamp(), endedAt: null }), 'permission-denied', 'trainer session');
-    await rejects(addDoc(readings(trainer), { wbgtF: 84, enteredValue: 84, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(), zone: 'yellow', uilClass: 3, recordedBy: trainer.uid, recordedAt: serverTimestamp(), acknowledgedBy: null, acknowledgedAt: null }), 'permission-denied', 'trainer reading');
+    await rejects(reading(trainer, sessionRef.id), 'permission-denied', 'trainer reading on an ended session');
+  });
+  await test('during a practice the coach started, a trainer logs readings and confirms guidance, but cannot end it', async () => {
+    const { doc, updateDoc } = await import('firebase/firestore');
+    const open = await addDoc(sessions(coach), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null });
+    await rejects(reading(trainer, open.id, { zone: 'green' }), 'permission-denied', 'trainer picking the wrong zone');
+    await rejects(reading(trainer, open.id, { recordedBy: coach.uid }), 'permission-denied', 'trainer recording as the coach');
+    const logged = await reading(trainer, open.id);
+    equal((await admin.doc(logged.path).get()).data().zone, 'yellow', 'zone of the trainer reading');
+    await updateDoc(doc(trainer.db, logged.path), { acknowledgedBy: trainer.uid, acknowledgedAt: serverTimestamp() });
+    await rejects(updateDoc(doc(trainer.db, open.path), { endedAt: serverTimestamp() }), 'permission-denied', 'trainer ending practice');
+    await rejects(reading(athlete, open.id), 'permission-denied', 'athlete logging a reading');
+    await updateDoc(doc(coach.db, open.path), { endedAt: serverTimestamp() });
   });
   await test('an athlete sees their trainer but not other athletes; a stranger sees neither', async () => {
     const staff = await getDocs(query(collection(athlete.db, 'teamMembers'), where('teamId', '==', teamId), where('role', '==', 'trainer'), where('status', '==', 'active')));

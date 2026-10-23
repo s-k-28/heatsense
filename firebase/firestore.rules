@@ -235,7 +235,8 @@ service cloud.firestore {
       match /readings/{readingId} {
         function session() { return get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)).data; }
         allow read: if isCoach(teamId) || isActiveMember(teamId);
-        allow create: if isCoach(teamId)
+        // The head coach or an approved athletic trainer logs readings and confirms guidance; only the coach starts and ends practice.
+        allow create: if (isCoach(teamId) || isActiveTrainer(teamId))
           && session().endedAt == null
           && request.resource.data.keys().hasOnly(['wbgtF', 'enteredValue', 'enteredUnit', 'source', 'measuredAt', 'zone', 'uilClass', 'recordedBy', 'recordedAt', 'acknowledgedBy', 'acknowledgedAt'])
           && request.resource.data.wbgtF is number && request.resource.data.wbgtF >= 32 && request.resource.data.wbgtF <= 120
@@ -251,7 +252,7 @@ service cloud.firestore {
           && request.resource.data.recordedAt == request.time
           && request.resource.data.acknowledgedBy == null
           && request.resource.data.acknowledgedAt == null;
-        allow update: if isCoach(teamId)
+        allow update: if (isCoach(teamId) || isActiveTrainer(teamId))
           && resource.data.acknowledgedAt == null
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledgedBy', 'acknowledgedAt'])
           && request.resource.data.acknowledgedBy == request.auth.uid

@@ -36,11 +36,7 @@
           "backgroundColor": "#101416",
           "image": "./assets/images/heatsense-logo.png",
           "imageWidth": 120,
-          "resizeMode": "contain",
-          "dark": {
-            "backgroundColor": "#101416",
-            "image": "./assets/images/heatsense-logo.png"
-          }
+          "resizeMode": "contain"
         }
       ],
       "expo-image",
