@@ -89,12 +89,12 @@ export default function PlanEditorScreen() {
 
           <Text style={styles.label}>Timing</Text>
           <View style={styles.card}>
-            <Stepper detail="When athletes arrive" label="Start" onChange={(v) => set('startMinutes', v)} step={15} min={5 * 60} max={21 * 60} value={plan.startMinutes} format={(v) => clockTime(v, true)} />
-            <Stepper detail="Before the first block" label="Check-in" onChange={(v) => set('checkInMinutes', v)} step={5} min={0} max={30} value={plan.checkInMinutes} format={(v) => `${v} min`} />
-            <Stepper detail="Work before each break" label="Work block" onChange={(v) => set('workMinutes', v)} step={5} min={5} max={60} value={plan.workMinutes} format={(v) => `${v} min`} />
-            <Stepper detail="Each break" label="Break" onChange={(v) => set('restMinutes', v)} step={1} min={2} max={20} value={plan.restMinutes} format={(v) => `${v} min`} />
-            <Stepper detail="Work and breaks together" label="Practice length" onChange={(v) => set('lengthMinutes', v)} step={6} min={30} max={180} value={plan.lengthMinutes} format={(v) => `${v} min`} />
-            <Stepper detail="Including during work" label="Water every" last onChange={(v) => set('waterEveryMinutes', v)} step={5} min={5} max={30} value={plan.waterEveryMinutes} format={(v) => `${v} min`} />
+            <Stepper label="Start" onChange={(v) => set('startMinutes', v)} step={15} min={5 * 60} max={21 * 60} value={plan.startMinutes} format={(v) => clockTime(v, true)} />
+            <Stepper label="Check-in" onChange={(v) => set('checkInMinutes', v)} step={5} min={0} max={30} value={plan.checkInMinutes} format={(v) => `${v} min`} />
+            <Stepper label="Work block" onChange={(v) => set('workMinutes', v)} step={5} min={5} max={60} value={plan.workMinutes} format={(v) => `${v} min`} />
+            <Stepper label="Break" onChange={(v) => set('restMinutes', v)} step={1} min={2} max={20} value={plan.restMinutes} format={(v) => `${v} min`} />
+            <Stepper label="Practice length" onChange={(v) => set('lengthMinutes', v)} step={6} min={30} max={180} value={plan.lengthMinutes} format={(v) => `${v} min`} />
+            <Stepper label="Water every" last onChange={(v) => set('waterEveryMinutes', v)} step={5} min={5} max={30} value={plan.waterEveryMinutes} format={(v) => `${v} min`} />
           </View>
 
           <Text style={styles.label}>Equipment</Text>
@@ -141,13 +141,12 @@ export default function PlanEditorScreen() {
   );
 }
 
-function Stepper({ detail, format, label, last, max, min, onChange, step, value }: { detail: string; format: (value: number) => string; label: string; last?: boolean; max: number; min: number; onChange: (value: number) => void; step: number; value: number }) {
+function Stepper({ format, label, last, max, min, onChange, step, value }: { format: (value: number) => string; label: string; last?: boolean; max: number; min: number; onChange: (value: number) => void; step: number; value: number }) {
   const shown = format(value);
   return (
     <View accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} accessibilityLabel={`${label}, ${shown}`} accessibilityRole="adjustable" accessible onAccessibilityAction={(event) => onChange(Math.max(min, Math.min(max, value + (event.nativeEvent.actionName === 'increment' ? step : -step))))} style={[styles.stepper, !last && styles.stepperDivider]}>
       <View style={styles.flex}>
         <Text style={styles.stepLabel}>{label}</Text>
-        <Text style={styles.stepDetail}>{detail}</Text>
       </View>
       <Pressable accessibilityElementsHidden disabled={value <= min} hitSlop={6} onPress={() => onChange(Math.max(min, value - step))} style={({ pressed }) => [styles.round, value <= min && styles.roundOff, pressed && styles.pressed]}>
         <HeatIcon name={minus} size={14} tintColor={Palette.ink} weight="bold" />
@@ -174,7 +173,6 @@ const styles = StyleSheet.create({
   stepper: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 60 },
   stepperDivider: { borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
   stepLabel: { color: Palette.ink, ...Type.body },
-  stepDetail: { color: Palette.inkMuted, ...Type.footnote },
   stepValue: { color: Palette.ink, ...Type.figure, fontSize: 20, lineHeight: 24, minWidth: 74, textAlign: 'center' },
   round: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: 16, height: 32, justifyContent: 'center', width: 32 },
   roundOff: { opacity: 0.35 },

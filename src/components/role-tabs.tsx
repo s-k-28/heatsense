@@ -5,11 +5,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ZoneRules } from '@/components/coach-tabs';
 import { CoachToday } from '@/components/coach-today';
-import { CapsLabel, ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
+import { Card, Facts, ListRow, Rows, SampleTag, SectionTitle, StatRow } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
-import { recentSessions, SOURCE_LABEL, type SessionSummary } from '@/services/practice-sessions';
+import { recentSessions, type SessionSummary } from '@/services/practice-sessions';
 import { usePreferences, useTemperature } from '@/state/preferences';
 import { LiveVitalsRows, SimulatedTag, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
@@ -36,13 +36,9 @@ export function AthleteHome() {
   return (
     <>
       {waiting ? (
-        <Rows>
-          <ListRow detail={`Your request to join ${membership.team?.teamName ?? 'the team'} is with your coach. Practice readings show up here once they approve you.`} label="Waiting for approval" />
-        </Rows>
+        <Card message={`Your request to join ${membership.team?.teamName ?? 'the team'} is with your coach. Practice readings show up here once they approve you.`} title="Waiting for approval" />
       ) : noTeam ? (
-        <Rows>
-          <ListRow detail={membership?.status === 'declined' ? 'Your coach declined the request. Check the code with them and try again.' : 'Enter the six-digit code from your coach.'} label="Join your team" onPress={() => router.push('/setup/athlete')} />
-        </Rows>
+        <Card message={membership?.status === 'declined' ? 'Your coach declined the request. Check the code with them and try again.' : 'Enter the six-digit code from your coach.'} onPress={() => router.push('/setup/athlete')} title="Join your team" />
       ) : null}
       <CoachToday readOnly role="athlete" />
       {latest ? (
@@ -65,7 +61,7 @@ function YourTrainer({ teamId }: { teamId: string | null }) {
     <>
       <SectionTitle title="Your athletic trainer" />
       <Rows>
-        {trainers.map((t) => <ListRow detail="Find them first if you feel unwell" key={t.userId} label={t.displayName ?? 'Athletic trainer'} />)}
+        {trainers.map((t) => <ListRow key={t.userId} label={t.displayName ?? 'Athletic trainer'} />)}
       </Rows>
     </>
   );
@@ -74,8 +70,7 @@ function YourTrainer({ teamId }: { teamId: string | null }) {
 function SpeakUp() {
   return (
     <View style={styles.speak}>
-      <Text style={styles.speakTitle}>Feel off? Stop and tell a coach.</Text>
-      <Text style={styles.speakBody}>Dizziness, nausea, a headache, cramps or confusion are reasons to stop right away. Don’t wait for a break.</Text>
+      <Card message="Dizziness, nausea, a headache, cramps or confusion are reasons to stop right away. Don’t wait for a break." title="Feel off? Stop and tell a coach." />
     </View>
   );
 }
@@ -144,39 +139,50 @@ export function AthleteSessions() {
   const data = useCoachData('athlete');
   const temp = useTemperature();
   const readings = [...(data?.readings ?? [])].reverse();
+  const latest = readings[0] ?? null;
   const past = usePastSessions(data?.teamId ?? null, Boolean(data?.sample));
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
-      <CapsLabel>{data?.session ? `Today · ${data.session.venue}` : 'Today'}</CapsLabel>
-      {readings.length ? (
-        <Rows>
-          {readings.map((r) => (
-            <ListRow detail={`${time(r.measuredAt)} · ${SOURCE_LABEL[r.source]}`} key={r.id} label={ZONES[r.zone].label} trailing={<View style={[styles.dot, { backgroundColor: dot(r.zone) }]} />} value={`${temp.value(r.wbgtF)}${temp.unit}`} />
-          ))}
-        </Rows>
+      {data?.session ? (
+        <Card title={`Today · ${data.session.venue}`}>
+          <StatRow stats={[
+            { label: 'Latest WBGT', value: latest ? `${temp.value(latest.wbgtF)}` : '--', unit: latest ? temp.unit : undefined },
+            { label: 'Zone', value: latest ? ZONES[latest.zone].label.replace(' zone', '') : '--', tone: latest ? dot(latest.zone) : undefined },
+            { label: 'Readings', value: String(readings.length) },
+          ]} />
+        </Card>
       ) : (
-        <Text style={styles.empty}>No practice readings yet today. Your coach’s field readings show up here as they’re taken.</Text>
+        <Card message="No practice today. Your coach’s field readings show up here as they’re taken." title="Today" />
       )}
+      {readings.length ? (
+        <View style={styles.gapTop}>
+          <Rows>
+            {readings.map((r) => (
+              <ListRow key={r.id} label={time(r.measuredAt)} trailing={<View style={[styles.dot, { backgroundColor: dot(r.zone) }]} />} value={`${temp.value(r.wbgtF)}${temp.unit}`} />
+            ))}
+          </Rows>
+        </View>
+      ) : null}
 
       <SectionTitle title="Earlier" />
       {past === null ? (
         <Text style={styles.empty}>Loading past practices…</Text>
       ) : past.length ? (
-        <Rows>
+        <View style={styles.cards}>
           {past.map(({ session, readingCount, peak }) => {
             const minutes = session.endedAt ? Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000) : null;
             return (
-              <ListRow
-                detail={[session.venue, minutes !== null ? `${minutes} min` : null, `${readingCount} reading${readingCount === 1 ? '' : 's'}`].filter(Boolean).join(' · ')}
-                key={session.id}
-                label={dayLabel(session.startedAt)}
-                trailing={peak ? <View style={[styles.dot, { backgroundColor: dot(peak.zone) }]} /> : undefined}
-                value={peak ? `Peak ${temp.value(peak.wbgtF)}${temp.unit}` : 'No readings'}
-              />
+              <Card key={session.id} title={dayLabel(session.startedAt)}>
+                <StatRow stats={[
+                  { label: 'Peak WBGT', value: peak ? `${temp.value(peak.wbgtF)}` : '--', unit: peak ? temp.unit : undefined, tone: peak ? dot(peak.zone) : undefined },
+                  { label: 'Length', value: minutes !== null ? String(minutes) : '--', unit: minutes !== null ? ' min' : undefined },
+                  { label: 'Readings', value: String(readingCount) },
+                ]} />
+              </Card>
             );
           })}
-        </Rows>
+        </View>
       ) : (
         <Text style={styles.empty}>Finished practices show up here with their hottest reading.</Text>
       )}
@@ -184,25 +190,23 @@ export function AthleteSessions() {
   );
 }
 
+const zoneFacts = () => ZONE_ORDER.map((zone) => ({ title: `${ZONES[zone].label}, ${zoneRange(zone, 3).replace(' °F', '°F')}`, body: UIL_GUIDANCE[zone].summary, tone: dot(zone) }));
+
 export function LearnTab() {
   return (
     <>
-      <CapsLabel>What the zones mean (UIL Class 3)</CapsLabel>
-      <Rows>
-        {ZONE_ORDER.map((zone) => (
-          <ListRow detail={UIL_GUIDANCE[zone].summary} key={zone} label={ZONES[zone].label} trailing={<View style={[styles.dot, { backgroundColor: dot(zone) }]} />} value={zoneRange(zone, 3).replace(' °F', '°')} />
-        ))}
-      </Rows>
+      <SectionTitle title="What the zones mean" />
+      <Facts items={zoneFacts()} />
       <SectionTitle title="Warning signs" />
-      <Rows>
-        <ListRow detail="Heavy sweating, dizziness, headache, nausea, muscle cramps, feeling weak." label="Heat exhaustion" />
-        <ListRow detail="Confusion, slurred speech, collapse or not acting like yourself. This is an emergency." label="Heat stroke" />
-      </Rows>
+      <Facts items={[
+        { title: 'Heat exhaustion', body: 'Heavy sweating, dizziness, headache, nausea, muscle cramps, feeling weak.' },
+        { title: 'Heat stroke', body: 'Confusion, slurred speech, collapse or not acting like yourself. This is an emergency.', tone: Palette.emergency },
+      ]} />
       <SectionTitle title="What to do" />
-      <Rows>
-        <ListRow detail="Tell a coach or trainer right away. Get to shade and drink water." label="Feeling off" />
-        <ListRow detail="Call 911. Cool the athlete immediately, ideally in a cold-water tub, while help comes." label="Someone collapses" />
-      </Rows>
+      <Facts items={[
+        { title: 'Feeling off', body: 'Tell a coach or trainer right away. Get to shade and drink water.' },
+        { title: 'Someone collapses', body: 'Call 911. Cool them immediately, ideally in a cold-water tub, while help comes.', tone: Palette.emergency },
+      ]} />
     </>
   );
 }
@@ -243,29 +247,25 @@ export function ProtocolsTab() {
   return (
     <>
       <SectionTitle title="Emergency" />
-      <Rows>
-        <ListRow detail="Activate the emergency action plan and call 911." label="Collapse or confusion" valueTone={Palette.emergency} />
-        <ListRow detail="Cold-water immersion on site, then transport. Keep the tub ready in Yellow and above." label="Cool first, transport second" />
-        <ListRow detail="Stop activity, move to shade, remove equipment, give fluids, and monitor." label="Heat exhaustion" />
-      </Rows>
+      <Facts items={[
+        { title: 'Collapse or confusion', body: 'Activate the emergency action plan and call 911.', tone: Palette.emergency },
+        { title: 'Cool first, transport second', body: 'Cold-water immersion on site, then transport. Keep the tub ready in Yellow and above.' },
+        { title: 'Heat exhaustion', body: 'Stop activity, move to shade, remove equipment, give fluids, and monitor.' },
+      ]} />
       <SectionTitle title="UIL zones (Class 3)" />
-      <Rows>
-        {ZONE_ORDER.map((zone) => (
-          <ListRow detail={UIL_GUIDANCE[zone].summary} key={zone} label={ZONES[zone].label} trailing={<View style={[styles.dot, { backgroundColor: dot(zone) }]} />} value={zoneRange(zone, 3).replace(' °F', '°')} />
-        ))}
-      </Rows>
+      <Facts items={zoneFacts()} />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  speak: { backgroundColor: Palette.card, borderColor: Palette.coral, borderRadius: 18, borderWidth: 1, gap: 6, marginTop: 28, padding: 18 },
-  speakTitle: { color: Palette.ink, fontSize: 18, fontWeight: '700' },
-  speakBody: { color: Palette.inkMuted, fontSize: 15, lineHeight: 21 },
+  speak: { marginTop: 28 },
   bandHero: { alignItems: 'center', gap: 10, marginBottom: 24, marginTop: 8 },
   band: { height: 220, width: 220 },
   bandState: { color: Palette.ink, fontSize: 24, fontWeight: '700' },
   bandNote: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22, maxWidth: 330, textAlign: 'center' },
   dot: { borderRadius: 6, height: 12, width: 12 },
+  gapTop: { marginTop: 12 },
+  cards: { gap: 12 },
   empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22 },
 });

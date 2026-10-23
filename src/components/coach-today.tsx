@@ -10,7 +10,7 @@ import { Ring } from '@/components/ui/visuals';
 import { Palette } from '@/constants/theme';
 import { enter, swap } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
-import { recheckStatus, SOURCE_LABEL } from '@/services/practice-sessions';
+import { recheckStatus } from '@/services/practice-sessions';
 import { useTemperature } from '@/state/preferences';
 import { useCoachData, useNow, type SessionRole } from '@/state/team-session';
 
@@ -115,8 +115,7 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
               <View key={r.id} style={styles.row}>
                 <View style={[styles.dot, { backgroundColor: ZONES[r.zone].color === '#000000' ? '#8E8E93' : ZONES[r.zone].color }]} />
                 <View style={styles.rowCopy}>
-                  <Text style={styles.rowTitle}>{temp.value(r.wbgtF)}{temp.unit} · {ZONES[r.zone].label}</Text>
-                  <Text style={styles.rowMeta}>{r.measuredAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {SOURCE_LABEL[r.source]}</Text>
+                  <Text style={styles.rowTitle}>{temp.value(r.wbgtF)}{temp.unit} · {r.measuredAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
                 </View>
                 <Text style={[styles.rowState, { color: r.acknowledgedAt ? Palette.safe : Palette.inkMuted }]}>{r.acknowledgedAt ? 'Applied' : 'Pending'}</Text>
               </View>
@@ -134,8 +133,7 @@ function Metric({ children, label, sub }: { children: ReactNode; label: string; 
   return (
     <View style={styles.metric}>
       {children}
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricSub}>{sub}</Text>
+      <Text accessibilityHint={sub} style={styles.metricLabel}>{label}</Text>
     </View>
   );
 }
@@ -174,7 +172,6 @@ const styles = StyleSheet.create({
   metric: { alignItems: 'center', gap: 4, width: '32%' },
   ringValue: { color: Palette.ink, fontSize: 20, fontVariant: ['tabular-nums'], fontWeight: '700' },
   metricLabel: { color: Palette.ink, fontSize: 16, fontWeight: '600', marginTop: 10 },
-  metricSub: { color: Palette.inkMuted, fontSize: 14 },
   section: { color: Palette.ink, fontSize: 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 12, marginTop: 34 },
   cards: { gap: 12 },
   card: { backgroundColor: Palette.surface, borderRadius: 16, flexDirection: 'row', gap: 12, padding: 18 },
@@ -191,6 +188,5 @@ const styles = StyleSheet.create({
   dot: { borderRadius: 6, height: 12, width: 12 },
   rowCopy: { flex: 1, gap: 2 },
   rowTitle: { color: Palette.ink, fontSize: 16, fontWeight: '600' },
-  rowMeta: { color: Palette.inkMuted, fontSize: 13 },
   rowState: { fontSize: 13, fontWeight: '700' },
 });
