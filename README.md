@@ -50,6 +50,62 @@ We built HeatSense so a coach can enter the reading, see what UIL says to do abo
 | 🩺 | **Athletic trainers** | The same reading and plan the coach sees, plus a record of what was decided. A trainer workspace exists in the dashboard prototype. |
 | 🏃 | **Athletes** | Join their team with a code, set up a profile, and follow the team's practice session once approved. Health answers stay private to the athlete (see [Privacy & safety](#privacy--safety)). |
 
+## HeatSense at a glance
+
+```mermaid
+flowchart LR
+    subgraph Field["On the field"]
+        M["Handheld WBGT meter<br/>or weather station"]
+        B["HeatSense Band<br/>(in development)"]
+    end
+    subgraph App["HeatSense app"]
+        E["UIL heat engine<br/>reading → zone → rules"]
+        P["Practice record<br/>append-only readings"]
+        V["Vitals + recovery check"]
+    end
+    subgraph People["The team"]
+        C["Coach<br/>runs practice"]
+        T["Athletic trainer<br/>watches recovery"]
+        A["Athletes<br/>see the zone, wear the band"]
+    end
+    M -->|"coach enters reading"| E
+    E --> P
+    B -.->|"BLE (planned)"| V
+    P --> C
+    P --> T
+    P --> A
+    V --> C
+    V --> T
+    V --> A
+```
+
+| | |
+|---|---|
+| **Problem** | Texas schools must adjust practice for heat using a WBGT chart (UIL). On a hot field, that means a meter, a printed chart, a stopwatch and memory. Nothing records what was done. |
+| **What HeatSense does** | Turns one WBGT reading into the zone and the exact UIL rules, times the next recheck, keeps a tamper-proof record, and shows each athlete's recovery so staff can act early. |
+| **Who uses it** | Coaches (run the practice), athletic trainers (watch recovery), athletes (see the zone, wear the band). |
+| **Built with** | Expo / React Native (iOS, Android, web), Firebase Auth + Firestore on the free plan, security rules as the backend, an ESP32 wearable in development. |
+| **By the numbers** | ~13,900 lines of TypeScript, rules and tests · 44 backend tests on the emulator · 2 self-check suites (UIL engine, band simulator) · 3 role-specific apps · 0 servers to run |
+
+### A coach's practice day
+
+```mermaid
+journey
+    title A practice day with HeatSense
+    section Before practice
+      Take a WBGT reading on the field: 4: Coach
+      See the zone and the UIL rules: 5: Coach
+      Confirm the changes are applied: 5: Coach
+    section During practice
+      Recheck reminder fires on time: 5: Coach
+      Field moves from Yellow to Orange: 3: Coach
+      Slow recovery flagged for one athlete: 4: Coach, Trainer
+      Trainer checks in, shade and water: 5: Trainer, Athlete
+    section After practice
+      Share the practice record: 5: Coach
+      Athletes review the day's zones: 4: Athlete
+```
+
 ## Status at a glance
 
 We want to be clear about what is real and what is not yet.
@@ -62,10 +118,12 @@ We want to be clear about what is real and what is not yet.
 | 🟢 **Works today** | Coach creates a team and gets a six-digit invite code; an athlete or athletic trainer joins; coach approves | Enforced by `firebase/firestore.rules`, with no server code (free Firebase plan) |
 | 🟢 **Works today** | Athlete profile onboarding (profile → body → safety) | Profile saved to Firestore; health and contact answers are **not** saved in production yet |
 | 🟡 **In progress** | iOS Live Activity / Dynamic Island practice widget | Built, but it still shows the built-in **sample** reading |
-| 🟡 **In progress** | Dashboard overview | Its hero reading is still the sample from `src/lib/practice.ts`. Real readings live in the field check |
+| 🟢 **Works today** | Coach Home | Heat orb shows the session's latest real reading; rings for recheck, readings and applied guidance; alerts derived from the practice record |
+| 🟢 **Works today** | Three role-specific apps: coach (team-centred), athlete (their own band), athletic trainer (read-only staff) | See [Roles](#roles). Access is enforced in `firebase/firestore.rules` |
+| 🧪 **Simulated** | Band vitals for a demo team (heart rate, skin temperature, sweat, movement, recovery check) | `src/lib/band-simulator.ts`. Every screen labels it **SIMULATED BAND DATA**; on by default only in builds without Firebase |
 | 🔵 **Planned** | Custom (non-UIL) school heat policies | `src/lib/heat-policy.ts` has `CONFIGURED_POLICY = null` |
 | 🔵 **Planned** | Live sensor or weather-based WBGT | Today, every reading is typed in by a coach |
-| 🛠️ **In development** | HeatSense Band wearable | Pairing screen UI only. No firmware or Bluetooth code yet. See [HeatSense Band](#heatsense-band-hardware-in-development) |
+| 🛠️ **In development** | HeatSense Band wearable | Pairing flow in onboarding and a tested signal simulator. No firmware or Bluetooth code yet. See [HeatSense Band](#heatsense-band-hardware-in-development) |
 
 ## How it works
 
@@ -100,7 +158,26 @@ Some decisions we made on purpose:
 - **The server checks the math.** The app computes the zone, but `firebase/firestore.rules` has its own copy of the UIL thresholds. It recomputes the zone from `wbgtF` and the session's class, and rejects any reading whose zone doesn't match.
 - **Readings are append-only.** Once saved, a reading can't be edited or deleted. The only allowed change is the coach's one-time acknowledgment. Sessions can only be ended, never edited.
 - **Every reading records its source.** Each session stores the policy version (`uil-wbgt@2025-26`). Each reading stores the entered value and unit, the source, the time measured, and who recorded it.
-- **Tested both ways.** `scripts/check-uil-wbgt.ts` checks the classifier against the chart, including the zone boundaries. The emulator suite (`npm run test:invites`, 45/45 passing) covers invites, access rules, and session/reading rules.
+- **Tested both ways.** `scripts/check-uil-wbgt.ts` checks the classifier against the chart, including the zone boundaries. The emulator suite (`npm run test:invites`, 44/44 passing) covers invites, access rules, and session/reading rules.
+
+## Roles
+
+HeatSense is three apps in one, chosen on the role screen during onboarding. The coach's app is about the whole team; the athlete's is about themselves.
+
+| | Coach | Athletic trainer | Athlete |
+|---|---|---|---|
+| Joins a team by | Creating it (gets the invite code) | Entering the coach's code, then approval | Entering the coach's code, then approval |
+| Tabs | Plan · Team · **Home** · Alerts · Profile | Monitor · Athletes · **Home** · Protocols · Profile | Band · Sessions · **Home** · Learn · Profile |
+| Home | Heat orb with the latest reading, recheck/readings/applied rings, get-started cards, today's readings | Same orb and rings, read-only | Same orb, read-only, plus today's UIL rules and their athletic trainer |
+| Vitals | Team tab: every athlete's live vitals, tap for detail | Monitor tab: the same team view | Band tab: their own vitals in depth |
+| Can record readings | Yes | No (rules refuse) | No |
+| Can invite | Yes, shares the code | No | No, only enters a code |
+
+How each role finds its data (`src/state/team-session.ts`):
+
+- **Coach:** `teams` where `coachUid == uid`, then the team's open session in `teams/{id}/sessions` and its `readings`.
+- **Athlete and trainer:** their `teamMembers/{teamId}_{uid}` document with `status == 'active'`, then the same session and readings. The rules let active members read them and nothing more.
+- **Athletes see their trainer** through a query for the team's active `trainer` memberships, which the rules allow; they cannot list other athletes.
 
 ## Architecture
 
@@ -245,6 +322,36 @@ erDiagram
     }
 ```
 
+### Lifecycles
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "Team membership" as M {
+        [*] --> pending: athlete or trainer enters a live code
+        pending --> active: coach approves
+        pending --> declined: coach declines
+        declined --> pending: asks again with a live code
+        active --> [*]
+    }
+```
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "Practice session" as S {
+        [*] --> open: coach starts (venue, UIL class, recheck interval)
+        open --> open: reading added (zone checked by the rules)
+        open --> ended: coach ends practice
+        ended --> [*]
+    }
+    state "Field reading" as R {
+        [*] --> saved: append-only, cannot be edited or deleted
+        saved --> applied: coach acknowledges (once)
+        applied --> [*]
+    }
+```
+
 | Collection | Who can read it from the app | Who can write it |
 |---|---|---|
 | `teams` | The coach, and approved (active) members | The coach creates their own; edits only details and the active code |
@@ -258,6 +365,16 @@ erDiagram
 ## UIL WBGT zones
 
 HeatSense uses the same five zones as UIL: green, yellow, orange, red, and black. The numbers below come from the official UIL chart, and the same values appear in `src/lib/uil-wbgt.ts` and `firebase/firestore.rules`. ([UIL 2025–26 WBGT chart](https://www.uiltexas.org/files/athletics/25-26WBGTChart.png))
+
+```text
+WBGT °F   78    80    82    84    86    88    90    92    94
+          ├─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+Class 3   ░░░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓██████■■■■■■   green <82.0 · yellow 82.0–86.9 · orange 87.0–90.0 · red 90.1–92.0 · black ≥92.1
+Class 2   ░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓██████■■■■■■■■■■■■■   green <79.7 · yellow 79.7–84.6 · orange 84.7–87.6 · red 87.7–89.7 · black ≥89.8
+                            ▲
+          84 °F WBGT is Yellow in both classes
+          ░ green  ▒ yellow  ▓ orange  █ red  ■ black
+```
 
 > [!NOTE]
 > These values are **WBGT**, not air temperature or heat index. A 90°F afternoon is not the same as a 90°F WBGT reading.
@@ -294,7 +411,9 @@ The HeatSense Band is a screenless wearable that an athlete wears on the wrist o
 
 | | Item |
 |---|---|
-| ✅ Exists | Pairing screen UI (`src/app/pair-band.tsx`), simulated, reached from the athlete dashboard |
+| ✅ Exists | Pairing flow (`src/app/pair-band.tsx`): get ready → put on → pairing light → select → connect. Part of athlete onboarding and the athlete's Band tab. Search and connection are simulated |
+| ✅ Exists | Signal simulator (`src/lib/band-simulator.ts`) that produces the same signals the band is designed to send, with a self-check (`scripts/check-band-simulator.ts`) |
+| ✅ Exists | Vitals screens fed by the simulator: coach Team tab, trainer Monitor, athlete vitals detail (`src/app/athlete-vitals.tsx`), athlete Band tab |
 | ✅ Exists | The band as an optional part of the product design. The app is fully usable without it |
 | 🔵 Planned | Firmware for the ESP32 Nano (C++, Arduino framework, built with PlatformIO) |
 | 🔵 Planned | A BLE library in the app, for example `react-native-ble-plx` (needs a native build, not Expo Go) |
@@ -346,12 +465,43 @@ flowchart LR
     APP -.->|"BLE write: control"| MCU
 ```
 
+### Sensor signal chain
+
+What each sensor measures, how the firmware is planned to turn it into a number, and where that number ends up in the app. Sampling settings are **planned starting points**, to be tuned on the bench.
+
+| Signal | Sensor | Bus | Planned acquisition | Derived value | App field (`Vitals`) |
+|---|---|---|---|---|---|
+| Heart rate | MAX30102 (PPG, red + IR LEDs) | I2C `0x57` | 100 Hz, 4-sample averaging, IR channel | Beats per minute from peak-to-peak intervals over a ~8 s window; 0 when the signal is too poor | `heartRate` (bpm) |
+| Movement | MPU6050 (accelerometer ± gyro) | I2C `0x68` | ±8 g accelerometer at 50 Hz | Mean of \|a\| − 1 g over 1 s, scaled 0–100 against 2 g | `movement` (0–100) |
+| Sweat response | GSR module (two skin electrodes) | ESP32 ADC | 12-bit ADC (0–4095) at 10 Hz, 1 s average | Skin conductance in µS from the module's divider; a relative trend, not calibrated | `sweat` (µS) |
+| Skin temperature | **Not in the current parts list** | n/a | n/a | The MAX30102's die temperature tracks the chip, not the skin, so it isn't used. Adding a dedicated sensor (for example MAX30205, I2C `0x48`, ±0.1 °C) is planned | `skinTempF` (°F) |
+| Battery | LiPo via the board's ADC | ADC | Every 60 s | Percent from a voltage curve | `battery` (packet only) |
+
+> [!IMPORTANT]
+> The simulator already produces `skinTempF`, so the screens are ready for it, but the **current parts list cannot measure skin temperature**. Packet v2 below adds the field for when a skin sensor is added.
+
 ### Languages and tools
 
 | Side | Language | Tools | Status |
 |---|---|---|---|
 | Band firmware | C++ | Arduino framework on ESP32, built with PlatformIO | Planned, no code yet |
 | App | TypeScript | React Native / Expo, plus a BLE library such as `react-native-ble-plx` | Pairing UI exists; BLE layer planned |
+
+### Firmware main loop (planned)
+
+```mermaid
+stateDiagram-v2
+    [*] --> Boot
+    Boot --> Advertising: init I2C (MAX30102, MPU6050), ADC, BLE
+    Advertising --> Connected: phone connects
+    Connected --> Streaming: Control write "start"
+    Streaming --> Streaming: every interval: read sensors → build packet → notify
+    Streaming --> Connected: Control write "stop"
+    Connected --> Advertising: link lost
+    Streaming --> Advertising: link lost
+    Advertising --> Sleep: idle 10 min
+    Sleep --> Advertising: wrist motion (MPU6050 interrupt)
+```
 
 ### Bluetooth Low Energy design (draft)
 
@@ -369,11 +519,93 @@ flowchart LR
 | 1 | `sequence` | uint16 | Counts up by one per packet and wraps around. Gaps show dropped packets |
 | 3 | `timestamp` | uint32 | Seconds since the band started (the app maps this to wall-clock time) |
 | 7 | `heartRate` | uint8 | Beats per minute, 0 = no valid reading |
-| 8 | `motion` | uint16 | Movement magnitude from the MPU6050 (units TBD) |
+| 8 | `motion` | uint16 | Movement, 0–100 (see the signal chain above) |
 | 10 | `gsr` | uint16 | Raw GSR level from the ADC (relative trend, not calibrated) |
 | 12 | `battery` | uint8 | Battery percent, 0–100 |
 
 > This schema is a **draft**. Field sizes, units, and the interval will change once we test real hardware.
+
+**Draft v2** appends two fields (15 bytes, still one notification): `skinTemp` int16 at offset 13 (hundredths of a °C, `0x7FFF` = no sensor) and `flags` uint8 at offset 15 (bit 0: on-wrist contact, bit 1: charging).
+
+**Planned decode in the app.** Packets become the same `Vitals` shape the simulator produces today, so the screens don't change when real data arrives:
+
+```ts
+// Planned: src/lib/band-packet.ts. Not in the repo yet.
+function decodePacket(bytes: DataView): Vitals | null {
+  const version = bytes.getUint8(0);
+  if (version !== 1 && version !== 2) return null;        // unknown format: reject, don't guess
+  const heartRate = bytes.getUint8(7);                     // 0 = no valid reading
+  const motion = bytes.getUint16(8, true);
+  const gsr = bytes.getUint16(10, true);
+  const skinC = version >= 2 ? bytes.getInt16(13, true) : 0x7fff;
+  return {
+    heartRate,
+    movement: Math.min(100, motion),
+    sweat: gsrToMicrosiemens(gsr),                         // raw ADC → µS, calibrated per module on the bench
+    skinTempF: skinC === 0x7fff ? NaN : (skinC / 100) * 1.8 + 32,
+    phase: 'work',                                         // set from the practice plan, not the band
+  };
+}
+```
+
+### Recovery check
+
+The one judgment the vitals screens make, in `recoveryStatus()` (`src/lib/band-simulator.ts`). It runs only during a rest block:
+
+1. Wait until the athlete is at least **4 minutes into the rest block**. Earlier than that, the status is always "usual".
+2. Take **peak**, the heart rate at the end of the work block, and **floor**, the expected resting level for the conditions: resting HR + 30 + 12 × heat load (0 in Green up to 1 in Black).
+3. Recovery = (peak − current HR) ÷ (peak − floor). Below **0.6** (less than 60% of the way back), the status is **"watch"**, which shows "Slow recovery" on the vitals screens and an alert for the coach.
+
+It's a prompt to check on someone, **not a diagnosis**, and the screens say so.
+
+```mermaid
+flowchart TD
+    A["New vitals sample"] --> B{"In a rest block?"}
+    B -->|no| U["Usual range"]
+    B -->|yes| C{"≥ 4 min into rest?"}
+    C -->|no| U
+    C -->|yes| D["recovery = (peak − HR now) ÷ (peak − floor)"]
+    D --> E{"recovery ≥ 0.6?"}
+    E -->|yes| U
+    E -->|no| W["Slow recovery<br/>shown on vitals + alert to coach"]
+```
+
+```text
+ bpm
+ 170 ┤
+ 163 ┤○○  ○○○○○ ○○ ○○○○○○ ○                            ○○○○○○ ○○ ○
+ 155 ┤●●◐◐●●●●●◐●●◐●●●●●●◐ ○○○                    ○◐○◐◐●●●●●●◐●●◐●
+ 148 ┤                    ●   ○                  ○● ●
+ 141 ┤                         ○○○              ◐●
+ 134 ┤                     ●●     ○○○○○○       ○
+ 126 ┤                                  ○○○○   ●          ← Marcus still ~120 bpm
+ 119 ┤                       ●              ○○○              six minutes into rest:
+ 112 ┤                        ●●              ●              flagged "slow recovery"
+ 105 ┤                          ●●●●  ●
+  97 ┤                              ●● ●●●●●●●            ← Jordan back near resting
+  90 ┤
+     └─────────────────────────────────────────────────────────────
+      ◄──── work (20 min) ────►◄──── rest (10 min) ────►◄─ work ──►
+      ● Jordan (typical recovery)   ○ Marcus (slow recovery)   ◐ both
+```
+*Generated from `src/lib/band-simulator.ts` (Yellow zone, one 20/10 work-rest cycle). Simulated data.*
+
+### Band simulator (stands in for the firmware)
+
+Until there's firmware, `src/lib/band-simulator.ts` produces each demo athlete's signals from the practice rhythm and the field's heat. It's deterministic (no randomness), so the demo is repeatable and testable. With *h* = heat load (0 Green → 1 Black) and *t* in minutes:
+
+| Signal | Model |
+|---|---|
+| Heart rate, work block | floor + (peak − floor) · (1 − e^(−t/1.2)) |
+| Heart rate, rest block | floor + (peak − floor) · e^(−0.55 · r² · t), where *r* is the athlete's recovery speed (1 = typical) |
+| Peak / floor | peak = 150 + 18h + 8(1 − r); floor = resting HR + 30 + 12h |
+| Skin temperature | 91.5 + 3h + min(1.6, t/40) + 0.4 in work (°F) |
+| Sweat | 2 + 9h + min(4, t/15) + 1.5 in work (µS) |
+| Movement | 72 in work, 12 in rest, ± a small smooth wobble |
+
+The live demo team (`src/state/demo-team.ts`) runs practice time at **10×**, so a full 20/10 work-rest cycle plays out in 3 minutes, and one athlete (*r* = 0.45) is built to recover slowly so the "slow recovery" path can be seen. `scripts/check-band-simulator.ts` checks that every signal stays in a plausible range in every zone, that work raises heart rate and rest lowers it, that heat costs something, and that the slow athlete (and only that athlete) gets flagged.
+
+When firmware exists, `decodePacket()` replaces the simulator as the source of `Vitals`, and nothing downstream changes.
 
 ### Data flow (planned)
 
@@ -427,39 +659,58 @@ flowchart TD
 
     Role -->|coach| SetupCoach["/setup/coach"]
     Role -->|athlete| SetupAthlete["/setup/athlete<br/>enter team code"]
+    Role -->|athletic trainer| SetupTrainer["/setup/trainer<br/>enter team code"]
 
-    SetupCoach --> TeamCreate["/team/create"]
+    SetupCoach --> TeamCreate["/team/create<br/>incl. UIL class"]
     TeamCreate --> TeamInvite["/team/invite<br/>share 6-digit code"]
-    TeamInvite --> Location["/team/practice-location"]
-    Location --> Dash
+    TeamInvite --> Ready["/ready<br/>what to expect"]
+    SetupTrainer --> Ready
+    Ready --> Dash
 
     SetupAthlete --> Profile["/athlete/profile"]
     Profile --> Body["/athlete/body"]
-    Body --> Safety["/athlete/safety"]
-    Safety --> Done["/athlete/done"]
+    Body --> Safety["/athlete/safety<br/>+ consent"]
+    Safety --> Pair["/pair-band<br/>simulated pairing"]
+    Pair --> Alerts["/notifications<br/>heat alerts"]
+    Alerts --> Done["/athlete/done"]
     Done --> Dash
 
     Dash["/dashboard<br/>role + tab"]
-    Dash --> FieldCheck["Field check sheet<br/>session, readings, history"]
-    Dash --> Detail["/detail<br/>athlete, alert, session"]
+    Dash --> FieldCheck["Practice sheet<br/>session, readings, history"]
+    Dash --> Vitals["/athlete-vitals<br/>one athlete's vitals"]
     Dash --> PlanEditor["/plan-editor<br/>coach"]
-    Dash --> PairBand["/pair-band<br/>athlete · simulated UI"]
+    Dash --> Detail["/detail"]
 ```
 
-The field check opens as a sheet over the dashboard, not as its own route. `/ready` (role-specific setup after the intro screens) and the redirect shims `/setup/[role]` and `/team/[mode]` also lead to `/dashboard`.
+The practice sheet opens over the dashboard rather than as its own route.
 
 ## Screenshots
 
-<!-- UPDATE AFTER BUILD -->
-| Welcome | Sign in | Coach dashboard | Team invite |
-|---|---|---|---|
-| <!-- screenshot: welcome --> | <!-- screenshot: sign-in --> | <!-- screenshot: coach-dashboard --> | <!-- screenshot: team-invite --> |
+Captured from the iOS Simulator (iPhone 17 Pro Max). Dashboard screens run in sample mode; vitals are **simulated** and labelled as such in the app.
 
-| Field check | Athlete onboarding | Live Activity | Session history |
-|---|---|---|---|
-| <!-- screenshot: field-check --> | <!-- screenshot: athlete-onboarding --> | <!-- screenshot: live-activity --> | <!-- screenshot: session-history --> |
+| Welcome | Coach Home | Plan | Alerts |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/readme/welcome.png" width="200" alt="Welcome screen with the HeatSense Band"> | <img src="docs/screenshots/readme/home.png" width="200" alt="Coach Home: heat orb showing 84°F Yellow zone with recheck, readings and applied rings"> | <img src="docs/screenshots/readme/plan.png" width="200" alt="Plan tab: Yellow zone with UIL rules as tiles"> | <img src="docs/screenshots/readme/alerts.png" width="200" alt="Alerts: guidance not applied and a slow-recovery alert"> |
+| Read the heat. Ready the team. | Latest reading, recheck timer, applied guidance | Today's UIL rules for the zone | Built from the practice record |
+
+| Team vitals | Athlete vitals | Athlete Band tab | Band pairing |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/readme/team-vitals.png" width="200" alt="Coach Team tab with live simulated vitals for four athletes"> | <img src="docs/screenshots/readme/athlete-vitals.png" width="200" alt="Marcus Lee's vitals: 125 bpm on break, slow recovery flagged"> | <img src="docs/screenshots/readme/athlete-band.png" width="200" alt="Athlete's own Band tab with heart rate and signal tiles"> | <img src="docs/screenshots/readme/pairing.png" width="200" alt="Pairing flow: Pair your HeatSense Band"> |
+| Every athlete at a glance (coach) | Slow recovery caught during a break | The athlete's own view | Part of athlete onboarding |
 
 ## Repository map
+
+```mermaid
+pie showData
+    title Lines of code by area (measured)
+    "Screens (src/app)" : 4174
+    "Components (src/components)" : 6724
+    "Logic (src/lib)" : 529
+    "Firebase services (src/services)" : 815
+    "State (src/state)" : 659
+    "Security rules (firebase)" : 267
+    "Tests and checks (scripts)" : 701
+```
 
 ```text
 heatsense/
@@ -467,7 +718,7 @@ heatsense/
 ├── app.json                     Expo app config (name, icons, plugins, iOS/Android settings). Expo reads it from the root
 ├── tsconfig.json                TypeScript settings and the @/ path alias. Editors and tsc look for it at the root
 ├── eslint.config.js             ESLint flat config (eslint-config-expo). ESLint finds it at the root
-├── firebase.json                Firebase CLI config: emulators, functions, and where the rules live. The CLI requires it at the root
+├── firebase.json                Firebase CLI config: emulators and where the rules live. The CLI requires it at the root
 ├── .firebaserc                  Which Firebase project the CLI deploys to. Lives next to firebase.json
 ├── .env.example                 Template for local Firebase / Google sign-in settings
 ├── LICENSE                      MIT license
@@ -478,24 +729,34 @@ heatsense/
 │   │   ├── index.tsx            Launch: intro steps, or redirect to /welcome or /role
 │   │   ├── welcome.tsx          First screen for signed-out users
 │   │   ├── sign-in.tsx          Google sign-in
-│   │   ├── role.tsx             Pick coach or athlete
+│   │   ├── role.tsx             Pick coach, athlete or athletic trainer
 │   │   ├── ready.tsx            Role-specific setup after the intro
-│   │   ├── setup/               coach.tsx, athlete.tsx (join with a code), [role].tsx (redirect shim)
+│   │   ├── setup/               coach.tsx, athlete.tsx and trainer.tsx (join with a code), [role].tsx (redirect shim)
 │   │   ├── team/                create.tsx, invite.tsx (show/share code), practice-location.tsx, [mode].tsx (redirect)
 │   │   ├── athlete/             Athlete onboarding: profile → body → safety → done
+│   │   ├── notifications.tsx    Heat-alert step of athlete onboarding
+│   │   ├── athlete-vitals.tsx   One athlete's band vitals (live chart, tiles, recovery check)
 │   │   ├── dashboard.tsx        Tabbed workspace for each role
 │   │   ├── detail.tsx           Drill-downs: athlete, alert, session
 │   │   ├── plan-editor.tsx      Coach practice-plan editor
-│   │   └── pair-band.tsx        HeatSense Band pairing screen (UI only, pairing is simulated)
+│   │   └── pair-band.tsx        HeatSense Band pairing flow (simulated search and connection)
 │   ├── components/              UI building blocks
 │   │   ├── field-check-sheet.tsx  Core loop: reading → guidance → acknowledge → recheck → history → share
 │   │   ├── dashboard-*.tsx      Dashboard shell, role content, and empty/offline/alert states
-│   │   ├── coach/               Coach workspace, WBGT gauge, recheck clock
+│   │   ├── coach-today.tsx      Home: heat orb, recheck/readings/applied rings, get-started cards
+│   │   ├── heat-orb.tsx         The zone-tinted animated orb
+│   │   ├── coach-tabs.tsx       Plan, Team (roster + live vitals) and Profile tabs
+│   │   ├── alerts-tab.tsx       Alerts derived from the practice record and slow-recovery checks
+│   │   ├── role-tabs.tsx        Athlete (Band, Sessions, Learn) and trainer (Monitor, Protocols) tabs
+│   │   ├── vitals.tsx           Vitals rows, detail view and the SIMULATED tag
+│   │   ├── whoop-ui.tsx         Dashboard kit: section titles, caps labels, rows, metric tiles
 │   │   ├── ui/                  Shared lists, charts, buttons, visuals
 │   │   └── onboarding-*.tsx     Onboarding visuals, fields, and controls
 │   ├── lib/                     Pure logic with no UI
 │   │   ├── uil-wbgt.ts          UIL WBGT classifier: thresholds, guidance, °C→°F, zone ranges
 │   │   ├── heat-policy.ts       Policy types for custom school policies (none configured yet)
+│   │   ├── band-simulator.ts    Band signal model and recovery check (stands in for firmware)
+│   │   ├── motion.ts            Motion tokens (durations, easing, Reduce Motion helpers)
 │   │   ├── practice.ts          Zone colors and the built-in sample reading
 │   │   └── practice-activity.ts Starts and updates the iOS Live Activity
 │   ├── services/                Talking to Firebase
@@ -505,7 +766,8 @@ heatsense/
 │   │   ├── team-invites.ts      Teams, invite codes, join requests and approvals, straight to Firestore
 │   │   ├── team-roster.ts       Reads the team's members
 │   │   └── athlete-*.ts         Athlete profile, health, and safety data (health storage off in production)
-│   ├── state/                   App state: auth session, onboarding, preferences, practice day and plans
+│   ├── state/                   App state: auth session, onboarding, preferences, practice plans,
+│   │                            team-session.ts (each role's team + live session), demo-team.ts (live simulated vitals)
 │   ├── hooks/                   use-coach-team, use-roster
 │   ├── constants/               Theme, colors, type scale, sports list, dev flags
 │   ├── widgets/                 PracticeActivity.tsx: iOS Live Activity / Dynamic Island layout
@@ -517,7 +779,8 @@ heatsense/
 │
 ├── scripts/                     Developer scripts
 │   ├── check-uil-wbgt.ts        Self-check for the UIL classifier (node scripts/check-uil-wbgt.ts)
-│   ├── test-team-invites.mjs    Emulator test suite: invites, access rules, sessions, readings
+│   ├── check-band-simulator.ts  Self-check for the band signal model and recovery check
+│   ├── test-team-invites.mjs    Emulator test suite: teams, codes, joining, roles, sessions, readings (44 tests)
 │   ├── check-auth-config.mjs    Checks Google sign-in configuration (npm run check:auth)
 │   ├── check-coach-countdown.mjs Checks the recheck countdown math
 │   ├── capture-screen.sh        Screenshot one route on the iOS Simulator
@@ -540,22 +803,59 @@ heatsense/
 
 ## Tech stack
 
-| Layer | What we use |
-|---|---|
-| App framework | [Expo](https://expo.dev/) SDK 57, React Native 0.86, React 19.2, TypeScript 6 |
-| Navigation | [Expo Router](https://docs.expo.dev/router/introduction/) (file-based routes, typed routes) |
-| Auth | Firebase Auth with Google sign-in (`@react-native-google-signin/google-signin` on native) |
-| Database | Cloud Firestore with field-level validation and a server-side UIL zone check in security rules |
-| Backend | None: the free Firebase plan. Firestore security rules enforce every write |
-| iOS extras | Live Activity / Dynamic Island widget via `expo-widgets` |
-| Location | `expo-location` and `expo-maps` for the team's practice location |
-| UI & motion | React Native Reanimated 4 (with Reduce Motion support), Skia, React Native SVG, Gifted Charts, Atkinson Hyperlegible Next |
-| Testing | Firebase emulators + `scripts/test-team-invites.mjs`; `scripts/check-uil-wbgt.ts` |
-| Band (planned) | C++ on ESP32 with the Arduino framework and PlatformIO; a BLE library such as `react-native-ble-plx` in the app |
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  HeatSense Band (in development)   ESP32 · MAX30102 · MPU6050 · GSR    │
+│  C++ / Arduino / PlatformIO        BLE GATT peripheral                 │
+└──────────────────────────────────▲──────────────────────────────────────┘
+                                   │ BLE notify (planned)
+┌──────────────────────────────────┴──────────────────────────────────────┐
+│  App (iOS · Android · web)          Expo SDK 57 · React Native 0.86    │
+│  Screens       Expo Router (file-based, typed routes)                  │
+│  Logic         UIL heat engine · band simulator · recovery check       │
+│  Motion        Reanimated 4 · React Native SVG                         │
+│  iOS extras    Live Activity / Dynamic Island (expo-widgets)           │
+└──────────────────────────────────▲──────────────────────────────────────┘
+                                   │ Firebase JS SDK (Auth + Firestore)
+┌──────────────────────────────────┴──────────────────────────────────────┐
+│  Firebase (free Spark plan, no servers)                                │
+│  Auth: Google sign-in     Firestore: teams, codes, sessions, readings  │
+│  Security rules: the backend. They validate every write.               │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+| Layer | Technology | Version | Why we chose it |
+|---|---|---|---|
+| Language | TypeScript | ~6.0 | One typed language for screens, logic, services and tests |
+| App framework | Expo + React Native | Expo ~57.0, RN 0.86.3, React 19.2.3 | One codebase for iOS, Android and web; native builds when we need native modules |
+| Navigation | Expo Router | ~57.0 | File-based routes: each screen is a file in `src/app/` |
+| Auth | Firebase Auth + Google Sign-In | firebase ^12.4, google-signin ^16.1 | Students and staff already have school Google accounts |
+| Database | Cloud Firestore | (firebase ^12.4) | Live listeners keep every phone on the team in sync |
+| Backend | Firestore security rules | rules v2 | Free plan, nothing to host; the rules validate every field and recompute every zone |
+| Motion | React Native Reanimated | 4.5.1 | Runs animations on the UI thread; built-in Reduce Motion support |
+| Graphics | React Native SVG, Skia | 15.15, ^2.6 | Heat orb, rings and charts |
+| iOS extras | expo-widgets | ~57.0 | Practice Live Activity / Dynamic Island |
+| Device | expo-location, expo-maps, expo-crypto | ~57.0 | Practice location; secure random invite codes |
+| Testing | Firebase Emulator Suite, firebase-admin, Node test scripts | firebase-admin ^14.5 | 44 backend tests against the real rules; self-checks for the heat engine and band simulator |
+| Hardware (planned) | ESP32, C++, Arduino framework, PlatformIO, react-native-ble-plx | n/a | Low-cost BLE microcontroller with standard I2C sensors |
 
 ## Getting started
 
-**You need:** Node.js 22.13 or newer, npm, and Xcode with an iOS Simulator (or Android Studio, or just a browser for web).
+These steps take a fresh Mac from nothing to HeatSense running in the iPhone Simulator. Each step says what you should see, so you know it worked.
+
+### 1. Install the tools (one time)
+
+| Tool | Version | How to check | Where to get it |
+|---|---|---|---|
+| macOS + Xcode | Xcode 26 or newer, with an iOS Simulator | `xcodebuild -version` | Mac App Store → Xcode. Open it once and let it install components |
+| Node.js | 22.13 or newer | `node --version` | [nodejs.org](https://nodejs.org) (LTS) |
+| npm | comes with Node | `npm --version` | — |
+| Git | any recent | `git --version` | Comes with Xcode's command line tools |
+| Java | 21 or newer (only for the backend tests) | `java -version` | [adoptium.net](https://adoptium.net) |
+
+Android Studio is only needed for Android; a browser is enough for the web build.
+
+### 2. Get the code
 
 ```bash
 git clone https://github.com/s-k-28/heatsense.git
@@ -563,29 +863,77 @@ cd heatsense
 npm install
 ```
 
-Copy `.env.example` to `.env` and fill in your Firebase project values. [docs/engineering/auth-setup.md](docs/engineering/auth-setup.md) walks through Google sign-in setup.
+✅ You should see `added … packages` and no `ERR!` lines. Warnings are fine.
+
+### 3. Connect it to Firebase
+
+1. Copy the template: `cp .env.example .env`
+2. The values in `.env.example` already point at the team's Firebase project (`heatsense-aa3c8`). To use your own project, replace them with the values from **Firebase console → Project settings → Your apps**:
+
+| Variable | What it is |
+|---|---|
+| `EXPO_PUBLIC_FIREBASE_API_KEY` | Identifies the app to Firebase (public by design; the security rules protect the data) |
+| `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN` | `<project-id>.firebaseapp.com` |
+| `EXPO_PUBLIC_FIREBASE_PROJECT_ID` | The Firebase project ID |
+| `EXPO_PUBLIC_FIREBASE_APP_ID` | The web app's ID |
+| `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | The project number |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Google Sign-In OAuth client (web) |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Google Sign-In OAuth client (iOS) |
+
+`.env` is gitignored, so it never gets committed. Google Sign-In setup is explained step by step in [docs/engineering/auth-setup.md](docs/engineering/auth-setup.md).
+
+> [!TIP]
+> No `.env` at all? The app still runs and shows clearly labelled **sample data**, which is handy for reviewing screens.
+
+### 4. Run the app
 
 ```bash
-npm run ios        # build and run on the iOS Simulator
-npm run android    # build and run on an Android emulator
-npm run web        # run in the browser
+npm run ios        # builds and opens the iPhone Simulator (first build: about 5–10 minutes)
+npm run android    # Android emulator
+npm run web        # web browser
 ```
 
-### Run the backend locally
+✅ The Simulator opens on the welcome screen with the HeatSense band. Edits to the code reload instantly while it runs.
+
+### 5. Run the backend tests
 
 ```bash
-npm run emulators     # starts the Auth + Firestore emulators
-npm run test:invites  # runs the emulator test suite (invites, access rules, sessions, readings)
+npm run test:invites
 ```
+
+This starts local Firebase emulators (Auth + Firestore), runs 44 tests against the real security rules, and shuts them down.
+
+✅ The last line reads `44 passed, 0 failed`.
+
+### 6. Deploy the security rules (team leads only)
+
+```bash
+npx -y firebase-tools@14 login                 # one time, opens a browser
+npx -y firebase-tools@14 deploy --only firestore:rules,firestore:indexes --project heatsense-aa3c8
+```
+
+✅ `Deploy complete!` Everything runs on the free Spark plan; there are no Cloud Functions to deploy.
 
 ### Checks before pushing
 
 ```bash
-npx tsc --noEmit
-npm run lint
-node scripts/check-uil-wbgt.ts
-npm run test:invites
+npx tsc --noEmit                          # type errors → should print nothing
+npm run lint                              # style and React rules → 0 errors
+node scripts/check-uil-wbgt.ts            # heat engine → "all checks passed"
+node scripts/check-band-simulator.ts      # band model → "all checks passed"
+npm run test:invites                      # backend rules → "44 passed, 0 failed"
 ```
+
+### Troubleshooting
+
+| What you see | Why | Fix |
+|---|---|---|
+| "HeatSense isn't connected to its server" | No `.env`, or Metro started before you made it | Create `.env` (step 3), then restart with `npx expo start --clear` |
+| Changes don't show up in the Simulator | The dev server stalled | Stop it, run `npx expo start --dev-client --clear`, relaunch the app |
+| Google sign-in fails | OAuth client IDs don't match the project | Follow [auth-setup.md](docs/engineering/auth-setup.md) |
+| `test:invites` says Java not found | The emulators need Java 21+ | Install Java (step 1) |
+| `firebase deploy` says "Failed to authenticate" | The CLI isn't logged in on this computer | Run `npx -y firebase-tools@14 login` in your own Terminal (it needs a browser) |
+| A write fails with `permission-denied` | The security rules refused it, on purpose | Check the rules for that collection in `firebase/firestore.rules` |
 
 ## Privacy & safety
 
@@ -598,6 +946,21 @@ npm run test:invites
 
 ## Roadmap
 
+```mermaid
+gantt
+    title Congressional App Challenge 2026 (TX04)
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+    section Build
+    Heat engine, practice record, rules     :done, a1, 2026-10-18, 3d
+    Roles, trainer, simulated vitals, motion :done, a2, 2026-10-21, 2d
+    Free-plan backend, docs                  :done, a3, 2026-10-22, 1d
+    section Submit
+    Demo video and screenshots               :active, b1, 2026-10-23, 2d
+    Internal target to submit                :milestone, m1, 2026-10-23, 0d
+    Official deadline (earliest)             :crit, milestone, m2, 2026-10-26, 0d
+```
+
 **Contest build**
 - [x] Manual WBGT entry with units, source, and measurement time
 - [x] UIL class selection, with the policy version saved on each session
@@ -605,19 +968,24 @@ npm run test:invites
 - [x] Server-side zone check and append-only readings in Firestore rules
 - [x] Coach acknowledgment, recheck countdown, and overdue state
 - [x] Session history synced to the team through Firestore, with a shareable text record
-- [ ] Replace the sample reading in the dashboard overview and Live Activity with the session's latest reading <!-- UPDATE AFTER BUILD -->
+- [x] Coach Home shows the session's latest reading (heat orb, rings, alerts)
+- [x] Coach, athlete and athletic-trainer roles, enforced by the rules
+- [x] Simulated band vitals with a recovery check, clearly labelled
+- [x] Free-plan backend: rules-only, no Cloud Functions
+- [ ] Replace the sample reading in the Live Activity with the session's latest reading
 - [ ] Have a local coach or athletic trainer review how we interpret the UIL chart
 
 **Next**
 - [ ] Weather-based WBGT estimates as a second, clearly labeled source
 - [ ] Parent/guardian consent flow and privacy notice, then turn health storage on
 - [ ] Android release setup and testing on real devices
-- [ ] App Check enforcement for the invite functions
+- [ ] Rate limiting or App Check for invite-code lookups (needs a server, so the Blaze plan)
 
 **HeatSense Band: in development**
 - [ ] Bench-test each sensor (MAX30102, MPU6050, GSR) on the ESP32 Nano
 - [ ] Firmware v0: read sensors, build v1 packets, BLE notify
-- [ ] App BLE layer: scan, pair, subscribe, parse, reconnect
+- [ ] Add a skin-temperature sensor (for example MAX30205) and packet v2
+- [ ] App BLE layer: scan, pair, subscribe, `decodePacket()`, reconnect, replacing the simulator as the `Vitals` source
 - [ ] Consent flow before any band data is shared
 - [ ] On-body testing against a reference heart-rate device
 
