@@ -9,7 +9,8 @@
     "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/images/heatsense-app-icon.png",
-      "bundleIdentifier": "com.s-k-28.heatsense-app"
+      "bundleIdentifier": "com.s-k-28.heatsense-app",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -33,6 +34,7 @@
         }
       ],
       "expo-image",
+      "expo-apple-authentication",
       "expo-web-browser"
     ],
     "experiments": {

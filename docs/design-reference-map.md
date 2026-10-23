@@ -6,6 +6,7 @@ HeatSense adapts interaction and information patterns from these references. It 
 
 | HeatSense area | Reference | Pattern carried forward | HeatSense adaptation |
 | --- | --- | --- | --- |
+| First-run welcome | [Fitness onboarding](https://www.pinterest.com/pin/223983781463832340/) and [minimal weather illustration](https://www.pinterest.com/pin/211174974073715/) | One oversized message, a single abstract weather motif, and actions anchored low | A human-free sun-and-field contour mark, one plain-language promise, and a single setup action; no looping ambient motion |
 | Athlete overview and signal details | [Smart Fitness Wearable Assistant](https://www.pinterest.com/pin/4362930884633155/) | Warm background, compact metric modules, one dominant visualization per detail screen | Personal WBGT context, HR recovery, skin trend, sweat trend, and exertion; wristband remains optional |
 | WBGT status | [Air pollution screens](https://www.pinterest.com/pin/169659110952554883/) and [original Dribbble source](https://dribbble.com/shots/14795971-Air-pollution-screens) | Oversized risk number, semantic gradient, secondary values along the lower edge | WBGT number, UIL risk zone, work/rest interval, water interval, equipment guidance |
 | Athlete trend interpretation | [Fitness Training Load](https://www.pinterest.com/pin/839147343102897010/) | One dominant trend, short status label, plain-language interpretation | Personal-baseline trend with movement context; never presented as a diagnosis |
