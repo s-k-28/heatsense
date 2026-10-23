@@ -2,7 +2,7 @@ import { practiceDaysSince } from '@/lib/acclimatization';
 import type { RosterMember } from '@/services/team-roster';
 import { useDemoTeam } from '@/state/demo-team';
 import { usePastSessions } from '@/state/past-sessions';
-import { useCoachData, useNow, useRoster, useTeamVitals, type SessionRole } from '@/state/team-session';
+import { useCoachData, useNow, useRoster, useTeamVitals, vitalsHistory, type SessionRole } from '@/state/team-session';
 
 // One list of athletes for the trainer and coach screens, whatever the source: the simulated demo
 // team in sample mode, or the real roster joined with each athlete's latest band sample.
@@ -13,7 +13,7 @@ export type AthleteLive = {
   heartRate: number;
   skinTempF: number | null;
   sweat: number | null;
-  /** Recent heart rate, oldest first; just the latest value for a real band until history syncs. */
+  /** Recent heart rate, oldest first: the simulator's history, or the samples this phone has seen. */
   history: number[];
   status: 'usual' | 'watch';
   phase: 'work' | 'rest' | null;
@@ -75,7 +75,7 @@ export function useAthletes(role: SessionRole = 'trainer'): { athletes: AthleteV
         heartRate: r.heartRate,
         skinTempF: r.skinTempF,
         sweat: r.sweat,
-        history: [r.heartRate],
+        history: data?.session ? vitalsHistory(data.session.id, m.userId).slice(-20).map((v) => v.heartRate) : [r.heartRate],
         status: r.recovery === 'watch' ? 'watch' : 'usual',
         phase: null,
         updatedAt: r.updatedAt,

@@ -3,13 +3,20 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { BarChart, LineChart } from '@/components/ui/charts';
 import { Face, Palette } from '@/constants/theme';
-import type { Vitals } from '@/lib/band-simulator';
 import { HISTORY_STEP_SEC } from '@/state/demo-team';
 
 // The band's five signals, each drawn the way it's best read, like an activity's analysis page:
 // heart rate as a trend plus time in zones, skin temperature against its usual range, sweat as
-// bars, movement as a work/rest strip, blood oxygen on a gauge. History covers the last 30 minutes.
+// bars, movement as a work/rest strip, blood oxygen on a gauge. One sample per 30 s; a signal the
+// band didn't send has no card rather than an invented value.
 
+/** One band sample: the simulator's always has every signal, a real band's may not. */
+export type VitalSample = { heartRate: number; skinTempF: number | null; sweat: number | null; movement: number; spo2: number | null };
+type Vitals = VitalSample;
+const complete = (values: (number | null)[]): values is number[] => values.length > 1 && values.every((v) => v !== null);
+
+/** How far back the history reaches, as an axis label. */
+const since = (count: number) => `${Math.max(1, Math.round(((count - 1) * HISTORY_STEP_SEC) / 60))} min ago`;
 const avg = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / Math.max(1, values.length);
 const one = (v: number) => v.toFixed(1);
 const whole = (v: number) => String(Math.round(v));
@@ -58,7 +65,7 @@ function HeartRate({ history }: { history: Vitals[] }) {
   return (
     <VitalCard now={whole(hr.at(-1)!)} title="Heart rate" unit=" bpm">
       <Figures items={[{ label: 'Avg', value: whole(avg(hr)) }, { label: 'Max', value: whole(Math.max(...hr)) }, { label: 'Min', value: whole(Math.min(...hr)) }]} />
-      <LineChart labels={['30 min ago', 'Now']} max={190} min={60} summary={`Heart rate over 30 minutes, average ${whole(avg(hr))}`} tone={Palette.coral} values={hr} />
+      <LineChart labels={[since(hr.length), 'Now']} max={190} min={60} summary={`Heart rate since ${since(hr.length)}, average ${whole(avg(hr))}`} tone={Palette.coral} values={hr} />
       <Text style={styles.sub}>Time in zones</Text>
       {ZONES.map((zone, i) => (
         <View accessible accessibilityLabel={`${zone.label} zone, ${Math.round(share[i] * 100)} percent`} key={zone.name} style={styles.zoneRow}>
@@ -74,26 +81,24 @@ function HeartRate({ history }: { history: Vitals[] }) {
 
 const USUAL_SKIN: [number, number] = [91, 95];
 
-function SkinTemp({ history }: { history: Vitals[] }) {
-  const t = history.map((v) => v.skinTempF);
+function SkinTemp({ t }: { t: number[] }) {
   const change = t.at(-1)! - t[0];
   return (
     <VitalCard now={one(t.at(-1)!)} title="Skin temp" unit="°F">
-      <Figures items={[{ label: 'Avg', value: one(avg(t)), unit: '°' }, { label: 'Max', value: one(Math.max(...t)), unit: '°' }, { label: '30 min', value: `${change >= 0 ? '+' : ''}${one(change)}`, unit: '°' }]} />
-      <LineChart band={USUAL_SKIN} format={(v) => v.toFixed(0)} labels={['30 min ago', 'Now']} max={97} min={89} summary={`Skin temperature over 30 minutes, now ${one(t.at(-1)!)} degrees`} tone="#FFB347" values={t} />
+      <Figures items={[{ label: 'Avg', value: one(avg(t)), unit: '°' }, { label: 'Max', value: one(Math.max(...t)), unit: '°' }, { label: 'Change', value: `${change >= 0 ? '+' : ''}${one(change)}`, unit: '°' }]} />
+      <LineChart band={USUAL_SKIN} format={(v) => v.toFixed(0)} labels={[since(t.length), 'Now']} max={97} min={89} summary={`Skin temperature since ${since(t.length)}, now ${one(t.at(-1)!)} degrees`} tone="#FFB347" values={t} />
       <View style={styles.legend}><View style={styles.legendSwatch} /><Text style={styles.legendText}>Usual range, {USUAL_SKIN[0]}–{USUAL_SKIN[1]}°F</Text></View>
     </VitalCard>
   );
 }
 
-function Sweat({ history }: { history: Vitals[] }) {
-  const s = history.map((v) => v.sweat);
+function Sweat({ s }: { s: number[] }) {
   // 90-second buckets, so the bars show the sweat response building through work and easing in rest.
   const buckets = Array.from({ length: Math.ceil(s.length / 3) }, (_, i) => avg(s.slice(i * 3, i * 3 + 3)));
   return (
     <VitalCard now={one(s.at(-1)!)} title="Sweat (GSR)" unit=" µS">
       <Figures items={[{ label: 'Avg', value: one(avg(s)) }, { label: 'Peak', value: one(Math.max(...s)) }, { label: 'Low', value: one(Math.min(...s)) }]} />
-      <BarChart labels={['30 min ago', 'Now']} summary={`Sweat level in 90-second steps, now ${one(s.at(-1)!)} microsiemens`} tone="#64D2FF" values={buckets} />
+      <BarChart labels={[since(s.length), 'Now']} summary={`Sweat level in 90-second steps, now ${one(s.at(-1)!)} microsiemens`} tone="#64D2FF" values={buckets} />
     </VitalCard>
   );
 }
@@ -104,18 +109,17 @@ function Movement({ history }: { history: Vitals[] }) {
   return (
     <VitalCard now={whole(m.at(-1)!)} title="Movement" unit="%">
       <Figures items={[{ label: 'Active', value: String(Math.round(active / 60)), unit: ' min' }, { label: 'Resting', value: String(Math.round((m.length * HISTORY_STEP_SEC - active) / 60)), unit: ' min' }, { label: 'Avg', value: whole(avg(m)), unit: '%' }]} />
-      <View accessible accessibilityLabel={`Work and rest over 30 minutes: ${Math.round(active / 60)} minutes active`} style={styles.strip}>
+      <View accessible accessibilityLabel={`Work and rest since ${since(m.length)}: ${Math.round(active / 60)} minutes active`} style={styles.strip}>
         {m.map((v, i) => <View key={i} style={[styles.stripCell, { backgroundColor: v >= 40 ? Palette.coral : v >= 20 ? 'rgba(255,177,131,0.45)' : 'rgba(235,235,245,0.14)' }]} />)}
       </View>
-      <View style={styles.stripAxis}><Text style={styles.legendText}>30 min ago</Text><Text style={styles.legendText}>Now</Text></View>
+      <View style={styles.stripAxis}><Text style={styles.legendText}>{since(m.length)}</Text><Text style={styles.legendText}>Now</Text></View>
     </VitalCard>
   );
 }
 
 const GAUGE: [number, number] = [90, 100];
 
-function BloodOxygen({ history }: { history: Vitals[] }) {
-  const o = history.map((v) => v.spo2);
+function BloodOxygen({ o }: { o: number[] }) {
   const lo = Math.min(...o);
   const hi = Math.max(...o);
   const at = (v: number) => `${((v - GAUGE[0]) / (GAUGE[1] - GAUGE[0])) * 100}%` as const;
@@ -138,13 +142,16 @@ function BloodOxygen({ history }: { history: Vitals[] }) {
 
 /** All five signals for one athlete, one card each. */
 export function VitalCards({ history }: { history: Vitals[] }) {
+  const skin = history.map((v) => v.skinTempF);
+  const sweat = history.map((v) => v.sweat);
+  const spo2 = history.map((v) => v.spo2 ?? null);
   return (
     <View style={styles.cards}>
       <HeartRate history={history} />
-      <SkinTemp history={history} />
-      <Sweat history={history} />
+      {complete(skin) ? <SkinTemp t={skin} /> : null}
+      {complete(sweat) ? <Sweat s={sweat} /> : null}
       <Movement history={history} />
-      <BloodOxygen history={history} />
+      {complete(spo2) ? <BloodOxygen o={spo2} /> : null}
     </View>
   );
 }

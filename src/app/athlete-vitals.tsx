@@ -5,12 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { AcclimatizationCard } from '@/components/acclimatization-card';
+import { VitalCards } from '@/components/vital-cards';
 import { SimulatedTag, VitalsDetail } from '@/components/vitals';
 import { ListRow, Rows } from '@/components/whoop-ui';
 import { Face, MaxContentWidth, Palette } from '@/constants/theme';
 import { useAthletes } from '@/state/athletes';
 import { useDemoTeam } from '@/state/demo-team';
-import { useCoachData, useRoster, useTeamVitals, type SessionRole } from '@/state/team-session';
+import { useCoachData, useRoster, useTeamVitals, vitalsHistory, type SessionRole } from '@/state/team-session';
 
 // One athlete's band vitals, opened from the coach's Team tab or the trainer's Monitor.
 
@@ -24,6 +25,8 @@ export default function AthleteVitalsScreen() {
   // A real athlete: their name from the roster and their latest band sample from this practice.
   const roster = useRoster(data?.teamId ?? null);
   const live = useTeamVitals(data?.session ?? null).find((r) => r.athleteUid === id) ?? null;
+  // Every sample this phone has seen for them this practice, for the trend cards.
+  const trend = data?.session && id ? vitalsHistory(data.session.id, id).map((r) => ({ ...r, spo2: r.spo2 ?? null })) : [];
   const athlete = useAthletes(role === 'trainer' ? 'trainer' : 'coach').athletes.find((a) => a.id === id) ?? null;
   const name = member ? member.athlete.name : roster?.find((m) => m.userId === id)?.displayName ?? 'Athlete';
 
@@ -54,6 +57,7 @@ export default function AthleteVitalsScreen() {
                 <Text style={styles.liveUnit}>bpm · {live.recovery === 'watch' ? 'slow recovery' : 'usual range'}</Text>
                 <Text style={styles.liveWhen}>Updated {live.updatedAt ? live.updatedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : 'just now'}</Text>
               </View>
+              {trend.length > 1 ? <View style={styles.accl}><VitalCards history={trend} /></View> : null}
               <Rows>
                 <ListRow label="Skin temp" value={live.skinTempF ? `${live.skinTempF.toFixed(1)}°F` : '--'} />
                 <ListRow label="Sweat (GSR)" value={live.sweat ? `${live.sweat.toFixed(1)} µS` : '--'} />
