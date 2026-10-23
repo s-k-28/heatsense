@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { SampleTag } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
+import { CoachPalette, CoachRadius } from '@/constants/coach-theme';
 import { ACCLIMATIZATION_DAYS } from '@/lib/acclimatization';
 import { enter, settle } from '@/lib/motion';
 import { useAthletes, type AthleteView } from '@/state/athletes';
@@ -49,7 +50,7 @@ function BandMark({ a }: { a: AthleteView }) {
   );
 }
 
-export function TrainerAthletes({ role = 'trainer', embedded = false }: { role?: 'trainer' | 'coach'; embedded?: boolean }) {
+export function TrainerAthletes({ role = 'trainer', embedded = false, onShare }: { role?: 'trainer' | 'coach'; embedded?: boolean; onShare?: () => void }) {
   const { athletes, pending, sample, loading } = useAthletes(role);
   const reduced = useReducedMotion();
   const [query, setQuery] = useState('');
@@ -58,12 +59,20 @@ export function TrainerAthletes({ role = 'trainer', embedded = false }: { role?:
     .filter(FILTERS[filter].match)
     .filter((a) => a.name.toLowerCase().includes(query.trim().toLowerCase()))
     .sort((x, y) => x.acclimatizationDay - y.acclimatizationDay || x.name.localeCompare(y.name));
+  const filters = (Object.keys(FILTERS) as Filter[]).map((key) => {
+    const on = filter === key;
+    return (
+      <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} key={key} onPress={() => setFilter(key)} style={[styles.chip, role === 'coach' && styles.coachChip, on && styles.chipOn, role === 'coach' && on && styles.coachChipOn]}>
+        <Text style={[styles.chipText, role === 'coach' && styles.coachChipText, on && styles.chipTextOn, role === 'coach' && on && styles.coachChipTextOn]}>{FILTERS[key].label} {athletes.filter(FILTERS[key].match).length}</Text>
+      </Pressable>
+    );
+  });
 
   return (
     <>
       {sample && !embedded ? <SampleTag /> : null}
-      <View style={styles.search}>
-        <Svg fill="none" height={18} stroke={Palette.inkMuted} strokeLinecap="round" strokeWidth={2} viewBox="0 0 24 24" width={18}><Circle cx={11} cy={11} r={7} /><Path d="m20 20-3.5-3.5" /></Svg>
+      <View style={[styles.search, role === 'coach' && styles.coachSearch]}>
+        <Svg fill="none" height={18} stroke={role === 'coach' ? CoachPalette.muted : Palette.inkMuted} strokeLinecap="round" strokeWidth={2} viewBox="0 0 24 24" width={18}><Circle cx={11} cy={11} r={7} /><Path d="m20 20-3.5-3.5" /></Svg>
         <TextInput
           accessibilityLabel="Search athletes"
           autoCorrect={false}
@@ -71,36 +80,30 @@ export function TrainerAthletes({ role = 'trainer', embedded = false }: { role?:
           placeholder="Search athletes"
           placeholderTextColor={Palette.inkFaint}
           returnKeyType="search"
-          style={styles.searchInput}
+          style={[styles.searchInput, role === 'coach' && styles.coachSearchInput]}
           value={query}
         />
       </View>
 
-      <View style={styles.chips}>
-        {(Object.keys(FILTERS) as Filter[]).map((key) => {
-          const on = filter === key;
-          return (
-            <Pressable accessibilityRole="button" accessibilityState={{ selected: on }} key={key} onPress={() => setFilter(key)} style={[styles.chip, on && styles.chipOn]}>
-              <Text style={[styles.chipText, on && styles.chipTextOn]}>{FILTERS[key].label} {athletes.filter(FILTERS[key].match).length}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {role === 'coach' ? <ScrollView contentContainerStyle={[styles.chips, styles.coachChips]} horizontal showsHorizontalScrollIndicator={false}>{filters}</ScrollView> : <View style={styles.chips}>{filters}</View>}
 
       {pending.length && !embedded ? <Text style={styles.pending}>{pending.length} waiting for your coach to approve</Text> : null}
 
       {loading ? (
         <Text style={styles.empty}>Loading the roster…</Text>
       ) : shown.length === 0 ? (
-        <Text style={styles.empty}>{athletes.length ? 'No athletes match.' : role === 'coach' ? 'No athletes yet. Share your team code to invite them.' : 'No athletes yet. Once your coach approves athletes, they appear here.'}</Text>
+        <View style={role === 'coach' ? styles.coachEmpty : undefined}>
+          <Text style={[styles.empty, role === 'coach' && styles.coachEmptyText]}>{athletes.length ? 'No athletes match.' : role === 'coach' ? 'Your roster is ready for its first athlete.' : 'No athletes yet. Once your coach approves athletes, they appear here.'}</Text>
+          {role === 'coach' && !athletes.length && onShare ? <Pressable accessibilityRole="button" onPress={onShare} style={({ pressed }) => [styles.coachShare, pressed && styles.pressed]}><Text style={styles.coachShareText}>Share code</Text></Pressable> : null}
+        </View>
       ) : (
-        <View style={styles.list}>
+        <View style={[styles.list, role === 'coach' && styles.coachList]}>
           {shown.map((a, i) => (
             <Animated.View entering={enter(i, reduced)} key={a.id} layout={settle(reduced)}>
               {i > 0 ? <View style={styles.divider} /> : null}
-              <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-                <View style={styles.avatar}><Text style={styles.avatarText}>{initials(a.name)}</Text></View>
-                <Text numberOfLines={1} style={styles.name}>{a.name}</Text>
+              <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })} style={({ pressed }) => [styles.row, role === 'coach' && styles.coachRow, pressed && styles.pressed]}>
+                <View style={[styles.avatar, role === 'coach' && styles.coachAvatar]}><Text style={styles.avatarText}>{initials(a.name)}</Text></View>
+                <Text numberOfLines={1} style={[styles.name, role === 'coach' && styles.coachName]}>{a.name}</Text>
                 <AcclimatizationPill day={a.acclimatizationDay} />
                 <BandMark a={a} />
               </Pressable>
@@ -132,4 +135,19 @@ const styles = StyleSheet.create({
   pill: { alignItems: 'center', borderRadius: 999, borderWidth: 1, flexDirection: 'row', gap: 4, paddingHorizontal: 10, paddingVertical: 4 },
   pillText: { fontSize: 13, fontWeight: '700' },
   band: { alignItems: 'center', justifyContent: 'center', width: 26 },
+  coachSearch: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.pill, minHeight: 52, paddingHorizontal: 18 },
+  coachSearchInput: { color: CoachPalette.text, fontWeight: '600' },
+  coachChips: { flexWrap: 'nowrap', paddingRight: 16 },
+  coachChip: { backgroundColor: CoachPalette.surface, borderColor: 'transparent', paddingHorizontal: 16, paddingVertical: 10 },
+  coachChipOn: { backgroundColor: CoachPalette.text },
+  coachChipText: { color: CoachPalette.textSecondary },
+  coachChipTextOn: { color: CoachPalette.canvas },
+  coachEmpty: { alignItems: 'flex-start', backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, marginTop: 14, padding: 22 },
+  coachEmptyText: { color: CoachPalette.muted, marginTop: 0 },
+  coachShare: { backgroundColor: CoachPalette.peach, borderRadius: CoachRadius.pill, marginTop: 16, paddingHorizontal: 18, paddingVertical: 12 },
+  coachShareText: { color: CoachPalette.peachInk, fontSize: 15, fontWeight: '800' },
+  coachList: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card },
+  coachRow: { minHeight: 72, paddingHorizontal: 18 },
+  coachAvatar: { backgroundColor: CoachPalette.interactive, borderRadius: 22, height: 44, width: 44 },
+  coachName: { color: CoachPalette.text, fontSize: 18, fontWeight: '700' },
 });
