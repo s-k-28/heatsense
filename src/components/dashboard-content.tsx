@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { createContext, useContext } from 'react';
 import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 
-import { LargeTitle, type DashboardRole } from '@/components/dashboard-shell';
+import { CoachLargeTitle, LargeTitle, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
 import { AlertsTab } from '@/components/alerts-tab';
 import { PlanTab, TeamTab } from '@/components/coach-tabs';
@@ -73,10 +73,10 @@ export function DashboardContent({ onNavigate, role, tab }: { onNavigate?: (tab:
 
 function CoachContent({ tab }: { tab: string }) {
   const go = useContext(NavContext);
-  if (tab === 'plan') return <><LargeTitle title="Plan" /><PlanTab /></>;
-  if (tab === 'team') return <><LargeTitle title="Team" /><TeamTab /></>;
-  if (tab === 'alerts') return <><LargeTitle title="Alerts" /><AlertsTab onNavigate={go} /></>;
-  if (tab === 'profile') return <><LargeTitle title="Profile" /><ProfileTab role="Coach" /></>;
+  if (tab === 'plan') return <><CoachLargeTitle title="Plan" /><PlanTab /></>;
+  if (tab === 'team') return <><CoachLargeTitle title="Team" /><TeamTab /></>;
+  if (tab === 'alerts') return <><CoachLargeTitle title="Alerts" /><AlertsTab onNavigate={go} /></>;
+  if (tab === 'profile') return <><CoachLargeTitle title="Profile" /><ProfileTab role="Coach" /></>;
   return <CoachHome />;
 }
 
@@ -106,7 +106,6 @@ function CoachHome() {
   const { draft } = useTeam();
   return (
     <>
-      <LargeTitle title="Today" />
       <CoachToday onInvite={() => shareTeamCode(draft)} />
     </>
   );

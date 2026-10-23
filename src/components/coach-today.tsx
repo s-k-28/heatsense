@@ -1,4 +1,7 @@
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { CoachPalette, CoachRadius, CoachType } from '@/constants/coach-theme';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -11,7 +14,7 @@ import { ReadingsTimeline } from '@/components/readings-timeline';
 import { ActionButton } from '@/components/ui/action-button';
 import { SampleTag } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
-import { swap } from '@/lib/motion';
+import { enter, swap } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { recheckStatus } from '@/services/practice-sessions';
 import { useTemperature } from '@/state/preferences';
@@ -62,6 +65,100 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach', teamPra
       </View>
       {children}
     </>;
+  }
+
+  if (role === 'coach') {
+    return (
+      <>
+        <Text accessibilityRole="header" style={styles.coachPageTitle}>Today</Text>
+        {data?.sample ? <SampleTag /> : null}
+        <Animated.View entering={enter(0, reduced)} style={styles.coachHero}>
+          <Image accessibilityIgnoresInvertColors contentFit="cover" source={require('@/assets/images/sign-in-on-field.jpg')} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={['rgba(5,7,8,0.16)', 'rgba(5,7,8,0.54)', 'rgba(5,7,8,0.96)']} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
+          <View style={styles.coachHeroCopy}>
+            <Text style={styles.coachEyebrow}>{session ? 'TODAY’S PRACTICE' : 'COACH DASHBOARD'}</Text>
+            {latest ? (
+              <>
+                <Text style={styles.coachHeroValue}>{temp.value(latest.wbgtF)}<Text style={styles.coachHeroUnit}>{temp.unit}</Text></Text>
+                <Text style={[styles.coachHeroZone, { color: ZONES[latest.zone].text }]}>{ZONES[latest.zone].label}</Text>
+                <Text style={styles.coachHeroMeta}>WBGT measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.coachHeroTitle}>{data ? 'Ready when you are.' : 'Loading practice…'}</Text>
+                <Text style={styles.coachHeroMeta}>{!data ? 'Loading your team’s practice…' : session ? 'Take the first field reading.' : 'Start practice and check field conditions.'}</Text>
+              </>
+            )}
+            {canRecord ? (
+              <ActionButton disabled={!data} label={action} onPress={() => setSheet(true)} style={styles.coachCta} />
+            ) : null}
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={enter(1, reduced)} style={styles.coachQuickGrid}>
+          <View style={styles.coachQuickCard}>
+            <Text style={styles.coachQuickLabel}>NEXT READING</Text>
+            <Text style={[styles.coachQuickValue, recheck?.overdue && { color: Palette.emergency }]}>{recheck ? (recheck.overdue ? 'Late' : `${Math.ceil(recheck.msLeft / 60_000)} min`) : '—'}</Text>
+          </View>
+          <View style={styles.coachQuickCard}>
+            <Text style={styles.coachQuickLabel}>TEAM STATUS</Text>
+            <Text style={styles.coachQuickValue}>{!data ? 'Loading…' : total ? `${acked}/${total} applied` : 'No readings'}</Text>
+          </View>
+        </Animated.View>
+
+        <Text accessibilityRole="header" style={styles.coachSection}>Today’s practice</Text>
+        <Animated.View entering={enter(2, reduced)} style={styles.coachSurface}>
+          <View style={styles.coachPracticeRow}>
+            <View>
+              <Text style={styles.coachCardTitle}>{!data ? 'Loading practice…' : session ? 'Practice in progress' : 'No active practice'}</Text>
+              <Text style={styles.coachBody}>{!data ? 'Looking for your team’s latest reading.' : latest ? `${ZONES[latest.zone].label} guidance is based on the latest field reading.` : 'Field guidance appears after a real WBGT reading.'}</Text>
+            </View>
+            {latest ? <View accessibilityElementsHidden style={styles.coachScale}>{(['green', 'yellow', 'orange', 'red', 'black'] as Zone[]).map((key) => <View key={key} style={[styles.coachScaleStep, { backgroundColor: key === 'black' ? '#8E8E93' : ZONES[key].color, opacity: zone === key ? 1 : 0.25 }]} />)}</View> : null}
+          </View>
+        </Animated.View>
+
+        {onInvite ? <>
+        <Text accessibilityRole="header" style={styles.coachSection}>Team</Text>
+        <Animated.View entering={enter(3, reduced)} style={styles.coachSurface}>
+          <Text style={styles.coachCardTitle}>Keep everyone connected</Text>
+          <Text style={styles.coachBody}>Share the team code so athletes can join your roster.</Text>
+<ActionButton disabled={!data} label="Share team code" onPress={onInvite} style={styles.coachSecondary} variant="secondary" />
+        </Animated.View>
+
+        </> : null}
+
+        {recheck?.overdue || (latest && !latest.acknowledgedAt) ? (
+          <>
+            <Text accessibilityRole="header" style={styles.coachSection}>Important alert</Text>
+            <View style={styles.coachAlert}>
+              <View style={[styles.coachAlertEdge, { backgroundColor: recheck?.overdue ? Palette.emergency : Palette.warning }]} />
+              <View style={styles.coachAlertCopy}>
+                <Text style={styles.coachCardTitle}>{recheck?.overdue ? 'Field reading overdue' : 'Guidance needs confirmation'}</Text>
+                <Text style={styles.coachBody}>{recheck?.overdue ? `This practice rechecks every ${session?.recheckMinutes ?? '—'} minutes.` : 'Apply the current UIL adjustments to today’s practice.'}</Text>
+                <ActionButton label="Open practice" onPress={() => setSheet(true)} style={styles.coachSecondary} variant="secondary" />
+              </View>
+            </View>
+          </>
+        ) : null}
+
+        {total > 0 && session ? (
+          <>
+            <Text accessibilityRole="header" style={styles.coachSection}>Today’s readings</Text>
+            <View style={styles.coachSurface}>
+              <ReadingsTimeline now={now} readings={data?.readings ?? []} startedAt={session.startedAt} temp={temp} uilClass={session.uilClass} />
+            </View>
+          </>
+        ) : null}
+
+        <Text accessibilityRole="header" style={styles.coachSection}>Heat history</Text>
+          {history.status === 'error' ? <>
+            <Text accessibilityLiveRegion="polite" style={styles.detailCopy}>Practice history couldn’t load.</Text>
+            <ActionButton label="Retry history" onPress={history.retry} variant="text" />
+          </> : team.status === 'loading' || history.status === 'loading' || past === null ? <Text style={styles.detailCopy}>Loading practice history…</Text> : <HeatHistory onOpenSession={({ session }) => router.push({ pathname: '/practice-record', params: { role, teamId: session.teamId, id: session.id, ...(data?.sample ? { sample: '1' } : {}) } })} past={past} temp={temp} today={todayPeak} />}
+        {children}
+        {canRecord ? <FieldCheckSheet onClose={() => setSheet(false)} visible={sheet} /> : null}
+      </>
+    );
   }
 
   return (
@@ -190,4 +287,32 @@ const baseStyles = StyleSheet.create({
   teamLink: { alignItems: 'center', borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', marginTop: 18, minHeight: 52 },
   panel: { backgroundColor: Palette.surface, borderRadius: 16, padding: 16 },
   section: { color: Palette.ink, fontSize: 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 12, marginTop: 34 },
+  coachHero: { borderRadius: CoachRadius.card, minHeight: 430, overflow: 'hidden', position: 'relative' },
+  coachPageTitle: { color: CoachPalette.text, ...CoachType.page, marginBottom: 18, marginTop: 8 },
+  coachHeroCopy: { flex: 1, justifyContent: 'flex-end', padding: 24 },
+  coachEyebrow: { color: CoachPalette.textSecondary, fontSize: 13, fontWeight: '700', letterSpacing: 1.2, marginBottom: 10 },
+  coachHeroValue: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 92, lineHeight: 94 },
+  coachHeroUnit: { color: CoachPalette.muted, fontFamily: Face.label, fontSize: 29 },
+  coachHeroZone: { fontSize: 22, fontWeight: '800', marginBottom: 4 },
+  coachHeroTitle: { color: CoachPalette.text, fontSize: 38, fontWeight: '800', letterSpacing: -1.2, lineHeight: 41, maxWidth: 300 },
+  coachHeroMeta: { color: CoachPalette.textSecondary, ...CoachType.body, marginTop: 4 },
+  coachCta: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: CoachPalette.peach, borderRadius: CoachRadius.pill, justifyContent: 'center', marginTop: 22, minHeight: 54, paddingHorizontal: 24 },
+  coachCtaText: { color: CoachPalette.peachInk, fontSize: 16, fontWeight: '800' },
+  coachPressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
+  coachQuickGrid: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  coachQuickCard: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.panel, flex: 1, minHeight: 112, padding: 18 },
+  coachQuickLabel: { color: CoachPalette.muted, fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
+  coachQuickValue: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 28, lineHeight: 32, marginTop: 12 },
+  coachSection: { color: CoachPalette.text, ...CoachType.section, marginBottom: 12, marginTop: 32 },
+  coachSurface: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, padding: 22 },
+  coachPracticeRow: { gap: 16 },
+  coachCardTitle: { color: CoachPalette.text, ...CoachType.card },
+  coachBody: { color: CoachPalette.muted, ...CoachType.body, marginTop: 6 },
+  coachSecondary: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: CoachPalette.interactive, borderRadius: CoachRadius.pill, justifyContent: 'center', marginTop: 18, minHeight: 46, paddingHorizontal: 20 },
+  coachSecondaryText: { color: CoachPalette.text, fontSize: 15, fontWeight: '700' },
+  coachAlert: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, flexDirection: 'row', overflow: 'hidden' },
+  coachAlertEdge: { width: 5 },
+  coachAlertCopy: { flex: 1, padding: 22 },
+  coachScale: { flexDirection: 'row', gap: 4 },
+  coachScaleStep: { flex: 1, height: 6, borderRadius: 3 },
 });

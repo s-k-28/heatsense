@@ -3,7 +3,7 @@ import { File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { signOut, updateProfile } from 'firebase/auth';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
@@ -15,6 +15,7 @@ import { Segmented } from '@/components/motion/segmented';
 import { ActionButton } from '@/components/ui/action-button';
 import { CapsLabel, ListRow, PersonGlyph, Rows, SampleTag } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
+import { CoachPalette, CoachRadius, CoachType } from '@/constants/coach-theme';
 import { EASE_OUT } from '@/lib/motion-engine';
 import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_SOURCE_URL } from '@/lib/uil-wbgt';
@@ -70,11 +71,12 @@ function Pencil() {
   return <Svg fill="none" height={14} stroke="#101416" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} viewBox="0 0 24 24" width={14}><Path d="M4 20h4L19 9l-4-4L4 16z" /></Svg>;
 }
 
-function Header({ role }: { role: Role }) {
+function Header({ role, team = null, coach = false }: { role: Role; team?: string | null; coach?: boolean }) {
   const styles = useAthleteStyles(baseStyles);
   const { user } = useAuthSession();
   const { photoUri, profileName } = usePreferences();
   const profileOwner = user?.uid ?? (firebaseAuth ? null : 'local-demo');
+  const since = user?.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString([], { month: 'long', year: 'numeric' }) : null;
   const realName = profileName?.trim() || user?.displayName?.trim() || null;
   const name = realName ?? 'Add your name';
   const initials = realName ? realName.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase() : null;
@@ -113,24 +115,25 @@ function Header({ role }: { role: Role }) {
   };
 
   return (
-    <View style={styles.header}>
-      <Pressable accessibilityHint="Changes your profile picture" accessibilityLabel="Profile picture" accessibilityRole="button" onPress={choosePhoto} style={({ pressed }) => [styles.avatarWrap, pressed && styles.pressed]}>
-        {photoUri ? <Image accessibilityIgnoresInvertColors contentFit="cover" source={{ uri: photoUri }} style={styles.avatar} /> : <View style={styles.avatar}>{initials ? <Text style={styles.avatarText}>{initials}</Text> : <PersonGlyph />}</View>}
+    <View style={[styles.header, coach && styles.coachHeader]}>
+      <Pressable accessibilityHint="Changes your profile picture" accessibilityLabel="Profile picture" accessibilityRole="button" onPress={choosePhoto} style={({ pressed }) => [styles.avatarWrap, coach && styles.coachAvatarWrap, pressed && styles.pressed]}>
+        {photoUri ? <Image accessibilityIgnoresInvertColors contentFit="cover" source={{ uri: photoUri }} style={[styles.avatar, coach && styles.coachAvatar]} /> : <View style={[styles.avatar, coach && styles.coachAvatar]}>{initials ? <Text style={[styles.avatarText, coach && styles.coachAvatarText]}>{initials}</Text> : <PersonGlyph />}</View>}
         <View style={styles.avatarBadge}><Pencil /></View>
       </Pressable>
-      <View style={styles.identity}>
+      <View style={[styles.identity, coach && styles.coachIdentity]}>
         <View style={styles.nameLine}>
-          <Text style={[styles.name, !realName && styles.namePlaceholder]}>{name}</Text>
+          <Text style={[styles.name, coach && styles.coachName, !realName && styles.namePlaceholder]}>{name}</Text>
           <ActionButton accessibilityLabel="Edit your name" accessibilityHint="Changes the name shown to your team" label="Edit" onPress={rename} style={styles.editAction} variant="text" />
         </View>
-        <Text style={styles.meta}>{role}</Text>
+        <Text style={[styles.meta, coach && styles.coachMeta]}>{role}{coach && team ? ` · ${team}` : ''}</Text>
+        {coach && since ? <Text style={styles.coachSince}>Member since {since}</Text> : null}
       </View>
     </View>
   );
 }
 
 /** Summarizes the available records. A capped history cannot establish all-time totals or trends. */
-function Season({ team, waiting }: { team: ReturnType<typeof useCoachDataState>; waiting: boolean }) {
+function Season({ team, waiting, coach = false }: { team: ReturnType<typeof useCoachDataState>; waiting: boolean; coach?: boolean }) {
   const styles = useAthleteStyles(baseStyles);
   const sample = Boolean(team.data?.sample);
   const history = usePastSessionsState(team.data?.teamId ?? null, sample, RECORD_LIMIT);
@@ -144,9 +147,9 @@ function Season({ team, waiting }: { team: ReturnType<typeof useCoachDataState>;
   const hours = (list: typeof current) => list.reduce((sum, p) => sum + ((p.session.endedAt ?? p.session.startedAt).getTime() - p.session.startedAt.getTime()), 0) / 3_600_000;
   const hottest = current.reduce<{ wbgtF: number; zone: Zone } | null>((hot, p) => (p.peak && (!hot || p.peak.wbgtF > hot.wbgtF) ? p.peak : hot), null);
   return (
-    <View style={styles.season}>
+    <View style={[styles.season, coach && styles.coachSeason]}>
       <View style={styles.seasonHead}>
-        <Text accessibilityRole="header" style={styles.sectionTitle}>Practice record</Text>
+        <Text accessibilityRole="header" style={[styles.sectionTitle, coach && styles.coachCardTitle]}>Practice record</Text>
         <Segmented itemWidth={64} onChange={setPeriod} options={(Object.keys(PERIOD_DAYS) as Period[]).map((key) => ({ key, label: key }))} size="sm" value={period} />
       </View>
       {team.status === 'ready' && history.status === 'ready' ? <Text style={styles.recordNote}>{`Based on up to ${RECORD_LIMIT} recent saved practices.`}</Text> : null}
@@ -155,22 +158,22 @@ function Season({ team, waiting }: { team: ReturnType<typeof useCoachDataState>;
         <Text accessibilityRole="alert" style={styles.empty}>Couldn’t load your team’s practice records.</Text>
         <ActionButton label="Try again" onPress={team.retry} variant="secondary" />
       </View> : team.status === 'loading' ? <Text style={styles.empty}>Loading your team…</Text>
-        : team.status === 'no-team' ? <Text style={styles.empty}>{waiting ? 'Practice records become available after your coach approves your team request.' : 'No team linked. Join or create a team to view its practice records.'}</Text>
+        : team.status === 'no-team' ? <Text style={styles.empty}>{waiting ? 'Practice records become available after your coach approves your team request.' : coach ? 'Create a team to save practice records.' : 'Join a team to view its saved practices.'}</Text>
           : history.status === 'error' ? <View style={styles.recordState}>
             <Text accessibilityRole="alert" style={styles.empty}>Couldn’t load saved practices.</Text>
             <ActionButton label="Try again" onPress={history.retry} variant="secondary" />
           </View> : past === null ? <Text style={styles.empty}>Loading practice records…</Text> : current.length ? (
         <>
           <View accessible accessibilityLabel={`${current.length} ${current.length === 1 ? 'practice' : 'practices'} in the available records`} style={styles.practiceSummary}>
-            <Text style={styles.practiceCount}>{current.length}<Text style={styles.practiceUnit}> {current.length === 1 ? 'practice' : 'practices'}</Text></Text>
+            <Text style={[styles.practiceCount, coach && styles.coachPracticeCount]}>{current.length}<Text style={styles.practiceUnit}> {current.length === 1 ? 'practice' : 'practices'}</Text></Text>
           </View>
-          <View accessible style={styles.seasonRow}>
-            <Text style={styles.seasonLabel}>Practice time</Text>
-            <Text style={styles.seasonValue}>{hours(current).toFixed(1)}<Text style={styles.zoneLabel}> hr</Text></Text>
+          <View accessible style={[styles.seasonRow, coach && styles.coachSeasonRow]}>
+            <Text style={[styles.seasonLabel, coach && styles.coachSeasonLabel]}>Practice time</Text>
+            <Text style={[styles.seasonValue, coach && styles.coachSeasonValue]}>{hours(current).toFixed(1)}<Text style={styles.zoneLabel}> hr</Text></Text>
           </View>
-          <View accessible style={styles.seasonRow}>
-            <Text style={styles.seasonLabel}>Peak WBGT</Text>
-            <Text style={[styles.seasonValue, hottest ? { color: tone(hottest.zone) } : null]}>
+          <View accessible style={[styles.seasonRow, coach && styles.coachSeasonRow]}>
+            <Text style={[styles.seasonLabel, coach && styles.coachSeasonLabel]}>Peak WBGT</Text>
+            <Text style={[styles.seasonValue, coach && styles.coachSeasonValue, hottest ? { color: tone(hottest.zone) } : null]}>
               {hottest ? `${temp.value(hottest.wbgtF)}${temp.unit}` : '--'}
               {hottest ? <Text style={styles.zoneLabel}>  {ZONES[hottest.zone].label.replace(' zone', '')}</Text> : null}
             </Text>
@@ -211,6 +214,17 @@ function BandDevice() {
 
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (next: boolean) => void }) {
   return <ListRow label={label} trailing={<Switch accessibilityLabel={label} onValueChange={onChange} trackColor={{ true: Palette.coral }} value={value} />} />;
+}
+
+function CoachSettingRow({ label, onPress, trailing }: { label: string; onPress?: () => void; trailing?: ReactNode }) {
+  const styles = baseStyles;
+  const content = <><Text style={styles.coachSettingLabel}>{label}</Text>{trailing ?? (onPress ? <Text style={styles.coachChevron}>›</Text> : null)}</>;
+  return onPress ? <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.coachSettingRow, pressed && styles.pressed]}>{content}</Pressable> : <View style={styles.coachSettingRow}>{content}</View>;
+}
+
+function CoachSettingsSection({ children, title }: { children: ReactNode; title: string }) {
+  const styles = baseStyles;
+  return <View style={styles.coachSettingsSection}><Text accessibilityRole="header" style={styles.coachSettingsTitle}>{title}</Text><View style={styles.coachSettingsCard}>{children}</View></View>;
 }
 
 export function ProfileTab({ role }: { role: Role }) {
@@ -282,6 +296,40 @@ export function ProfileTab({ role }: { role: Role }) {
     ]);
   };
 
+  if (role === 'Coach') {
+    return (
+      <>
+        <Header coach role={role} team={teamName} />
+        <Season coach team={team} waiting={false} />
+        <CoachSettingsSection title="Team">
+          {teamLookup.error ? <CoachSettingRow label="Couldn’t load your team" onPress={teamLookup.retry} trailing={<Text style={styles.coachSettingValue}>Try again</Text>} /> : teamLookup.loading ? <CoachSettingRow label="Loading your team…" /> : <CoachSettingRow label={teamName ?? 'Create or manage your team'} onPress={mine === null ? () => router.push('/team/create') : undefined} trailing={<Text style={styles.coachSettingValue}>{teamName ? 'Team' : 'Not set'}</Text>} />}
+        </CoachSettingsSection>
+        <CoachSettingsSection title="Notifications">
+          <CoachSettingRow label="Recheck reminders" trailing={<Switch accessibilityLabel="Recheck reminders" onValueChange={(v) => setPreference('alertRecheck', v)} trackColor={{ false: CoachPalette.interactive, true: CoachPalette.peach }} value={prefs.alertRecheck} />} />
+          <CoachSettingRow label="Zone changes" trailing={<Switch accessibilityLabel="Zone changes" onValueChange={(v) => setPreference('alertZone', v)} trackColor={{ false: CoachPalette.interactive, true: CoachPalette.peach }} value={prefs.alertZone} />} />
+          <CoachSettingRow label="Slow-recovery alerts" trailing={<Switch accessibilityLabel="Slow-recovery alerts" onValueChange={(v) => setPreference('alertBand', v)} trackColor={{ false: CoachPalette.interactive, true: CoachPalette.peach }} value={prefs.alertBand} />} />
+          <CoachSettingRow label="Test alert" trailing={<ActionButton busy={testingAlert} busyLabel="Sending…" label="Send" onPress={testAlert} variant="text" />} />
+        </CoachSettingsSection>
+        <CoachSettingsSection title="Display">
+          <CoachSettingRow label="Temperature" trailing={<Segmented itemWidth={46} onChange={(key) => setPreference('celsius', key === 'c')} options={[{ key: 'f', label: '°F' }, { key: 'c', label: '°C' }]} size="sm" value={prefs.celsius ? 'c' : 'f'} />} />
+          <CoachSettingRow label="Lock Screen practice clock" trailing={<Switch accessibilityLabel="Lock Screen practice clock" onValueChange={(v) => setPreference('practiceLiveActivity', v)} trackColor={{ false: CoachPalette.interactive, true: CoachPalette.peach }} value={prefs.practiceLiveActivity} />} />
+          <CoachSettingRow label="Sample athletes" trailing={<Switch accessibilityLabel="Sample athletes" onValueChange={(v) => setPreference('demoTeam', v)} trackColor={{ false: CoachPalette.interactive, true: CoachPalette.peach }} value={prefs.demoTeam} />} />
+        </CoachSettingsSection>
+        <CoachSettingsSection title="Support">
+          <CoachSettingRow label="UIL heat chart" onPress={() => Linking.openURL(UIL_SOURCE_URL)} />
+          <CoachSettingRow label="Data permissions" onPress={() => Alert.alert('Data permissions', 'You see athletes on your roster and the practice records your team creates. Athletes’ health answers and emergency contacts stay private to them.')} />
+          <CoachSettingRow label="Safety and limitations" onPress={() => Alert.alert('Safety and limitations', 'HeatSense supports, but doesn’t replace, your district’s emergency action plan or an athletic trainer’s judgment. It doesn’t diagnose heat illness.')} />
+        </CoachSettingsSection>
+        {Platform.OS === 'web' && signOutPrompt ? <View style={styles.signOutConfirm}>
+          <Text accessibilityRole="header" style={styles.coachCardTitle}>Log out of HeatSense?</Text>
+          {signOutError ? <Text accessibilityRole="alert" style={styles.signOutError}>{signOutError}</Text> : null}
+          <ActionButton busy={loggingOut} busyLabel="Logging out…" label="Log out" onPress={performSignOut} variant="danger" />
+          <ActionButton disabled={loggingOut} label="Cancel" onPress={() => { setSignOutPrompt(false); setSignOutError(null); }} variant="secondary" />
+        </View> : <ActionButton busy={loggingOut} busyLabel="Logging out…" label="Log out" onPress={confirmSignOut} style={styles.coachLogout} variant="danger" />}
+      </>
+    );
+  }
+
   return (
     <>
       <Header role={role} />
@@ -293,11 +341,10 @@ export function ProfileTab({ role }: { role: Role }) {
       {role === 'Athlete' ? <View style={styles.gap}><BandDevice /></View> : null}
       <CapsLabel>Team</CapsLabel>
       <Rows>
-        {role !== 'Coach' && team.status === 'error' ? <ListRow label="Couldn’t load your team" onPress={team.retry} value="Try again" />
-          : role === 'Coach' && teamLookup.error ? <ListRow label="Couldn’t load your team" onPress={teamLookup.retry} value="Try again" />
-          : teamLookup.loading || (role !== 'Coach' && membership === undefined) ? <ListRow label="Team" value="Loading…" />
-            : <ListRow label={waiting ? 'Waiting for approval' : 'Team'} onPress={role === 'Coach' && mine === null ? () => router.push('/team/create') : undefined} value={teamName ?? waiting ?? 'None yet'} />}
-        {role !== 'Coach' && team.status === 'no-team' && membership !== undefined && !waiting ? <ListRow label="Join a team" onPress={() => router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')} /> : null}
+        {team.status === 'error' ? <ListRow label="Couldn’t load your team" onPress={team.retry} value="Try again" />
+          : membership === undefined || team.status === 'loading' ? <ListRow label="Team" value="Loading…" />
+            : <ListRow label={waiting ? 'Waiting for approval' : 'Team'} value={teamName ?? waiting ?? (data?.teamId ? 'Joined' : 'None yet')} />}
+        {team.status === 'no-team' && membership !== undefined && !waiting ? <ListRow label="Join a team" onPress={() => router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')} /> : null}
         {role === 'Athlete' ? <ListRow label="Athletic trainer" value={trainers.length ? trainers.map((t) => t.displayName ?? 'Trainer').join(', ') : 'None yet'} /> : null}
       </Rows>
       </> : <>
@@ -381,4 +428,36 @@ const baseStyles = StyleSheet.create({
   battery: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 4 },
   batteryBar: { flex: 1 },
   batteryText: { color: Palette.ink, fontFamily: Face.figure, fontSize: 16 },
+  coachHeader: { alignItems: 'flex-start', flexDirection: 'column', gap: 0, marginBottom: 24 },
+  coachAvatarWrap: { marginBottom: 16 },
+  coachAvatar: { backgroundColor: CoachPalette.surface, borderRadius: 42, height: 84, width: 84 },
+  coachAvatarText: { color: CoachPalette.text, fontSize: 30 },
+  coachName: { color: CoachPalette.text, fontSize: 32, fontWeight: '800', letterSpacing: -0.8 },
+  coachMeta: { color: CoachPalette.textSecondary, fontSize: 16, fontWeight: '600' },
+  coachSince: { color: CoachPalette.muted, fontSize: 13 },
+  coachSeason: { marginTop: 0, backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, padding: 22 },
+  coachCardTitle: { color: CoachPalette.text, ...CoachType.card },
+  coachPeriods: { backgroundColor: CoachPalette.interactive, borderRadius: CoachRadius.pill, padding: 4 },
+  coachPeriod: { borderRadius: CoachRadius.pill, paddingHorizontal: 12, paddingVertical: 7 },
+  coachPeriodOn: { backgroundColor: CoachPalette.text },
+  coachPeriodText: { color: CoachPalette.muted },
+  coachSeasonRow: { minHeight: 72 },
+  coachSeasonLabel: { color: CoachPalette.textSecondary, fontWeight: '600' },
+  coachSeasonValue: { color: CoachPalette.text, fontSize: 32, lineHeight: 35 },
+  coachSeasonChange: { color: CoachPalette.muted },
+  coachSettingsSection: { marginTop: 30 },
+  coachSettingsTitle: { color: CoachPalette.text, ...CoachType.section, marginBottom: 12 },
+  coachSettingsCard: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, overflow: 'hidden', paddingHorizontal: 20 },
+  coachSettingRow: { alignItems: 'center', borderBottomColor: CoachPalette.hairline, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12, justifyContent: 'space-between', minHeight: 62, paddingVertical: 8 },
+  coachSettingLabel: { flex: 1, color: CoachPalette.textSecondary, fontSize: 16, fontWeight: '600' },
+  coachSettingValue: { color: CoachPalette.muted, fontSize: 15, fontWeight: '600' },
+  coachChevron: { color: CoachPalette.muted, fontSize: 26, lineHeight: 28 },
+  coachUnits: { backgroundColor: CoachPalette.interactive, borderRadius: CoachRadius.pill, flexDirection: 'row', padding: 3 },
+  coachUnit: { borderRadius: CoachRadius.pill, paddingHorizontal: 12, paddingVertical: 6 },
+  coachUnitOn: { backgroundColor: CoachPalette.peach },
+  coachUnitText: { color: CoachPalette.muted, fontSize: 14, fontWeight: '800' },
+  coachUnitTextOn: { color: CoachPalette.peachInk },
+  coachLogout: { alignItems: 'center', backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.pill, justifyContent: 'center', marginBottom: 12, marginTop: 30, minHeight: 52 },
+  coachIdentity: { flex: 0, width: '100%' },
+  coachPracticeCount: { color: CoachPalette.text },
 });
