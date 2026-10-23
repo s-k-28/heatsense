@@ -1,6 +1,6 @@
 import { Fragment, useId, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 import { Palette, Type } from '@/constants/theme';
 
@@ -66,6 +66,7 @@ function smooth(points: { x: number; y: number }[]) {
  * reading ringed. Data points are drawn as given; pass min and max to fix the scale.
  */
 export function LineChart({
+  band,
   format = (value: number) => String(Math.round(value)),
   height = 112,
   labels,
@@ -75,6 +76,8 @@ export function LineChart({
   tone,
   values,
 }: {
+  /** A shaded range behind the line, such as a person's usual range. */
+  band?: [number, number];
   /** How the gridline values on the right are written. */
   format?: (value: number) => string;
   height?: number;
@@ -112,6 +115,7 @@ export function LineChart({
         </Defs>
         {width > 0 ? (
           <>
+            {band ? <Rect fill="rgba(48,209,88,0.12)" height={y(band[0]) - y(band[1])} rx={4} width={width - gutter} x={0} y={y(band[1])} /> : null}
             {grid.map((value, index) => (
               <Fragment key={index}>
                 <Line stroke="rgba(255,255,255,0.08)" strokeDasharray={index === 2 ? undefined : '2 4'} strokeWidth={1} x1={0} x2={width - gutter} y1={y(value)} y2={y(value)} />

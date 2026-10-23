@@ -9,7 +9,9 @@ import { usePreferences } from '@/state/preferences';
 
 export const DEMO_SPEED = 10;
 const START_SECONDS = 17 * 60;
-const HISTORY = 36; // samples behind "now", one per 10 simulated seconds → the last 6 minutes
+/** Seconds of practice between history samples, and how many: the last 30 minutes, one work/rest cycle. */
+export const HISTORY_STEP_SEC = 30;
+const HISTORY = 60;
 const openedAt = Date.now();
 
 export type DemoMember = { athlete: DemoAthlete; vitals: Vitals; status: RecoveryStatus; history: Vitals[] };
@@ -19,13 +21,13 @@ export function demoSeconds(now: number) {
   return START_SECONDS + ((now - openedAt) / 1000) * DEMO_SPEED;
 }
 
-/** One athlete's signals now, plus every signal over the last six minutes. */
+/** One athlete's signals now, plus every signal over the last 30 minutes. */
 function simulate(athlete: DemoAthlete, t: number, zone: DemoZone): DemoMember {
   return {
     athlete,
     vitals: vitalsAt(athlete, t, zone),
     status: recoveryStatus(athlete, t, zone),
-    history: Array.from({ length: HISTORY }, (_, i) => vitalsAt(athlete, t - (HISTORY - 1 - i) * 10, zone)),
+    history: Array.from({ length: HISTORY }, (_, i) => vitalsAt(athlete, t - (HISTORY - 1 - i) * HISTORY_STEP_SEC, zone)),
   };
 }
 

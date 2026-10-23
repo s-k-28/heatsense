@@ -255,12 +255,13 @@ service cloud.firestore {
       match /vitals/{athleteUid} {
         function practice() { return get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)).data; }
         function validVitals(d) {
-          return d.keys().hasOnly(['heartRate', 'skinTempF', 'sweat', 'movement', 'recovery', 'source', 'serial', 'sampledAt', 'updatedAt'])
+          return d.keys().hasOnly(['heartRate', 'skinTempF', 'sweat', 'movement', 'spo2', 'recovery', 'source', 'serial', 'sampledAt', 'updatedAt'])
             && d.keys().hasAll(['heartRate', 'skinTempF', 'sweat', 'movement', 'recovery', 'source', 'serial', 'sampledAt', 'updatedAt'])
             && d.heartRate is int && d.heartRate >= 30 && d.heartRate <= 230
             && (d.skinTempF == null || (d.skinTempF is number && d.skinTempF >= 77 && d.skinTempF <= 113))
             && (d.sweat == null || (d.sweat is number && d.sweat >= 0 && d.sweat <= 100))
             && d.movement is number && d.movement >= 0 && d.movement <= 100
+            && (!('spo2' in d) || d.spo2 == null || (d.spo2 is int && d.spo2 >= 70 && d.spo2 <= 100))
             && d.recovery in ['usual', 'watch', 'unknown']
             && d.source in ['band', 'simulated']
             && (d.serial == null || (d.serial is string && d.serial.matches('^HS-[0-9A-F]{4}$')))

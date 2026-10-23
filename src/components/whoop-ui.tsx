@@ -32,7 +32,7 @@ const Chevron = () => (
 );
 
 /** One row: a label, an optional detail line, and a value, control or chevron. */
-export function ListRow({ label, detail, value, valueTone, onPress, trailing, destructive, selected }: { label: string; detail?: string; value?: string; valueTone?: string; onPress?: () => void; trailing?: ReactNode; destructive?: boolean; selected?: boolean }) {
+export function ListRow({ label, detail, value, valueTone, onPress, trailing, destructive }: { label: string; detail?: string; value?: string; valueTone?: string; onPress?: () => void; trailing?: ReactNode; destructive?: boolean }) {
   const body = (
     <>
       <View style={styles.rowCopy}>
@@ -44,7 +44,7 @@ export function ListRow({ label, detail, value, valueTone, onPress, trailing, de
     </>
   );
   return onPress ? (
-    <Pressable accessibilityRole="button" accessibilityState={selected === undefined ? undefined : { selected }} onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>{body}</Pressable>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>{body}</Pressable>
   ) : (
     // A row that holds its own controls (approve, a switch) can't be one accessible element, or those controls disappear for VoiceOver.
     <View accessible={!trailing} style={styles.row}>{body}</View>
