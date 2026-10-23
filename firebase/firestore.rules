@@ -321,6 +321,35 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Heat-illness responses saved from Protocols: a record of what was done and when. Only the
+    // coach and approved trainers read them (health information); they're never edited or deleted.
+    match /teams/{teamId}/incidents/{incidentId} {
+      allow read: if isCoach(teamId) || isActiveTrainer(teamId);
+      allow create: if (isCoach(teamId) || isActiveTrainer(teamId))
+        && request.resource.data.keys().hasOnly(['kind', 'at', 'steps', 'total', 'coolingSec', 'recordedBy', 'createdAt'])
+        && request.resource.data.kind in ['stroke', 'exhaustion', 'cramps']
+        && request.resource.data.at is timestamp && request.resource.data.at <= request.time + duration.value(1, 'm')
+        && request.resource.data.steps is int && request.resource.data.total is int
+        && request.resource.data.steps >= 0 && request.resource.data.steps <= request.resource.data.total && request.resource.data.total <= 12
+        && (request.resource.data.coolingSec == null || (request.resource.data.coolingSec is int && request.resource.data.coolingSec >= 0 && request.resource.data.coolingSec <= 4 * 3600))
+        && request.resource.data.recordedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // Today's pre-practice readiness checks, one document per day (yyyy-mm-dd), shared by staff.
+    match /teams/{teamId}/readiness/{day} {
+      allow read: if isCoach(teamId) || isActiveTrainer(teamId);
+      allow create, update: if (isCoach(teamId) || isActiveTrainer(teamId))
+        && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.keys().hasOnly(['done', 'updatedBy', 'updatedAt'])
+        && request.resource.data.done is map
+        && request.resource.data.done.keys().hasOnly(['tub', 'thermo', 'aed', 'water', 'shade', 'plan'])
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
