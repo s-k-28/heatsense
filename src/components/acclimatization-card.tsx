@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { Fill } from '@/components/motion/fill';
 import { Face, Palette } from '@/constants/theme';
 import { ACCLIMATIZATION_DAYS, acclimatizationPhase } from '@/lib/acclimatization';
 
@@ -16,7 +17,7 @@ export function AcclimatizationCard({ day, title = 'Heat acclimatization' }: { d
       </View>
       <View style={styles.steps}>
         {Array.from({ length: ACCLIMATIZATION_DAYS }, (_, i) => (
-          <View key={i} style={[styles.step, { backgroundColor: i < day ? tone : 'rgba(235,235,245,0.1)' }, (i === 1 || i === 4) && styles.phaseEnd]} />
+          <Fill color={tone} delay={i * 40} height={10} key={i} progress={i < day ? 1 : 0} radius={3} style={[styles.step, (i === 1 || i === 4) && styles.phaseEnd]} track="rgba(235,235,245,0.1)" />
         ))}
       </View>
       <View style={styles.legend}>
@@ -36,7 +37,7 @@ const styles = StyleSheet.create({
   title: { color: Palette.ink, fontSize: 18, fontWeight: '600' },
   count: { fontFamily: Face.figure, fontSize: 26 },
   steps: { flexDirection: 'row', gap: 3, marginTop: 14 },
-  step: { borderRadius: 3, flex: 1, height: 10 },
+  step: { flex: 1 },
   phaseEnd: { marginRight: 5 },
   legend: { flexDirection: 'row', marginTop: 6 },
   legendText: { color: Palette.inkMuted, fontSize: 12, fontWeight: '500' },

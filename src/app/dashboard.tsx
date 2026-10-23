@@ -1,11 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshControl, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import { StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DashboardContent } from '@/components/dashboard-content';
+import { AthleteAppearanceProvider } from '@/components/athlete-appearance';
+import { DashboardScrollContext } from '@/components/dashboard-scroll';
 import { DashboardState, type DashboardReviewState } from '@/components/dashboard-states';
 import {
   DashboardHeader,
@@ -20,7 +22,7 @@ import { endPracticeActivity, startPracticeActivity } from '@/lib/practice-activ
 import { useAuthSession } from '@/state/auth-session';
 import { useAthletes } from '@/state/athletes';
 import { useHeatAlerts } from '@/state/heat-alerts';
-import { markRefreshed, usePreferences } from '@/state/preferences';
+import { usePreferences } from '@/state/preferences';
 import { usePracticePlans } from '@/state/practice-plans';
 
 const icons = {
@@ -67,6 +69,13 @@ function normalizeRole(value?: string): DashboardRole {
 }
 
 export default function DashboardScreen() {
+  const { role } = useLocalSearchParams<{ role?: string }>();
+  return <AthleteAppearanceProvider enabled={normalizeRole(role) === 'athlete'}><DashboardView /></AthleteAppearanceProvider>;
+}
+
+function DashboardView() {
+  const scrollRef = useRef<Animated.ScrollView>(null);
+  const reduced = useReducedMotion();
   const params = useLocalSearchParams<{ role?: string; state?: string; tab?: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuthSession();
@@ -120,32 +129,25 @@ export default function DashboardScreen() {
     scrollY.set(0);
   }, [contentKey, scrollY]);
 
-  const [refreshing, setRefreshing] = useState(false);
-  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (refreshTimer.current) clearTimeout(refreshTimer.current); }, []);
-  const refresh = () => {
-    setRefreshing(true);
-    refreshTimer.current = setTimeout(() => {
-      markRefreshed();
-      setRefreshing(false);
-    }, 900);
-  };
+  // Firestore subscriptions update these screens live; a timed spinner is not a refresh.
 
   // The band in the corner: an athlete's battery, or how many athletes' bands are live for staff.
   const team = useAthletes(role);
   const live = team.athletes.filter((a) => a.live && !a.live.stale).length;
   const paired = bandConnected || demoTeam;
-  // ponytail: battery is the simulator's until the band's BLE battery service lands.
+  // The band is simulated until BLE is connected; do not present an invented battery reading.
   const headerBand = role === 'athlete'
-    ? { label: paired ? '78%' : 'Pair', tone: paired ? Palette.safe : Palette.coral, accessibilityLabel: paired ? 'HeatSense Band, 78 percent battery' : 'Pair your HeatSense Band', onPress: () => select('band') }
+    ? { label: paired ? 'Simulated' : 'Pair', tone: paired ? Palette.info : Palette.coral, accessibilityLabel: paired ? 'HeatSense Band, simulated readings' : 'Pair your HeatSense Band', onPress: () => select('band') }
     : live
       ? { label: String(live), tone: Palette.safe, accessibilityLabel: `${live} bands live`, onPress: () => select(role === 'trainer' ? 'monitor' : 'team') }
       : undefined;
 
   return (
+    <DashboardScrollContext.Provider value={(target) => target?.measureInWindow((_x, y) => scrollRef.current?.scrollTo({ y: Math.max(0, scrollY.get() + y - insets.top - HEADER_ROW - 16), animated: !reduced }))}>
     <View style={styles.screen}>
       <StatusBar style="light" />
       <Animated.ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: TAB_BAR_HEIGHT + insets.bottom + Spacing.six, paddingTop: insets.top + HEADER_ROW },
@@ -155,16 +157,16 @@ export default function DashboardScreen() {
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         onScroll={onScroll}
-        refreshControl={<RefreshControl onRefresh={refresh} progressViewOffset={insets.top + HEADER_ROW} refreshing={refreshing} tintColor={Palette.inkMuted} />}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}>
         <View style={styles.column}>
           {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent onNavigate={select} role={role} tab={activeTab} />}
         </View>
       </Animated.ScrollView>
-      <DashboardHeader band={headerBand} name={accountName} onAlerts={role === 'coach' ? () => select('alerts') : role === 'trainer' ? () => select('monitor') : undefined} onProfile={() => select('profile')} scrollY={scrollY} title={title} />
+      <DashboardHeader band={role === 'athlete' && activeTab === 'band' ? undefined : headerBand} name={accountName} onAlerts={role === 'coach' ? () => select('alerts') : role === 'trainer' ? () => select('monitor') : undefined} onProfile={() => select('profile')} scrollY={scrollY} title={title} />
       <TabBar activeTab={activeTab} onChange={select} tabs={tabs} />
     </View>
+    </DashboardScrollContext.Provider>
   );
 }
 

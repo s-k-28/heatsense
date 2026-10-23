@@ -1,7 +1,9 @@
-import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where, type Timestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 
 import { firebaseAuth, firestore } from '@/services/firebase';
 import { UIL_VERSION, celsiusToF, classifyWbgt, type UilClass, type Zone } from '@/lib/uil-wbgt';
+
+export { recheckStatus } from '@/lib/recheck';
 
 // Practice sessions and their field readings, shared with the whole team through Firestore.
 //   teams/{teamId}/sessions/{sessionId}                      one practice
@@ -77,22 +79,58 @@ export function watchActiveSession(teamId: string, onChange: (session: PracticeS
 /** A finished practice: how many readings were taken and the hottest one. */
 export type SessionSummary = { session: PracticeSession; readingCount: number; peak: { wbgtF: number; zone: Zone } | null };
 
-/** The team's most recent finished practices, newest first, each with its peak reading. */
-export async function recentSessions(teamId: string, count = 10): Promise<SessionSummary[]> {
-  // One extra, in case the newest is still open. ponytail: a few reads per practice; page this once teams keep a season of history.
-  const snap = await getDocs(query(sessions(teamId), orderBy('startedAt', 'desc'), limit(count + 1)));
-  const ended = snap.docs
-    .map((docSnap) => {
+const recentSessionQuery = (teamId: string, count: number) => query(sessions(teamId), orderBy('startedAt', 'desc'), limit(count + 1));
+
+function finishedSessions(docs: QueryDocumentSnapshot[], teamId: string, count: number): PracticeSession[] {
+  return docs.flatMap((docSnap) => {
       const data = docSnap.data();
-      return { id: docSnap.id, teamId, venue: data.venue, uilClass: data.uilClass, recheckMinutes: data.recheckMinutes, startedAt: toDate(data.startedAt) ?? new Date(), endedAt: toDate(data.endedAt) };
+      const startedAt = toDate(data.startedAt);
+      const endedAt = toDate(data.endedAt);
+      // Pending server timestamps aren't finished records yet. Wait for the committed dates.
+      return startedAt && endedAt ? [{ id: docSnap.id, teamId, venue: data.venue, uilClass: data.uilClass, recheckMinutes: data.recheckMinutes, startedAt, endedAt }] : [];
     })
-    .filter((session) => session.endedAt)
     .slice(0, count);
-  return Promise.all(ended.map(async (session) => {
-    const list = (await getDocs(readings(teamId, session.id))).docs.map((docSnap) => docSnap.data() as { wbgtF: number; zone: Zone });
-    const peak = list.reduce<{ wbgtF: number; zone: Zone } | null>((hottest, r) => (!hottest || r.wbgtF > hottest.wbgtF ? { wbgtF: r.wbgtF, zone: r.zone } : hottest), null);
-    return { session, readingCount: list.length, peak };
-  }));
+}
+
+async function summarizeSession(session: PracticeSession): Promise<SessionSummary> {
+  const list = (await getDocs(readings(session.teamId, session.id))).docs.map((docSnap) => docSnap.data() as { wbgtF: number; zone: Zone });
+  const peak = list.reduce<SessionSummary['peak']>((hottest, r) => (!hottest || r.wbgtF > hottest.wbgtF ? { wbgtF: r.wbgtF, zone: r.zone } : hottest), null);
+  return { session, readingCount: list.length, peak };
+}
+
+/** One-time compatibility read; UI history uses watchRecentSessions so ending practice refreshes it. */
+export async function recentSessions(teamId: string, count = 10): Promise<SessionSummary[]> {
+  const snapshot = await getDocs(recentSessionQuery(teamId, count));
+  return Promise.all(finishedSessions(snapshot.docs, teamId, count).map(summarizeSession));
+}
+
+/** Watches session membership of the history; completed sessions' measurement values are immutable. */
+export function watchRecentSessions(teamId: string, count: number, onChange: (list: SessionSummary[]) => void, onError: () => void) {
+  let live = true;
+  let version = 0;
+  const summaries = new Map<string, Promise<SessionSummary>>();
+  const stop = onSnapshot(recentSessionQuery(teamId, count), (snapshot) => {
+    const current = ++version;
+    const ended = finishedSessions(snapshot.docs, teamId, count);
+    const ids = new Set(ended.map((session) => session.id));
+    for (const id of summaries.keys()) if (!ids.has(id)) summaries.delete(id);
+    const pending = ended.map((session) => {
+      let summary = summaries.get(session.id);
+      if (!summary) {
+        summary = summarizeSession(session).catch((error: unknown) => { summaries.delete(session.id); throw error; });
+        summaries.set(session.id, summary);
+      }
+      return summary;
+    });
+    Promise.all(pending).then((list) => {
+      if (live && current === version) onChange(list);
+    }).catch(() => { if (live && current === version) onError(); });
+  }, () => {
+    version++;
+    summaries.clear();
+    if (live) onError();
+  });
+  return () => { live = false; version++; summaries.clear(); stop(); };
 }
 
 export async function startSession(teamId: string, input: { venue: string; uilClass: UilClass; recheckMinutes: number }) {
@@ -157,13 +195,6 @@ export async function addReading(session: PracticeSession, input: { value: numbe
 /** The coach confirms they've read the guidance for this reading. Recorded once, never edited. */
 export function acknowledgeReading(session: PracticeSession, reading: FieldReading) {
   return updateDoc(doc(readings(session.teamId, session.id), reading.id), { acknowledgedBy: uid(), acknowledgedAt: serverTimestamp() });
-}
-
-/** When the next reading is due, and whether it's late. Based on the last measurement, not on screen time. */
-export function recheckStatus(session: PracticeSession, latest: FieldReading | null, now: number) {
-  const from = latest ? latest.measuredAt.getTime() : session.startedAt.getTime();
-  const dueAt = from + session.recheckMinutes * 60_000;
-  return { dueAt, overdue: now > dueAt, msLeft: dueAt - now };
 }
 
 /** A plain-text record of the session for sharing with an athletic trainer or administrator. */

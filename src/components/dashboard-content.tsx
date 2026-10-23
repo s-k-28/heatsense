@@ -81,18 +81,19 @@ function CoachContent({ tab }: { tab: string }) {
 }
 
 function TrainerContent({ tab }: { tab: string }) {
+  const go = useContext(NavContext);
   if (tab === 'monitor') return <><LargeTitle title="Monitor" /><TrainerMonitor /></>;
   if (tab === 'athletes') return <><LargeTitle title="Athletes" /><TrainerAthletes /></>;
   if (tab === 'protocols') return <><LargeTitle title="Protocols" /><ProtocolsTab /></>;
   if (tab === 'profile') return <><LargeTitle title="Profile" /><ProfileTab role="Athletic trainer" /></>;
-  return <><LargeTitle title="Today" /><TrainerHome /></>;
+  return <><LargeTitle title="Today" /><TrainerHome onOpenMonitor={() => go('monitor')} /></>;
 }
 
 function AthleteContent({ tab }: { tab: string }) {
   const go = useContext(NavContext);
   if (tab === 'band') return <><LargeTitle title="Band" /><AthleteBand /></>;
   if (tab === 'sessions') return <><LargeTitle title="Sessions" /><AthleteSessions /></>;
-  if (tab === 'learn') return <><LargeTitle title="Learn" /><LearnTab /></>;
+  if (tab === 'learn') return <><LargeTitle title="Learn" /><LearnTab onOpenBand={() => go('band')} /></>;
   if (tab === 'profile') return <><LargeTitle title="Profile" /><ProfileTab role="Athlete" /></>;
   return <><LargeTitle title="Today" /><AthleteHome onOpenBand={() => go('band')} /></>;
 }

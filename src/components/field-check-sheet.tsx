@@ -1,12 +1,14 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
 import { Group, Row, TextLink } from '@/components/ui/list';
-import { Palette, Radius, Spacing, Type } from '@/constants/theme';
+import { ActionButton } from '@/components/ui/action-button';
+import { Face, Palette, Radius, Spacing, Type } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
-import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, zoneRange, type UilClass } from '@/lib/uil-wbgt';
+import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, type UilClass } from '@/lib/uil-wbgt';
+import { firestore } from '@/services/firebase';
+import { useAuthSession } from '@/state/auth-session';
 import { getMyTeamInvite } from '@/services/team-invites';
 import {
   SOURCE_LABEL,
@@ -43,53 +45,70 @@ const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2
  * acknowledge it, and recheck on time. Everything is saved to the team in Firestore, so the clock
  * and history survive a restart and assistant coaches see the same record.
  */
-export function FieldCheckSheet({ onClose, visible, trainerTeamId }: { onClose: () => void; visible: boolean; trainerTeamId?: string | null }) {
-  // An athletic trainer works on the team they belong to; the coach on the team they made.
+type FieldCheckProps = { onClose: () => void; visible: boolean; trainerTeamId?: string | null };
+
+export function FieldCheckSheet(props: FieldCheckProps) {
+  const { user, ready } = useAuthSession();
+  // Never reuse a previous account's team lookup, form or subscription result.
+  return <FieldCheckContent {...props} authReady={ready} key={`${user?.uid ?? 'signed-out'}:${props.trainerTeamId === undefined ? 'coach' : props.trainerTeamId ?? 'trainer-no-team'}`} uid={user?.uid ?? null} />;
+}
+
+function FieldCheckContent({ onClose, visible, trainerTeamId, uid, authReady }: FieldCheckProps & { uid: string | null; authReady: boolean }) {
   const trainer = trainerTeamId !== undefined;
-  const [coachTeamId, setTeamId] = useState<string | null | undefined>(undefined);
-  const teamId = trainer ? trainerTeamId : coachTeamId;
-  const [session, setSession] = useState<PracticeSession | null | undefined>(undefined);
-  const [failed, setFailed] = useState(false);
+  const [lookup, setLookup] = useState<{ teamId: string | null; failed: boolean } | null>(null);
+  const [lookupAttempt, setLookupAttempt] = useState(0);
+  const teamId = trainer ? trainerTeamId : lookup?.teamId;
+  const [record, setRecord] = useState<{ teamId: string; session: PracticeSession | null } | null>(null);
+  const [failedTeam, setFailedTeam] = useState<string | null>(null);
+  const [sessionAttempt, setSessionAttempt] = useState(0);
+  const session = record?.teamId === teamId ? record?.session : undefined;
+  const failed = Boolean(teamId && failedTeam === teamId);
+  const retryLookup = () => { setLookup(null); setLookupAttempt(value => value + 1); };
+  const retrySession = () => { setRecord(null); setFailedTeam(null); setSessionAttempt(value => value + 1); };
 
   useEffect(() => {
-    if (trainer) return;
+    if (trainer || !authReady || !uid || !firestore) return;
     let live = true;
     getMyTeamInvite()
-      .then((mine) => { if (live) setTeamId(mine?.invite.teamId ?? null); })
-      .catch(() => { if (live) setTeamId(null); });
+      .then(mine => { if (live) setLookup({ teamId: mine?.invite.teamId ?? null, failed: false }); })
+      .catch(() => { if (live) setLookup({ teamId: null, failed: true }); });
     return () => { live = false; };
-  }, [trainer]);
+  }, [authReady, lookupAttempt, trainer, uid]);
 
   useEffect(() => {
-    if (!teamId) return;
-    return watchActiveSession(teamId, (next) => {
-      setSession(next);
-      setFailed(false);
-      // The dashboard clock and Dynamic Island follow the saved session, so a restart picks it back up.
+    if (!teamId || !firestore || !uid || !authReady) return;
+    let live = true;
+    const stop = watchActiveSession(teamId, next => {
+      if (!live) return;
+      setRecord({ teamId, session: next });
+      setFailedTeam(null);
       if (next) startPractice(next.startedAt.getTime());
       else endPractice();
-    }, () => setFailed(true));
-  }, [teamId]);
+    }, () => { if (live) setFailedTeam(teamId); });
+    return () => { live = false; stop(); };
+  }, [authReady, sessionAttempt, teamId, uid]);
 
   let body;
-  if (teamId === undefined || (teamId && session === undefined && !failed)) body = <ActivityIndicator color={Palette.inkMuted} style={styles.loading} />;
+  if (!authReady) body = <ActivityIndicator accessibilityLabel="Loading account" color={Palette.inkMuted} style={styles.loading} />;
+  else if (!firestore) body = <Notice text="Practice records are unavailable in sample mode." />;
+  else if (!uid) body = <><Notice text="Sign in to view and save your team’s practice records." /><ActionButton label="Sign in" onPress={() => { onClose(); router.push('/sign-in'); }} /></>;
+  else if (!trainer && lookup?.failed) body = <><Notice text="Couldn’t find your team. Check your connection and try again." /><ActionButton label="Try again" onPress={retryLookup} variant="secondary" /></>;
+  else if (teamId === undefined || (teamId && session === undefined && !failed)) body = <ActivityIndicator accessibilityLabel="Loading practice records" color={Palette.inkMuted} style={styles.loading} />;
   else if (!teamId) body = trainer ? <Notice text="Join your team first. Your coach approves your request." /> : (
     <>
       <Notice text="Create your team first. Practice records are saved to the team so every coach sees the same readings." />
-      <Pressable accessibilityRole="button" onPress={() => { onClose(); router.push('/team/create'); }} style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
-        <Text style={styles.primaryText}>Create your team</Text>
-      </Pressable>
+      <ActionButton label="Create your team" onPress={() => { onClose(); router.push('/team/create'); }} />
     </>
   );
-  else if (failed) body = <Notice text="Couldn’t load practice records. Check your connection and try again." />;
-  else if (!session) body = trainer ? <Notice text="Practice hasn’t started yet. Once the head coach starts it, you can log readings and confirm guidance here." /> : <StartForm teamId={teamId} />;
-  else body = <SessionView canEnd={!trainer} session={session} />;
+  else if (failed) body = <><Notice text="Couldn’t load practice records. Check your connection and try again." /><ActionButton label="Try again" onPress={retrySession} variant="secondary" /></>;
+  else if (!session) body = trainer ? <Notice text="Practice hasn’t started yet. Once the head coach starts it, you can log readings and confirm guidance here." /> : <StartForm key={teamId} teamId={teamId} />;
+  else body = <SessionView canEnd={!trainer} key={`${session.teamId}:${session.id}`} session={session} />;
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
       <KeyboardAvoidingView behavior="padding" style={styles.sheet}>
         <View style={styles.bar}>
-          <Text style={styles.title}>{session ? 'Practice' : 'Field conditions'}</Text>
+          <Text accessibilityRole="header" style={styles.title}>{session ? 'Practice' : 'Field conditions'}</Text>
           <TextLink label="Done" onPress={onClose} />
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardDismissMode="interactive" keyboardShouldPersistTaps="always">{body}</ScrollView>
@@ -102,11 +121,11 @@ function Notice({ text }: { text: string }) {
   return <Text style={styles.note}>{text}</Text>;
 }
 
-function Chips<T extends string | number>({ label, onSelect, options, selected, format }: { label: string; onSelect: (v: T) => void; options: readonly T[]; selected: T; format: (v: T) => string }) {
+function Chips<T extends string | number>({ label, onSelect, options, selected, format, disabled = false }: { label: string; onSelect: (v: T) => void; options: readonly T[]; selected: T; format: (v: T) => string; disabled?: boolean }) {
   return (
     <View accessibilityLabel={label} accessibilityRole="radiogroup" style={styles.chips}>
       {options.map((option) => (
-        <Pressable accessibilityRole="radio" accessibilityState={{ checked: option === selected }} key={String(option)} onPress={() => onSelect(option)} style={[styles.chip, option === selected && styles.chipOn]}>
+        <Pressable accessibilityRole="radio" accessibilityState={{ checked: option === selected, disabled }} disabled={disabled} key={String(option)} onPress={() => onSelect(option)} style={[styles.chip, option === selected && styles.chipOn, disabled && styles.disabled]}>
           <Text style={[styles.chipText, option === selected && styles.chipTextOn]}>{format(option)}</Text>
         </Pressable>
       ))}
@@ -123,7 +142,7 @@ function StartForm({ teamId }: { teamId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const start = async () => {
-    if (!uilClass || !venue.trim()) return;
+    if (busy || !uilClass || !venue.trim()) return;
     setBusy(true);
     setError(null);
     try {
@@ -140,21 +159,19 @@ function StartForm({ teamId }: { teamId: string }) {
   return (
     <>
       <Field label="Where is practice?">
-        <TextInput accessibilityLabel="Practice location" maxLength={80} onChangeText={setVenue} placeholderTextColor={Palette.inkFaint} style={styles.input} value={venue} />
+        <TextInput editable={!busy} accessibilityLabel="Practice location" maxLength={80} onChangeText={setVenue} placeholderTextColor={Palette.inkFaint} style={styles.input} value={venue} />
       </Field>
       <Field label="Your school’s UIL heat class">
-        <Chips<UilClass> format={(c) => `Class ${c}`} label="UIL heat class" onSelect={setUilClass} options={[2, 3]} selected={uilClass ?? (0 as UilClass)} />
+        <Chips<UilClass> disabled={busy} format={(c) => `Class ${c}`} label="UIL heat class" onSelect={setUilClass} options={[2, 3]} selected={uilClass ?? (0 as UilClass)} />
         <Text style={styles.help}>UIL assigns each region a class. Zone thresholds differ between them, so pick the one your athletic department uses.</Text>
-        <TextLink label="View the UIL WBGT chart" onPress={() => Linking.openURL(UIL_SOURCE_URL)} />
+        <TextLink label="View the UIL WBGT chart" onPress={() => Linking.openURL(UIL_SOURCE_URL).catch(() => setError('Couldn’t open the UIL chart. Try again.'))} />
       </Field>
       <Field label="Recheck WBGT every">
-        <Chips format={(m) => `${m} min`} label="Recheck interval" onSelect={setRecheck} options={RECHECK_CHOICES} selected={recheck as (typeof RECHECK_CHOICES)[number]} />
+        <Chips disabled={busy} format={(m) => `${m} min`} label="Recheck interval" onSelect={setRecheck} options={RECHECK_CHOICES} selected={recheck as (typeof RECHECK_CHOICES)[number]} />
         <Text style={styles.help}>Use the interval in your school’s heat plan. HeatSense tells you when a reading is due.</Text>
       </Field>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Pressable accessibilityRole="button" accessibilityState={{ disabled: !uilClass || busy }} disabled={!uilClass || busy} onPress={start} style={({ pressed }) => [styles.primary, (!uilClass || busy) && styles.disabled, pressed && styles.pressed]}>
-        <Text style={styles.primaryText}>{busy ? 'Starting…' : 'Start practice session'}</Text>
-      </Pressable>
+      {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
+      <ActionButton busy={busy} busyLabel="Starting…" disabled={!uilClass || !venue.trim()} label="Start practice session" onPress={start} />
     </>
   );
 }
@@ -169,78 +186,93 @@ function Field({ children, label }: { children: React.ReactNode; label: string }
 }
 
 function SessionView({ session, canEnd = true }: { session: PracticeSession; canEnd?: boolean }) {
-  const reduced = useReducedMotion();
   const temp = useTemperature();
-  const [readings, setReadings] = useState<FieldReading[]>([]);
+  const [readings, setReadings] = useState<FieldReading[] | null>(null);
   const [listenError, setListenError] = useState(false);
+  const [listenAttempt, setListenAttempt] = useState(0);
+  const [shareError, setShareError] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const retryReadings = () => { setReadings(null); setListenError(false); setListenAttempt(value => value + 1); };
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => watchReadings(session, (next) => { setReadings(next); setListenError(false); }, () => setListenError(true)), [session]);
+  useEffect(() => {
+    let live = true;
+    const stop = watchReadings(session, next => { if (live) { setReadings(next); setListenError(false); } }, () => { if (live) setListenError(true); });
+    return () => { live = false; stop(); };
+  }, [listenAttempt, session]);
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
   }, []);
 
+  if (readings === null) return listenError
+    ? <><Notice text="Couldn’t load readings. Check your connection." /><ActionButton label="Try again" onPress={retryReadings} variant="secondary" /></>
+    : <ActivityIndicator accessibilityLabel="Loading readings" color={Palette.inkMuted} />;
+
   const latest = readings.at(-1) ?? null;
   const recheck = recheckStatus(session, latest, now);
-  const rise = (delay: number) => (reduced ? undefined : FadeInDown.delay(delay).duration(320));
 
   return (
     <>
       <Text style={styles.meta}>{session.venue} · UIL Class {session.uilClass} · started {time(session.startedAt)}</Text>
 
-      {latest ? <LatestReading latest={latest} now={now} session={session} temp={temp} /> : (
-        <Text style={styles.note}>No reading yet. Take a WBGT reading on the field before athletes start.</Text>
-      )}
-
-      <View accessibilityLiveRegion="polite" style={[styles.recheck, recheck.overdue && styles.recheckLate]}>
-        <Text style={styles.recheckLabel}>{recheck.overdue ? 'Reading overdue' : latest ? 'Next reading due' : 'First reading due'}</Text>
+      <View style={styles.recheck}>
+        <Text style={styles.recheckLabel}>{!latest ? 'First reading' : 'Next reading'}</Text>
         <Text style={[styles.recheckValue, recheck.overdue && { color: Palette.emergency }]}>
-          {recheck.overdue ? `${clock(-recheck.msLeft)} late` : `in ${clock(recheck.msLeft)}`}
+          {!latest || recheck.msLeft === 0 ? 'Due now' : recheck.overdue ? `${clock(-recheck.msLeft)} overdue` : `in ${clock(recheck.msLeft)}`}
         </Text>
-        <Text style={styles.help}>at {time(new Date(recheck.dueAt))} · every {session.recheckMinutes} min</Text>
       </View>
+      {!latest ? <Text style={styles.help}>Take a WBGT reading on the field before athletes start.</Text> : null}
 
-      <Animated.View entering={rise(0)}>
-        <ReadingForm session={session} />
-      </Animated.View>
+      {latest ? <LatestReading key={latest.id} latest={latest} session={session} /> : null}
 
-      {listenError ? <Text style={styles.error}>Couldn’t load readings. Check your connection.</Text> : null}
+      <ReadingForm session={session} />
+
+      {listenError ? <><Text accessibilityLiveRegion="assertive" style={styles.error}>Readings may be out of date. Check your connection.</Text><ActionButton label="Reload readings" onPress={retryReadings} variant="secondary" /></> : null}
       {readings.length > 0 ? <History readings={readings} temp={temp} /> : null}
 
-      <Pressable accessibilityRole="button" onPress={() => Share.share({ message: sessionReport(session, readings) })} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
-        <Text style={styles.secondaryText}>Share practice record</Text>
-      </Pressable>
+      <ActionButton busy={sharing} busyLabel="Opening sharing…" label="Share practice record" onPress={async () => {
+        setSharing(true); setShareError(false);
+        try { await Share.share({ message: sessionReport(session, readings) }); }
+        catch { setShareError(true); }
+        finally { setSharing(false); }
+      }} variant="text" />
+      {shareError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t share the record. Try again; the saved record is unchanged.</Text> : null}
       {canEnd ? (
-        <Pressable accessibilityRole="button" onPress={() => endSession(session).catch(() => {})} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
-          <Text style={[styles.secondaryText, { color: Palette.emergency }]}>End practice</Text>
-        </Pressable>
+        <ActionButton busy={ending} busyLabel="Ending…" label="End practice" onPress={async () => {
+          setEnding(true);
+          setEndError(false);
+          try { await endSession(session); }
+          catch { setEndError(true); }
+          finally { setEnding(false); }
+        }} variant="danger" />
       ) : null}
+      {endError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t end practice. Check your connection and try again.</Text> : null}
     </>
   );
 }
 
 type Temp = ReturnType<typeof useTemperature>;
 
-function LatestReading({ latest, now, session, temp }: { latest: FieldReading; now: number; session: PracticeSession; temp: Temp }) {
+function LatestReading({ latest, session }: { latest: FieldReading; session: PracticeSession }) {
   const zone = ZONES[latest.zone];
   const guidance = UIL_GUIDANCE[latest.zone];
   const [acking, setAcking] = useState(false);
-  const minutesAgo = Math.max(0, Math.round((now - latest.measuredAt.getTime()) / 60_000));
+  const [error, setError] = useState(false);
+  const [expanded, setExpanded] = useState(!latest.acknowledgedAt);
 
   return (
     <View style={styles.reading}>
-      <Text style={styles.eyebrow}>Measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`} · {SOURCE_LABEL[latest.source]}</Text>
-      <View style={styles.readingRow}>
-        <Text style={styles.readingValue}>{temp.value(latest.wbgtF)}</Text>
-        <Text style={styles.readingUnit}>{temp.unit} WBGT</Text>
-      </View>
-      <View style={[styles.zoneChip, { borderColor: zone.color }]}>
-        <View style={[styles.liveDot, { backgroundColor: zone.color }]} />
-        <Text style={[styles.zoneChipText, { color: zone.text }]}>{zone.label} · {zoneRange(latest.zone, session.uilClass)}</Text>
-      </View>
-
-      <Text style={styles.planTitle}>What UIL requires</Text>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={styles.guidanceToggle}>
+        <View style={styles.guidanceCopy}>
+          <Text style={[styles.guidanceTitle, { color: zone.text }]}>{zone.label} guidance</Text>
+          <Text style={styles.help}>{latest.acknowledgedAt ? `Applied at ${time(latest.acknowledgedAt)}` : 'Review and confirm for the latest reading'}</Text>
+        </View>
+        <Text style={styles.help}>{expanded ? 'Hide' : 'View'}</Text>
+      </Pressable>
+      {expanded ? <>
       <Group>
         <Row title={guidance.summary} />
         {guidance.breaksPerHour ? <Row title="Rest breaks" value={`${guidance.breaksPerHour}+ per hour, ${guidance.breakMinutes}+ min each`} /> : null}
@@ -251,18 +283,23 @@ function LatestReading({ latest, now, session, temp }: { latest: FieldReading; n
       </Group>
       <Text style={styles.help}>Source: UIL WBGT activity guidelines {UIL_VERSION}, Class {session.uilClass}. Your school’s plan may be stricter.</Text>
 
-      {latest.acknowledgedAt ? (
-        <Text style={styles.acked}>✓ Acknowledged at {time(latest.acknowledgedAt)}</Text>
-      ) : (
-        <Pressable
+      {!latest.acknowledgedAt ? (
+        <ActionButton
           accessibilityHint="Records that you've read the guidance for this reading"
-          accessibilityRole="button"
-          disabled={acking}
-          onPress={() => { setAcking(true); acknowledgeReading(session, latest).catch(() => {}).finally(() => setAcking(false)); }}
-          style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
-          <Text style={styles.primaryText}>{acking ? 'Saving…' : 'I’ve applied this guidance'}</Text>
-        </Pressable>
-      )}
+          busy={acking}
+          busyLabel="Saving…"
+          label="I’ve applied this guidance"
+          onPress={async () => {
+            setAcking(true);
+            setError(false);
+            try { await acknowledgeReading(session, latest); }
+            catch { setError(true); }
+            finally { setAcking(false); }
+          }}
+          variant="secondary" />
+      ) : null}
+      {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t confirm guidance. Check your connection and try again.</Text> : null}
+      </> : null}
     </View>
   );
 }
@@ -276,6 +313,7 @@ function ReadingForm({ session }: { session: PracticeSession }) {
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
+    if (busy) return;
     const number = Number(value.replace(',', '.'));
     if (!value.trim() || !Number.isFinite(number)) return setError('Enter the WBGT number from your meter.');
     setBusy(true);
@@ -293,18 +331,16 @@ function ReadingForm({ session }: { session: PracticeSession }) {
 
   return (
     <View style={styles.form}>
-      <Text style={styles.planTitle}>Add a field reading</Text>
+      <Text accessibilityRole="header" style={styles.planTitle}>Log WBGT</Text>
       <View style={styles.inputRow}>
-        <TextInput accessibilityLabel={`WBGT in degrees ${unit === 'F' ? 'Fahrenheit' : 'Celsius'}`} inputMode="decimal" keyboardType="decimal-pad" maxLength={5} onChangeText={setValue} onSubmitEditing={save} placeholder="WBGT" placeholderTextColor={Palette.inkFaint} style={[styles.input, styles.inputGrow]} value={value} />
-        <Chips<'F' | 'C'> format={(u) => `°${u}`} label="Unit" onSelect={setUnit} options={['F', 'C']} selected={unit} />
+        <TextInput editable={!busy} accessibilityLabel={`WBGT in degrees ${unit === 'F' ? 'Fahrenheit' : 'Celsius'}`} inputMode="decimal" keyboardType="decimal-pad" maxLength={5} onChangeText={setValue} onSubmitEditing={save} placeholder="WBGT" placeholderTextColor={Palette.inkFaint} style={[styles.input, styles.inputGrow]} value={value} />
+        <Chips<'F' | 'C'> disabled={busy} format={(u) => `°${u}`} label="Unit" onSelect={setUnit} options={['F', 'C']} selected={unit} />
       </View>
       {/* Save sits right under the number, above where the number pad opens (the pad has no return key). */}
       {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
-      <Pressable accessibilityRole="button" disabled={busy} onPress={() => { Keyboard.dismiss(); save(); }} style={({ pressed }) => [styles.primary, styles.saveNow, pressed && styles.pressed]}>
-        <Text style={styles.primaryText}>{busy ? 'Saving…' : 'Save reading'}</Text>
-      </Pressable>
-      <Chips<ReadingSource> format={(s) => SOURCE_LABEL[s]} label="Where the reading came from" onSelect={setSource} options={['handheld', 'station', 'other']} selected={source} />
-      <Chips format={(m) => (m === 0 ? 'Measured now' : `${m} min ago`)} label="When it was measured" onSelect={setMinutesAgo} options={MEASURED_CHOICES} selected={minutesAgo as (typeof MEASURED_CHOICES)[number]} />
+      <ActionButton busy={busy} busyLabel="Saving…" label="Save reading" onPress={() => { Keyboard.dismiss(); save(); }} />
+      <Chips<ReadingSource> disabled={busy} format={(s) => SOURCE_LABEL[s]} label="Where the reading came from" onSelect={setSource} options={['handheld', 'station', 'other']} selected={source} />
+      <Chips disabled={busy} format={(m) => (m === 0 ? 'Measured now' : `${m} min ago`)} label="When it was measured" onSelect={setMinutesAgo} options={MEASURED_CHOICES} selected={minutesAgo as (typeof MEASURED_CHOICES)[number]} />
     </View>
   );
 }
@@ -334,13 +370,11 @@ function History({ readings, temp }: { readings: FieldReading[]; temp: Temp }) {
 }
 
 const styles = StyleSheet.create({
-  saveNow: { marginTop: 0 },
-  pressed: { opacity: 0.6 },
-  disabled: { opacity: 0.4 },
+  disabled: { opacity: 0.45 },
   loading: { marginTop: Spacing.eight },
-  sheet: { backgroundColor: '#101214', flex: 1 },
+  sheet: { backgroundColor: Palette.canvas, flex: 1 },
   bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.three, paddingHorizontal: Spacing.five, paddingTop: Spacing.five },
-  title: { color: Palette.ink, ...Type.title2, fontWeight: '700' },
+  title: { flex: 1, color: Palette.ink, ...Type.title2, fontWeight: '700' },
   content: { gap: Spacing.five, paddingBottom: Spacing.eight, paddingHorizontal: Spacing.five, paddingTop: Spacing.two },
   meta: { color: Palette.inkMuted, ...Type.footnote },
   field: { gap: Spacing.two },
@@ -348,31 +382,21 @@ const styles = StyleSheet.create({
   help: { color: Palette.inkMuted, ...Type.footnote },
   error: { color: Palette.emergency, ...Type.footnote },
   input: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, color: Palette.ink, ...Type.callout, minHeight: 48, paddingHorizontal: Spacing.four },
-  inputRow: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three },
-  inputGrow: { flex: 1, fontSize: 22 },
+  inputRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
+  inputGrow: { flexGrow: 1, flexBasis: 140, fontSize: 22 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  chip: { backgroundColor: Palette.fill, borderRadius: 10, minHeight: 40, justifyContent: 'center', paddingHorizontal: 12 },
-  chipOn: { backgroundColor: Palette.coral },
+  chip: { backgroundColor: Palette.fill, borderRadius: 10, minHeight: 48, minWidth: 48, justifyContent: 'center', paddingHorizontal: 12 },
+  chipOn: { backgroundColor: Palette.surface, borderColor: Palette.inkMuted, borderWidth: 1 },
   chipText: { color: Palette.ink, ...Type.label, fontSize: 14 },
-  chipTextOn: { color: '#1A0E07' },
+  chipTextOn: { color: Palette.ink },
   form: { gap: Spacing.three },
-  reading: { gap: Spacing.two },
-  eyebrow: { color: Palette.inkMuted, ...Type.label, fontSize: 13 },
-  readingRow: { alignItems: 'baseline', flexDirection: 'row', gap: 6 },
-  readingValue: { color: Palette.ink, ...Type.figure, fontSize: 84, lineHeight: 86 },
-  readingUnit: { color: Palette.inkMuted, ...Type.label, fontSize: 18 },
-  zoneChip: { alignItems: 'center', alignSelf: 'flex-start', borderRadius: 8, borderWidth: 1, flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingVertical: 5 },
-  zoneChipText: { ...Type.label, fontSize: 14 },
-  liveDot: { borderRadius: 4, height: 8, width: 8 },
+  reading: { borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.two, paddingBottom: Spacing.four },
+  guidanceToggle: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 48 },
+  guidanceCopy: { flex: 1, gap: 4 },
+  guidanceTitle: { color: Palette.ink, ...Type.headline },
   planTitle: { color: Palette.ink, ...Type.headline, marginBottom: Spacing.two, marginTop: Spacing.three },
-  acked: { color: Palette.safe, ...Type.headline, marginTop: Spacing.two },
-  recheck: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, gap: 2, padding: Spacing.four },
-  recheckLate: { borderColor: Palette.emergency, borderWidth: 1 },
-  recheckLabel: { color: Palette.inkMuted, ...Type.label, fontSize: 13 },
-  recheckValue: { color: Palette.ink, ...Type.figure, fontSize: 34, lineHeight: 38 },
-  primary: { alignItems: 'center', backgroundColor: Palette.coral, borderCurve: 'continuous', borderRadius: 14, justifyContent: 'center', marginTop: Spacing.three, minHeight: 54 },
-  primaryText: { color: '#1A0E07', ...Type.label, fontSize: 17 },
+  recheck: { alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
+  recheckLabel: { color: Palette.inkMuted, ...Type.label, fontSize: 16 },
+  recheckValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 30, lineHeight: 36 },
   note: { color: Palette.inkMuted, ...Type.callout, marginTop: Spacing.three },
-  secondary: { alignItems: 'center', backgroundColor: Palette.fill, borderCurve: 'continuous', borderRadius: 14, justifyContent: 'center', minHeight: 50 },
-  secondaryText: { color: Palette.ink, ...Type.headline },
 });

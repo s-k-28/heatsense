@@ -4,7 +4,8 @@ import { Easing, FadeIn, FadeInDown, FadeOut, LinearTransition } from 'react-nat
 // tap many times a session stay instant. Every helper returns undefined when Reduce Motion is on,
 // so screens render in their final state.
 
-export const EASE_OUT = Easing.out(Easing.cubic);
+// Cubic ease-out as a Bézier factory also resolves correctly in web layout transitions.
+export const EASE_OUT = Easing.bezier(0.215, 0.61, 0.355, 1);
 
 const MAX_STAGGER = 8; // past this many items, the rest arrive together rather than trickling in
 

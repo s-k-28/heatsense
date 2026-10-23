@@ -1,53 +1,55 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { useAthleteStyles } from '@/components/athlete-appearance';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Face, Palette } from '@/constants/theme';
 import type { DemoMember } from '@/state/demo-team';
+import { useTemperature } from '@/state/preferences';
 
 // Four of the band's signals at a glance, each checked against its usual range, after Gentler
 // Streak's body metrics. Tapping opens the Band tab for the full picture.
 
 type Item = { label: string; value: string; unit: string; ok: boolean; note: string };
 
-function items(m: DemoMember): Item[] {
+function items(m: DemoMember, temp: ReturnType<typeof useTemperature>): Item[] {
   const v = m.vitals;
   return [
     { label: 'Heart rate', value: String(v.heartRate), unit: 'bpm', ok: m.status === 'usual', note: m.status === 'usual' ? 'Usual' : 'Slow recovery' },
-    { label: 'Skin', value: v.skinTempF.toFixed(1), unit: '°F', ok: v.skinTempF <= 95, note: v.skinTempF <= 95 ? 'Usual' : 'Warm' },
+    { label: 'Skin', value: temp.precise(v.skinTempF).toFixed(1), unit: temp.unit, ok: v.skinTempF <= 95, note: v.skinTempF <= 95 ? 'Usual' : 'Warm' },
     { label: 'Sweat', value: v.sweat.toFixed(1), unit: 'µS', ok: true, note: v.sweat > 10 ? 'Heavy' : 'Usual' },
     { label: 'Oxygen', value: String(v.spo2), unit: '%', ok: v.spo2 >= 95, note: v.spo2 >= 95 ? 'Usual' : 'Low' },
   ];
 }
 
-function Mark({ ok }: { ok: boolean }) {
-  return ok
-    ? <Svg fill="none" height={12} stroke={Palette.safe} strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} viewBox="0 0 24 24" width={12}><Path d="m5 12 5 5L20 7" /></Svg>
-    : <View style={styles.warnDot} />;
-}
-
-export function BodyStrip({ member, onPress }: { member: DemoMember; onPress: () => void }) {
-  const list = items(member);
+export function BodyStrip({ member }: { member: DemoMember }) {
+  const styles = useAthleteStyles(baseStyles);
+  const temp = useTemperature();
+  const list = items(member, temp);
   return (
-    <Pressable accessibilityHint="Opens your band" accessibilityLabel={list.map((i) => `${i.label} ${i.value} ${i.unit}, ${i.note}`).join('. ')} accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.strip, pressed && styles.pressed]}>
+    <View accessible accessibilityLabel={`Simulated band readings. ${list.map((i) => `${i.label} ${i.value} ${i.unit}, ${i.note}`).join('. ')}`}>
+      <View style={styles.metrics}>
       {list.map((i) => (
         <View key={i.label} style={styles.tile}>
-          <Text style={styles.label}>{i.label}</Text>
+          <View style={styles.copy}>
+            <Text style={styles.label}>{i.label}</Text>
+            {!i.ok || i.note === 'Heavy' ? <Text style={styles.note}>{i.note}</Text> : null}
+          </View>
           <Text style={styles.value}>{i.value}<Text style={styles.unit}> {i.unit}</Text></Text>
-          <View style={styles.noteRow}><Mark ok={i.ok} /><Text style={[styles.note, !i.ok && { color: Palette.warning }]}>{i.note}</Text></View>
         </View>
       ))}
-    </Pressable>
+      </View>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.75 },
-  strip: { flexDirection: 'row', gap: 8 },
-  tile: { backgroundColor: Palette.surface, borderRadius: 14, flex: 1, gap: 4, paddingHorizontal: 10, paddingVertical: 12 },
-  label: { color: Palette.inkMuted, fontSize: 13, fontWeight: '600' },
+  strip: { borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: 18 },
+  simulated: { color: Palette.inkMuted, fontSize: 14, marginBottom: 12 },
+  metrics: { gap: 0 },
+  tile: { alignItems: 'center', borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12, minHeight: 52, paddingVertical: 8 },
+  copy: { flex: 1, gap: 2 },
+  label: { color: Palette.ink, fontSize: 16, fontWeight: '500' },
   value: { color: Palette.ink, fontFamily: Face.figure, fontSize: 24, lineHeight: 28 },
   unit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 13 },
-  noteRow: { alignItems: 'center', flexDirection: 'row', gap: 4 },
-  note: { color: Palette.inkMuted, fontSize: 12, fontWeight: '600' },
-  warnDot: { backgroundColor: Palette.warning, borderRadius: 4, height: 8, width: 8 },
+  note: { color: Palette.warning, fontSize: 14, fontWeight: '500' },
 });

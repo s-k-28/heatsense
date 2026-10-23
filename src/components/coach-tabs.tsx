@@ -1,8 +1,10 @@
+import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Share, StyleSheet, Text, View } from 'react-native';
 
 import { Card, Facts, ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
+import { ActionButton } from '@/components/ui/action-button';
 import { Face, Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
 import { checkPlan } from '@/lib/plan-check';
@@ -10,6 +12,7 @@ import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION } from '@/lib/uil-wbgt';
 import type { FieldReading } from '@/services/practice-sessions';
 import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
 import { clockTime, usePracticePlans } from '@/state/practice-plans';
+import { Segmented } from '@/components/motion/segmented';
 import { TrainerAthletes } from '@/components/trainer-athletes';
 import { TrainerMonitor } from '@/components/trainer-monitor';
 import { useCoachData, useRoster } from '@/state/team-session';
@@ -31,17 +34,18 @@ function useMyTeam() {
 
 /** The coach's team: the roster to run (code, approvals, acclimatization, staff) and, during practice, everyone live. */
 export function TeamTab() {
+  const styles = useAthleteStyles(baseStyles);
   const data = useCoachData('coach');
   const mine = useMyTeam();
   const roster = useRoster(data?.teamId ?? null);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState<{ uid: string; approve: boolean } | null>(null);
   const [view, setView] = useState<'roster' | 'live'>('roster');
   const waiting = roster?.filter((m) => m.status === 'pending') ?? [];
   const staff = roster?.filter((m) => m.status === 'active' && m.role === 'trainer') ?? [];
 
   const respond = async (uid: string, approve: boolean) => {
-    if (!data?.teamId) return;
-    setBusy(uid);
+    if (!data?.teamId || busy) return;
+    setBusy({ uid, approve });
     try { await respondToJoinRequest(data.teamId, uid, approve); }
     catch { Alert.alert('Couldn’t update the request', NETWORK_ERROR); }
     finally { setBusy(null); }
@@ -51,13 +55,7 @@ export function TeamTab() {
 
   return (
     <>
-      <View accessibilityRole="tablist" style={styles.segments}>
-        {(['roster', 'live'] as const).map((key) => (
-          <Pressable accessibilityRole="tab" accessibilityState={{ selected: view === key }} key={key} onPress={() => setView(key)} style={[styles.segment, view === key && styles.segmentOn]}>
-            <Text style={[styles.segmentText, view === key && styles.segmentTextOn]}>{key === 'roster' ? 'Roster' : 'Live'}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <Segmented onChange={setView} options={[{ key: 'roster', label: 'Roster' }, { key: 'live', label: 'Live' }]} value={view} />
       <View style={styles.gap12} />
 
       {view === 'live' ? <TrainerMonitor role="coach" /> : (
@@ -74,9 +72,7 @@ export function TeamTab() {
                   <Text style={styles.codeLabel}>Team code</Text>
                   <Text accessibilityLabel={code ? `Team code ${code.split('').join(' ')}` : 'Team code loading'} style={styles.code}>{code ? code.replace(/(\d{3})(\d{3})/, '$1 $2') : '··· ···'}</Text>
                 </View>
-                <Pressable accessibilityRole="button" disabled={!code} onPress={() => Share.share({ message: `Join ${team?.teamName ?? 'our team'} on HeatSense with the code ${code}.` })} style={({ pressed }) => [styles.shareCode, pressed && { opacity: 0.7 }]}>
-                  <Text style={styles.shareCodeText}>Share</Text>
-                </Pressable>
+                <ActionButton accessibilityLabel="Share team code" disabled={!code} label="Share" onPress={() => Share.share({ message: `Join ${team?.teamName ?? 'our team'} on HeatSense with the code ${code}.` })} style={styles.shareCode} variant="secondary" />
               </View>
             </View>
           )}
@@ -86,16 +82,13 @@ export function TeamTab() {
               <SectionTitle title={`Waiting to join · ${waiting.length}`} />
               <Rows>
                 {waiting.map((m) => (
-                  <ListRow
-                    key={m.userId}
-                    label={m.displayName ?? 'Athlete'}
-                    trailing={
-                      <View style={styles.decide}>
-                        <Pressable accessibilityLabel={`Decline ${m.displayName ?? 'athlete'}`} accessibilityRole="button" disabled={busy === m.userId} onPress={() => respond(m.userId, false)} style={styles.decline}><Text style={styles.declineText}>Decline</Text></Pressable>
-                        <Pressable accessibilityLabel={`Approve ${m.displayName ?? 'athlete'}`} accessibilityRole="button" disabled={busy === m.userId} onPress={() => respond(m.userId, true)} style={styles.approve}><Text style={styles.approveText}>Approve</Text></Pressable>
-                      </View>
-                    }
-                  />
+                  <View key={m.userId} style={styles.request}>
+                    <Text style={styles.requestName}>{m.displayName ?? (m.role === 'trainer' ? 'Athletic trainer' : 'Athlete')}</Text>
+                    <View style={styles.decide}>
+                      <ActionButton accessibilityLabel={`Decline ${m.displayName ?? 'request'}`} busy={busy?.uid === m.userId && !busy.approve} busyLabel="Declining…" disabled={Boolean(busy)} label="Decline" onPress={() => respond(m.userId, false)} style={styles.decision} variant="secondary" />
+                      <ActionButton accessibilityLabel={`Approve ${m.displayName ?? 'request'}`} busy={busy?.uid === m.userId && busy.approve} busyLabel="Approving…" disabled={Boolean(busy)} label="Approve" onPress={() => respond(m.userId, true)} style={styles.decision} variant="secondary" />
+                    </View>
+                  </View>
                 ))}
               </Rows>
             </>
@@ -121,25 +114,19 @@ export function TeamTab() {
 /* ─────────────────────────────── Plan ─────────────────────────────── */
 
 export function PlanTab() {
+  const Palette = useAthletePalette();
   const data = useCoachData();
   const { active, plans } = usePracticePlans();
+  const [showRules, setShowRules] = useState(false);
   const latest = data?.readings.at(-1) ?? null;
   const session = data?.session ?? null;
   const uilClass = session?.uilClass ?? 3;
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
-      {latest ? (
-        <Card message={`${UIL_GUIDANCE[latest.zone].summary} UIL Class ${uilClass}, measured ${latest.measuredAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`} title={`Today’s rules · ${ZONES[latest.zone].label}`} />
-      ) : (
-        <Card message="Take a field reading to see today’s rules." title="Today’s rules" />
-      )}
-
-      <ZoneRules hideSummary latest={latest} uilClass={uilClass} />
-
       <SectionTitle action="New" onAction={() => router.push('/plan-editor')} title="Practice plans" />
       <Rows>
-        {plans.map((plan) => {
+        {[...plans].sort((a, b) => Number(b.id === active.id) - Number(a.id === active.id)).map((plan) => {
           // A plan that breaks today's zone rules says so here, before anyone opens it.
           const fails = latest ? !checkPlan(plan, UIL_GUIDANCE[latest.zone]).ok : false;
           const when = plan.id === active.id ? 'Today' : `${clockTime(plan.startMinutes, true)} · ${plan.lengthMinutes} min`;
@@ -154,12 +141,23 @@ export function PlanTab() {
           );
         })}
       </Rows>
+      <SectionTitle title="Field guidance" />
+      <Rows>
+        <ListRow
+          label={latest ? 'UIL rules' : 'Take a field reading'}
+          onPress={() => latest ? setShowRules(!showRules) : router.push('/dashboard?role=coach&tab=home')}
+          selected={latest ? showRules : undefined}
+          value={latest ? ZONES[latest.zone].label : 'Home'}
+        />
+      </Rows>
+      {showRules && latest ? <ZoneRules latest={latest} uilClass={uilClass} /> : null}
     </>
   );
 }
 
 /** What UIL requires for the latest reading's zone, one rule per row, with the source. */
 export function ZoneRules({ latest, uilClass, hideSummary = false }: { latest: FieldReading | null; uilClass: 2 | 3; hideSummary?: boolean }) {
+  const styles = useAthleteStyles(baseStyles);
   const guidance = latest ? UIL_GUIDANCE[latest.zone] : null;
   return (
     <>
@@ -185,27 +183,20 @@ export function ZoneRules({ latest, uilClass, hideSummary = false }: { latest: F
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   flex: { flex: 1 },
   gap12: { height: 12 },
-  segments: { backgroundColor: 'rgba(235,235,245,0.08)', borderRadius: 12, flexDirection: 'row', gap: 4, padding: 4 },
-  segment: { alignItems: 'center', borderRadius: 9, flex: 1, justifyContent: 'center', minHeight: 38 },
-  segmentOn: { backgroundColor: Palette.surface },
-  segmentText: { color: Palette.inkMuted, fontSize: 16, fontWeight: '600' },
-  segmentTextOn: { color: Palette.ink },
   teamCard: { backgroundColor: Palette.surface, borderRadius: 16, padding: 18 },
   teamName: { color: Palette.ink, fontSize: 22, fontWeight: '700' },
   teamMeta: { color: Palette.inkMuted, fontSize: 15, marginTop: 2 },
-  codeRow: { alignItems: 'flex-end', borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, paddingTop: 14 },
+  codeRow: { alignItems: 'flex-end', borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', marginTop: 16, paddingTop: 14 },
   codeLabel: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
   code: { color: Palette.ink, fontFamily: Face.figure, fontSize: 36, letterSpacing: 2, lineHeight: 40 },
-  shareCode: { backgroundColor: Palette.coral, borderRadius: 12, justifyContent: 'center', minHeight: 44, paddingHorizontal: 20 },
-  shareCodeText: { color: '#1A0E07', fontSize: 16, fontWeight: '700' },
-  decide: { flexDirection: 'row', gap: 8 },
-  approve: { backgroundColor: Palette.coral, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  approveText: { color: '#1A0E07', fontSize: 15, fontWeight: '600' },
-  decline: { borderColor: Palette.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
-  declineText: { color: Palette.inkMuted, fontSize: 15, fontWeight: '600' },
+  shareCode: { flexShrink: 1, maxWidth: '100%' },
+  request: { gap: 12, paddingHorizontal: 18, paddingVertical: 16 },
+  requestName: { color: Palette.ink, fontSize: 17, fontWeight: '600' },
+  decide: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  decision: { flexBasis: 150, flexGrow: 1 },
   empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22 },
   summary: { color: Palette.ink, fontSize: 17, lineHeight: 24, marginBottom: 14, marginTop: 16 },
   sourceRow: { marginTop: 16 },

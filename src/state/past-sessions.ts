@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { classifyWbgt } from '@/lib/uil-wbgt';
-import { recentSessions, type SessionSummary } from '@/services/practice-sessions';
+import { watchRecentSessions, type SessionSummary } from '@/services/practice-sessions';
+import { useAuthSession } from '@/state/auth-session';
 
 // Sample mode only, under the SAMPLE DATA tag: a season of practices so the history has a shape.
 // Deterministic: practices most days but Sunday, heat building through the month.
@@ -17,17 +18,31 @@ const SAMPLE_HISTORY = Array.from({ length: 100 }, (_, i) => i + 1)
   });
 
 /** The team's finished practices: real ones from the team, sample ones in sample mode. */
-export function usePastSessions(teamId: string | null, sample: boolean, count = 10) {
-  const [past, setPast] = useState<SessionSummary[] | null>(null);
+export function usePastSessionsState(teamId: string | null, sample: boolean, count = 10) {
+  const { user } = useAuthSession();
+  const uid = user?.uid ?? null;
+  const [revision, setRevision] = useState(0);
+  const retry = useCallback(() => setRevision((value) => value + 1), []);
+  const identity = useMemo(() => ({ teamId, count, uid, sample, revision }), [teamId, count, uid, sample, revision]);
+  const [past, setPast] = useState<{ identity: typeof identity; status: 'ready' | 'error'; list: SessionSummary[] | null } | null>(null);
   useEffect(() => {
-    if (!teamId || sample) return;
-    let live = true;
-    recentSessions(teamId, count).then((list) => { if (live) setPast(list); }).catch(() => { if (live) setPast([]); });
-    return () => { live = false; };
-  }, [count, sample, teamId]);
-  if (!sample) return teamId ? past : [];
+    if (!teamId || sample || !uid) return;
+    let active = true;
+    const fail = () => { if (active) setPast({ identity, status: 'error', list: null }); };
+    let stop: (() => void) | undefined;
+    try {
+      stop = watchRecentSessions(teamId, count,
+        (list) => { if (active) setPast({ identity, status: 'ready', list }); }, fail);
+    } catch { fail(); }
+    return () => { active = false; stop?.(); };
+  }, [count, identity, sample, teamId, uid]);
+  if (!sample) {
+    if (!teamId || !uid) return { status: 'idle' as const, data: [] as SessionSummary[], retry };
+    if (past?.identity !== identity) return { status: 'loading' as const, data: null, retry };
+    return { status: past.status, data: past.list, retry };
+  }
   const day = 86_400_000;
-  return SAMPLE_HISTORY.slice(0, count).map((h, i) => {
+  const data: SessionSummary[] = SAMPLE_HISTORY.slice(0, count).map((h, i) => {
     const startedAt = new Date(new Date().setHours(16, 0, 0, 0) - h.daysAgo * day);
     return {
       session: { id: `sample-${i}`, teamId: 'sample', venue: h.venue, uilClass: 3 as const, recheckMinutes: 30, startedAt, endedAt: new Date(startedAt.getTime() + h.minutes * 60_000) },
@@ -35,4 +50,11 @@ export function usePastSessions(teamId: string | null, sample: boolean, count = 
       peak: { wbgtF: h.wbgtF, zone: h.zone },
     };
   });
+  return { status: 'ready' as const, data, retry };
+}
+
+/** Compatibility view: null while loading, empty on failure. Use state for error UI. */
+export function usePastSessions(teamId: string | null, sample: boolean, count = 10) {
+  const result = usePastSessionsState(teamId, sample, count);
+  return result.status === 'error' ? [] : result.data;
 }

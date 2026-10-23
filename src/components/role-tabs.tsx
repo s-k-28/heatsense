@@ -1,27 +1,33 @@
-import { Image } from 'expo-image';
+import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ZoneRules } from '@/components/coach-tabs';
 import { CoachToday } from '@/components/coach-today';
-import { Card, ListRow, Rows, SampleTag, SectionTitle, StatRow } from '@/components/whoop-ui';
+import { TrainerHomeOverview } from '@/components/trainer-home-overview';
+import { Card, ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
+import { ActionButton } from '@/components/ui/action-button';
 import { Palette } from '@/constants/theme';
-import { ACCLIMATIZATION_DAYS } from '@/lib/acclimatization';
 import { ZONES, type Zone } from '@/lib/practice';
+import { UIL_GUIDANCE } from '@/lib/uil-wbgt';
 import { usePreferences, useTemperature } from '@/state/preferences';
-import { AcclimatizationCard } from '@/components/acclimatization-card';
 import { BodyStrip } from '@/components/body-strip';
+import { BandSpot } from '@/components/band-journey';
+import { BandViewer, type BandPreviewPhase } from '@/components/band-viewer';
+import { useDashboardScroll } from '@/components/dashboard-scroll';
+import type { BandSignal } from '@/components/vital-cards';
+import { PressScale } from '@/components/motion/press-scale';
 import { HeatHistory } from '@/components/heat-calendar';
-import { VitalsDetail } from '@/components/vitals';
+import { SimulatedTag, VitalsDetail } from '@/components/vitals';
 import { useDemoTeam, useOwnBand } from '@/state/demo-team';
-import { usePastSessions } from '@/state/past-sessions';
-import { useCoachData, useMembership, useTrainers } from '@/state/team-session';
+import { usePastSessionsState } from '@/state/past-sessions';
+import { useCoachData, useCoachDataState, useMembership, useTrainers } from '@/state/team-session';
 
 // Athlete tabs (Home, Band, Sessions) and the trainer's Home. Athletes see their team's real field
 // reading (Firestore lets approved members read it) and their own band, simulated until the
 // firmware ships and labelled that way.
 
-const BAND = require('@/assets/images/heatsense-band-refined.png');
 const dot = (zone: Zone) => (zone === 'black' ? '#8E8E93' : ZONES[zone].color);
 
 /* ─────────────────────────────── Athlete ─────────────────────────────── */
@@ -37,18 +43,25 @@ function useMyBand() {
 }
 
 export function AthleteHome({ onOpenBand }: { onOpenBand: () => void }) {
-  const data = useCoachData('athlete');
+  const styles = useAthleteStyles(baseStyles);
+  const team = useCoachDataState('athlete');
+  const data = team.data;
   const membership = useMembership();
   const band = useMyBand();
-  const past = usePastSessions(data?.teamId ?? null, Boolean(data?.sample), 20);
+  const history = usePastSessionsState(data?.teamId ?? null, Boolean(data?.sample), 20);
+  const past = history.data;
   const latest = data?.readings.at(-1) ?? null;
-  // Sample mode follows the demo athlete; a real athlete counts the team's practice days so far.
-  // ponytail: counts days before they joined too; use the membership's join date once athletes can read it.
+  const guidance = latest ? UIL_GUIDANCE[latest.zone] : null;
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const breakRule = guidance?.breaksPerHour && guidance.breakMinutes
+    ? `${guidance.breaksPerHour}+ rest breaks each hour, at least ${guidance.breakMinutes} minutes each.`
+    : guidance?.restMinutesPerHour ? `${guidance.restMinutesPerHour} minutes of rest each hour.` : null;
+  // Available team dates are a record count, not verified attendance or protocol completion.
   const practiceDays = new Set([...(past ?? []).map((p) => p.session.startedAt.toDateString()), ...(data?.session ? [data.session.startedAt.toDateString()] : [])]).size;
-  const acclimatization = data?.sample && band ? band.athlete.acclimatizationDay : Math.min(ACCLIMATIZATION_DAYS, practiceDays);
+  const availablePracticeDays = !data || history.status !== 'ready' ? undefined : practiceDays;
   // Until the coach approves them, an athlete can't see the team's practice, so say why.
   const waiting = !data?.sample && membership?.status === 'pending';
-  const noTeam = !data?.sample && (membership === null || membership?.status === 'declined');
+  const noTeam = !data?.sample && team.status === 'no-team' && (membership === null || membership?.status === 'declined');
   return (
     <>
       {waiting ? (
@@ -56,20 +69,38 @@ export function AthleteHome({ onOpenBand }: { onOpenBand: () => void }) {
       ) : noTeam ? (
         <Card message={membership?.status === 'declined' ? 'Your coach declined the request. Check the code with them and try again.' : 'Enter the six-digit code from your coach.'} onPress={() => router.push('/setup/athlete')} title="Join your team" />
       ) : null}
-      <CoachToday readOnly role="athlete" />
-      {band ? (
-        <>
-          <SectionTitle title="Your body" />
-          <BodyStrip member={band} onPress={onOpenBand} />
-        </>
+      {!waiting && !noTeam ? <CoachToday teamPracticeDays={availablePracticeDays} readOnly role="athlete" /> : null}
+      {history.status === 'error' ? <Card title="Practice history unavailable"><ActionButton label="Try again" onPress={history.retry} variant="secondary" /></Card> : null}
+      {latest && guidance && !waiting && !noTeam ? (
+        <View style={styles.homeGuidance}>
+          <View style={styles.homeModuleHead}>
+            <Text accessibilityRole="header" style={styles.homeModuleTitle}>At practice today</Text>
+            <Pressable accessibilityLabel={rulesOpen ? 'Hide full UIL guidance' : 'Show full UIL guidance'} accessibilityRole="button" accessibilityState={{ expanded: rulesOpen }} onPress={() => setRulesOpen(!rulesOpen)} style={({ pressed }) => [styles.homeDisclosure, pressed && styles.homePressed]}>
+              <Text style={styles.homeDisclosureText}>{rulesOpen ? 'Less' : 'UIL details'}</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.homeGuidanceSummary}>{guidance.summary}</Text>
+          {breakRule ? <Text style={styles.homeGuidanceRule}>{breakRule}</Text> : null}
+          {guidance.coolingZoneRequired ? <Text style={styles.homeGuidanceRule}>A rapid cooling zone must be on site.</Text> : null}
+          {guidance.football ? <Text style={styles.homeGuidanceRule}>Football: {guidance.football}</Text> : null}
+          {rulesOpen ? <ZoneRules hideSummary latest={latest} uilClass={data?.session?.uilClass ?? 3} /> : null}
+        </View>
       ) : null}
-      {data?.teamId || data?.sample ? <View style={styles.gapTop}><AcclimatizationCard day={acclimatization} title="Your heat acclimatization" /></View> : null}
-      {latest ? (
-        <>
-          <SectionTitle title="What changes today" />
-          <ZoneRules latest={latest} uilClass={data?.session?.uilClass ?? 3} />
-        </>
-      ) : null}
+      <View style={styles.homeBandPanel}>
+        <View style={styles.homeModuleHead}>
+          <PressScale accessibilityLabel="View your band" accessibilityHint="Opens your individual band signals and charts" accessibilityRole="button" onPress={onOpenBand} style={styles.homeBandLink}>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><BandSpot height={84} id="athlete-home" quiet travel={false} /></View>
+            <View style={styles.homeBandCopy}><Text style={styles.homeModuleTitle}>Your band</Text><Text style={styles.homeDisclosureText}>View band ›</Text></View>
+          </PressScale>
+          {band ? <SimulatedTag compact /> : null}
+        </View>
+        {band ? (
+          <BodyStrip member={band} />
+        ) : <>
+          <Text style={styles.homeGuidanceRule}>Pair a HeatSense Band to view your personal signals. Field readings still guide practice.</Text>
+          <ActionButton label="Pair your band" onPress={() => router.push('/pair-band')} style={styles.gapTop} variant="secondary" />
+        </>}
+      </View>
       <YourTrainer teamId={data?.teamId ?? null} />
       <SpeakUp />
     </>
@@ -91,22 +122,33 @@ function YourTrainer({ teamId }: { teamId: string | null }) {
 }
 
 function SpeakUp() {
+  const styles = useAthleteStyles(baseStyles);
   return (
     <View style={styles.speak}>
-      <Card message="Dizziness, nausea, a headache, cramps or confusion are reasons to stop right away. Don’t wait for a break." title="Feel off? Stop and tell a coach." />
+      <Text style={styles.speakTitle}>Feel off? Stop and tell a coach.</Text>
+      <Text style={styles.empty}>Dizziness, nausea, a headache, cramps or confusion are reasons to stop right away. Don’t wait for a break.</Text>
     </View>
   );
 }
 
 /** The athlete's own band: their vitals in depth. The app centres on them, not the team. */
 export function AthleteBand() {
+  const Palette = useAthletePalette();
+  const styles = useAthleteStyles(baseStyles);
   const { bandConnected } = usePreferences();
+  const [signal, setSignal] = useState<BandSignal>('heart');
+  const [preview, setPreview] = useState<BandPreviewPhase>('idle');
+  const signalsRef = useRef<View>(null);
+  const reveal = useDashboardScroll();
   // Sample athletes on: the demo athlete stands in. Otherwise a paired band shows the athlete's own signals.
   const me = useMyBand();
   if (me) {
     return (
       <>
-        <VitalsDetail member={{ ...me, athlete: { ...me.athlete, name: 'You', position: 'Your band' } }} />
+        <BandViewer onPreviewPhase={setPreview} onExploreHeartRate={() => { setSignal('heart'); reveal(signalsRef.current); }} />
+        <View ref={signalsRef} collapsable={false}>
+          <VitalsDetail selectedSignal={signal} onSignalChange={setSignal} previewHeartRate={preview === 'press' || preview === 'reveal'} member={{ ...me, athlete: { ...me.athlete, name: 'You', position: 'Your band' } }} />
+        </View>
         <Rows>
           <ListRow label="HeatSense Band" onPress={() => router.push('/pair-band')} value={bandConnected ? 'Connected' : 'Pair'} valueTone={bandConnected ? Palette.safe : Palette.coral} />
         </Rows>
@@ -116,7 +158,7 @@ export function AthleteBand() {
   return (
     <>
       <View style={styles.bandHero}>
-        <Image accessibilityIgnoresInvertColors contentFit="contain" source={BAND} style={styles.band} />
+        <BandSpot height={180} id="athlete-band" quiet travel={false} />
         <Text style={styles.bandState}>{bandConnected ? 'Band connected' : 'No band paired'}</Text>
         <Text style={styles.bandNote}>Pair your band to see heart rate, skin temperature, sweat and movement here. Field readings already guide every practice.</Text>
       </View>
@@ -130,55 +172,81 @@ export function AthleteBand() {
 const dayLabel = (d: Date) => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 
 export function AthleteSessions() {
-  const data = useCoachData('athlete');
+  const styles = useAthleteStyles(baseStyles);
+  const team = useCoachDataState('athlete');
+  const data = team.data;
   const temp = useTemperature();
-  const past = usePastSessions(data?.teamId ?? null, Boolean(data?.sample), 40);
-  // Today's practice counts toward the history the moment it has a reading; the readings live on Home.
-  const todayPeak = (data?.readings ?? []).reduce<{ wbgtF: number; zone: Zone } | null>((hot, r) => (!hot || r.wbgtF > hot.wbgtF ? { wbgtF: r.wbgtF, zone: r.zone } : hot), null);
+  const history = usePastSessionsState(data?.teamId ?? null, Boolean(data?.sample), 40);
+  const past = history.data;
+  const [visible, setVisible] = useState(10);
+  const today = new Date().toDateString();
+  // Only measurements made today belong in today's calendar overlay.
+  const todayPeak = (data?.readings ?? []).filter((reading) => reading.measuredAt.toDateString() === today).reduce<{ wbgtF: number; zone: Zone } | null>((hot, r) => (!hot || r.wbgtF > hot.wbgtF ? { wbgtF: r.wbgtF, zone: r.zone } : hot), null);
+  const openSession = ({ session }: NonNullable<typeof past>[number]) => router.push({ pathname: '/practice-record', params: { role: 'athlete', teamId: session.teamId, id: session.id, ...(data?.sample ? { sample: '1' } : {}) } });
+  if (team.status === 'loading') return <Text style={styles.empty}>Loading your team…</Text>;
+  if (team.status === 'error') return <Card title="Couldn’t load your team"><ActionButton label="Try again" onPress={team.retry} variant="secondary" /></Card>;
+  if (team.status === 'no-team') return <Card title="No team practice records yet" message="Your team’s saved practices appear here once your membership is approved." />;
+  if (history.status === 'error') return <Card title="Couldn’t load past practices"><ActionButton label="Try again" onPress={history.retry} variant="secondary" /></Card>;
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
-      <HeatHistory past={past ?? []} temp={temp} today={todayPeak} />
+      {past !== null ? <HeatHistory onOpenSession={openSession} past={past} temp={temp} today={todayPeak} /> : null}
 
-      <SectionTitle title="Earlier" />
+      <SectionTitle title={past?.length ? `Recent practices · ${past.length}` : 'Recent practices'} />
+      {past?.length === 40 ? <Text style={styles.empty}>Showing the latest 40 finished practices.</Text> : null}
       {past === null ? (
         <Text style={styles.empty}>Loading past practices…</Text>
       ) : past.length ? (
-        <View style={styles.cards}>
-          {past.slice(0, 5).map(({ session, readingCount, peak }) => {
+        <Rows>
+          {past.slice(0, visible).map(({ session, readingCount, peak }) => {
             const minutes = session.endedAt ? Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000) : null;
             return (
-              <Card key={session.id} title={`${dayLabel(session.startedAt)} · ${session.venue}`}>
-                <StatRow stats={[
-                  { label: 'Peak WBGT', value: peak ? `${temp.value(peak.wbgtF)}` : '--', unit: peak ? temp.unit : undefined, tone: peak ? dot(peak.zone) : undefined },
-                  { label: 'Length', value: minutes !== null ? String(minutes) : '--', unit: minutes !== null ? ' min' : undefined },
-                  { label: 'Readings', value: String(readingCount) },
-                ]} />
-              </Card>
+              <ListRow
+                detail={`${session.venue}${minutes !== null ? ` · ${minutes} min` : ''} · ${readingCount} ${readingCount === 1 ? 'reading' : 'readings'}`}
+                key={session.id}
+                label={dayLabel(session.startedAt)}
+                onPress={() => openSession({ session, readingCount, peak })}
+                value={peak ? `${temp.value(peak.wbgtF)}${temp.unit} peak` : 'No reading'}
+                valueTone={peak ? dot(peak.zone) : undefined}
+              />
             );
           })}
-        </View>
+        </Rows>
       ) : (
         <Text style={styles.empty}>Finished practices show up here with their hottest reading.</Text>
       )}
+      {past && past.length > visible ? (
+        <Rows><ListRow label={`Show ${Math.min(10, past.length - visible)} more practices`} onPress={() => setVisible((count) => count + 10)} /></Rows>
+      ) : null}
     </>
   );
 }
 
 /* ─────────────────────────────── Athletic trainer ─────────────────────────────── */
 
-export function TrainerHome() {
-  return <CoachToday readOnly role="trainer" />;
+export function TrainerHome({ onOpenMonitor }: { onOpenMonitor: () => void }) {
+  return <CoachToday readOnly role="trainer"><TrainerHomeOverview onOpenMonitor={onOpenMonitor} /></CoachToday>;
 }
 
-const styles = StyleSheet.create({
-  speak: { marginTop: 28 },
+const baseStyles = StyleSheet.create({
+  homeBandLink: { alignItems: 'center', flexDirection: 'row', gap: 16, minHeight: 84, flexShrink: 1 },
+  homeBandCopy: { gap: 8, flexShrink: 1 },
+  homePressed: { opacity: 0.7 },
+  homeGuidance: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, gap: 8, marginTop: 28, paddingTop: 16 },
+  homeModuleHead: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
+  homeModuleTitle: { color: Palette.ink, flexShrink: 1, fontSize: 21, fontWeight: '700', letterSpacing: -0.3 },
+  homeDisclosure: { alignItems: 'center', justifyContent: 'center', minHeight: 48, minWidth: 48, paddingHorizontal: 8 },
+  homeDisclosureText: { color: Palette.coral, fontSize: 16, fontWeight: '600' },
+  homeGuidanceSummary: { color: Palette.ink, fontSize: 18, fontWeight: '500', lineHeight: 25 },
+  homeGuidanceRule: { color: Palette.inkMuted, fontSize: 16, lineHeight: 23 },
+  homeBandPanel: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, gap: 4, marginTop: 28, paddingTop: 16 },
+  homeBandAction: { paddingHorizontal: 0, paddingVertical: 8 },
+  speak: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, gap: 8, marginTop: 28, paddingTop: 20 },
+  speakTitle: { color: Palette.ink, fontSize: 17, fontWeight: '600' },
   bandHero: { alignItems: 'center', gap: 10, marginBottom: 24, marginTop: 8 },
-  band: { height: 220, width: 220 },
   bandState: { color: Palette.ink, fontSize: 24, fontWeight: '700' },
   bandNote: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22, maxWidth: 330, textAlign: 'center' },
   dot: { borderRadius: 6, height: 12, width: 12 },
   gapTop: { marginTop: 12 },
-  cards: { gap: 12 },
   empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22 },
 });
