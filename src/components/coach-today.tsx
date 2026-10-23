@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
@@ -19,7 +18,6 @@ import { useCoachData, useNow, type SessionRole } from '@/state/team-session';
 // Everything comes from the team's practice session in Firestore. A build without Firebase shows the
 // sample reading instead, tagged SAMPLE wherever it appears.
 
-const BAND = require('@/assets/images/heatsense-band-refined.png');
 const NEUTRAL = '#6B7A82';
 
 export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onInvite?: () => void; readOnly?: boolean; role?: SessionRole }) {
@@ -96,13 +94,10 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
       <Text accessibilityRole="header" style={styles.section}>Get started</Text>
       <Animated.View entering={enter(4, reduced)} style={styles.cards}>
         {!latest && !dismissed.includes('reading') ? (
-          <StartCard accent action="Check field conditions" body="Enter the WBGT from your meter. HeatSense sets the zone from your UIL class and tells you what to change." onAction={() => setSheet(true)} onDismiss={() => setDismissed([...dismissed, 'reading'])} title="Take a field reading" />
+          <StartCard accent action="Check field conditions" body="Enter the WBGT from your meter." onAction={() => setSheet(true)} onDismiss={() => setDismissed([...dismissed, 'reading'])} title="Take a field reading" />
         ) : null}
         {!dismissed.includes('invite') ? (
-          <StartCard action="Share team code" body="Athletes join with your 6-digit code. You approve each one." onAction={() => onInvite?.()} onDismiss={() => setDismissed([...dismissed, 'invite'])} title="Invite your athletes" />
-        ) : null}
-        {!dismissed.includes('band') ? (
-          <StartCard action="How pairing works" body="Athletes pair a HeatSense Band during setup. Bands are optional; field readings drive every decision." onAction={() => setDismissed([...dismissed, 'band'])} onDismiss={() => setDismissed([...dismissed, 'band'])} title="Pair athlete bands" art={<Image contentFit="contain" source={BAND} style={styles.bandArt} />} />
+          <StartCard action="Share team code" body="You approve each athlete who joins." onAction={() => onInvite?.()} onDismiss={() => setDismissed([...dismissed, 'invite'])} title="Invite your athletes" />
         ) : null}
       </Animated.View>
       </>}
@@ -180,7 +175,6 @@ const styles = StyleSheet.create({
   cardBody: { color: Palette.inkMuted, fontSize: 15, lineHeight: 21 },
   cardAction: { color: Palette.coral, fontSize: 16, fontWeight: '600', marginTop: 8 },
   cardArt: { alignItems: 'center', justifyContent: 'center', width: 84 },
-  bandArt: { height: 84, width: 84 },
   close: { position: 'absolute', right: 14, top: 10 },
   closeText: { color: Palette.inkMuted, fontSize: 22 },
   list: { backgroundColor: Palette.card, borderRadius: 20, paddingHorizontal: 16 },

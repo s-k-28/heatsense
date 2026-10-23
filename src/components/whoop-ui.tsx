@@ -93,11 +93,13 @@ export function Tiles({ children }: { children: ReactNode }) {
  * of the sentence at full reading size, as one paragraph, never a title with a small grey line under it.
  */
 export function Facts({ items }: { items: { title: string; body: string; tone?: string }[] }) {
+  // When any item has a dot, the others keep the dot's space so every paragraph starts on one edge.
+  const dotted = items.some((item) => item.tone);
   return (
     <Rows>
       {items.map((item) => (
         <View accessible key={item.title} style={styles.fact}>
-          {item.tone ? <View style={[styles.factDot, { backgroundColor: item.tone }]} /> : null}
+          {dotted ? <View style={[styles.factDot, { backgroundColor: item.tone ?? 'transparent' }]} /> : null}
           <Text style={styles.factText}><Text style={styles.factTitle}>{item.title}. </Text>{item.body}</Text>
         </View>
       ))}
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
   tile: { backgroundColor: Palette.surface, borderRadius: 16, gap: 6, minHeight: 112, padding: 16 },
   tileLabel: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
   tileValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 42, lineHeight: 46, letterSpacing: 0.2 },
-  tileUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
+  tileUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 24 },
   pill: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   pillDot: { borderRadius: 4, height: 8, width: 8 },
   pillText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
@@ -174,7 +176,7 @@ const styles = StyleSheet.create({
   statRow: { flexDirection: 'row', gap: 12 },
   stat: { flex: 1, gap: 2 },
   statValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 36, lineHeight: 40, letterSpacing: 0.2 },
-  statUnit: { color: Palette.inkMuted, fontSize: 16, fontWeight: '500' },
+  statUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 22 },
   statLabel: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
   card: { backgroundColor: Palette.surface, borderRadius: 16, gap: 14, padding: 18 },
   cardTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
