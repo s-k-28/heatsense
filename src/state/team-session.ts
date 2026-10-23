@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { SAMPLE_READING } from '@/lib/practice';
 import { watchTeamVitals, type VitalsRecord } from '@/services/band-vitals';
 import { watchActiveSession, watchReadings, type FieldReading, type PracticeSession } from '@/services/practice-sessions';
-import { firebaseAuth, firestore } from '@/services/firebase';
+import { firestore } from '@/services/firebase';
 import { getMyTeamInvite, watchMyMembership, type Membership } from '@/services/team-invites';
 import { useAuthSession } from '@/state/auth-session';
 import { watchRoster, watchTrainers, type RosterMember } from '@/services/team-roster';
@@ -17,32 +17,43 @@ export type TeamSession =
   | { status: 'error' }
   | { status: 'ready'; teamId: string; session: PracticeSession | null; readings: FieldReading[] };
 
-let cachedTeamId: string | null | undefined;
+// The coach's team, looked up once per signed-in coach. Keyed by uid so signing out and in as
+// someone else never reuses another account's answer.
+let cachedTeam: { uid: string; teamId: string | null } | undefined;
+const cachedTeamFor = (uid: string | undefined) => (uid && cachedTeam?.uid === uid ? cachedTeam.teamId : undefined);
 
 export type SessionRole = 'coach' | 'athlete' | 'trainer';
 
 export function useTeamSession(role: SessionRole = 'coach'): TeamSession {
-  const [teamId, setTeamId] = useState<string | null | undefined>(role === 'coach' ? cachedTeamId : undefined);
+  const { user } = useAuthSession();
+  const uid = user?.uid;
+  // Each lookup's answer is stored with the account it was for, so a stale answer never leaks
+  // into the next person who signs in on this phone.
+  const [coachTeam, setCoachTeam] = useState<{ uid: string; teamId: string | null } | undefined>(undefined);
+  const [memberTeam, setMemberTeam] = useState<{ uid: string; teamId: string | null } | undefined>(undefined);
   const [session, setSession] = useState<PracticeSession | null | undefined>(undefined);
   const [readings, setReadings] = useState<FieldReading[]>([]);
   const [failed, setFailed] = useState(false);
 
   // Coaches find their team through their invite; athletes and trainers through an approved membership.
   useEffect(() => {
-    if (role === 'coach') return;
-    const uid = firebaseAuth?.currentUser?.uid;
-    if (!uid) return;
-    return watchMyMembership(uid, (membership) => setTeamId(membership?.status === 'active' ? membership.teamId : null), () => setTeamId(null));
-  }, [role]);
+    if (role === 'coach' || !uid) return;
+    return watchMyMembership(uid, (membership) => setMemberTeam({ uid, teamId: membership?.status === 'active' ? membership.teamId : null }), () => setMemberTeam({ uid, teamId: null }));
+  }, [role, uid]);
 
   useEffect(() => {
-    if (role !== 'coach' || cachedTeamId !== undefined) return;
+    if (role !== 'coach' || !uid || cachedTeamFor(uid) !== undefined) return;
     let live = true;
     getMyTeamInvite()
-      .then((mine) => { cachedTeamId = mine?.invite.teamId ?? null; if (live) setTeamId(cachedTeamId); })
-      .catch(() => { if (live) setTeamId(null); });
+      .then((mine) => { cachedTeam = { uid, teamId: mine?.invite.teamId ?? null }; if (live) setCoachTeam(cachedTeam); })
+      .catch(() => { if (live) setCoachTeam({ uid, teamId: null }); });
     return () => { live = false; };
-  }, [role]);
+  }, [role, uid]);
+
+  const cached = cachedTeamFor(uid);
+  const teamId: string | null | undefined = !uid ? undefined
+    : role === 'coach' ? (cached !== undefined ? cached : coachTeam?.uid === uid ? coachTeam.teamId : undefined)
+      : memberTeam?.uid === uid ? memberTeam.teamId : undefined;
 
   useEffect(() => {
     if (!teamId) return;
@@ -55,7 +66,7 @@ export function useTeamSession(role: SessionRole = 'coach'): TeamSession {
   }, [session]);
 
   // No signed-in member means no membership to wait for.
-  if (teamId === undefined && role !== 'coach' && !firebaseAuth?.currentUser) return { status: 'no-team' };
+  if (!uid) return { status: 'no-team' };
   if (teamId === undefined) return { status: 'loading' };
   if (!teamId) return { status: 'no-team' };
   if (failed) return { status: 'error' };

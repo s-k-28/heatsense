@@ -12,7 +12,7 @@ export function AcclimatizationCard({ day, title = 'Heat acclimatization' }: { d
     <View accessible accessibilityLabel={`${title}: ${done ? 'complete' : `day ${day} of ${ACCLIMATIZATION_DAYS}`}. ${phase.rule}`} style={styles.card}>
       <View style={styles.head}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={[styles.count, { color: tone }]}>{done ? 'Done' : `${day}/${ACCLIMATIZATION_DAYS}`}</Text>
+        <Text style={[styles.count, { color: tone }]}>{done ? 'Done' : day === 0 ? 'New' : `${day}/${ACCLIMATIZATION_DAYS}`}</Text>
       </View>
       <View style={styles.steps}>
         {Array.from({ length: ACCLIMATIZATION_DAYS }, (_, i) => (

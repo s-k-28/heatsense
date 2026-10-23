@@ -132,7 +132,7 @@ export default function DashboardScreen() {
   };
 
   // The band in the corner: an athlete's battery, or how many athletes' bands are live for staff.
-  const team = useAthletes(role === 'trainer' ? 'trainer' : 'coach');
+  const team = useAthletes(role);
   const live = team.athletes.filter((a) => a.live && !a.live.stale).length;
   const paired = bandConnected || demoTeam;
   // ponytail: battery is the simulator's until the band's BLE battery service lands.
