@@ -9,7 +9,7 @@ import { HeatIcon } from '@/components/heat-icon';
 import { Button, Card, CardHeader, Group, Row } from '@/components/ui/list';
 import { Palette, Spacing, Type } from '@/constants/theme';
 import { useTeamDraft } from '@/state/onboarding';
-import { setPreference, useTemperature } from '@/state/preferences';
+import { useTemperature } from '@/state/preferences';
 
 type IconName = ComponentProps<typeof HeatIcon>['name'];
 
