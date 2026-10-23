@@ -8,13 +8,16 @@ import { BandSpot } from '@/components/band-journey';
 import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { Entry } from '@/constants/entry-theme';
+import { firebaseAuth, firestore } from '@/services/firebase';
+import { savePairing } from '@/services/band-vitals';
+import { PAIRED_SERIAL } from '@/state/band-uplink';
 import { setPreference } from '@/state/preferences';
 
 // Pairing the HeatSense Band, in the onboarding's welcome-screen design: get the band ready, put it
 // on, look for the pairing light, pick your band, connect. There is no Bluetooth layer yet (see
 // README, "HeatSense Band"), so finding and connecting are simulated, and every step says so.
 
-const SERIAL = 'HS-02A7';
+const SERIAL = PAIRED_SERIAL;
 const STEPS = ['ready', 'wear', 'light', 'select', 'connecting', 'connected'] as const;
 type Step = (typeof STEPS)[number];
 
@@ -100,7 +103,12 @@ export default function PairBandScreen() {
   // Connecting, then connected.
   useEffect(() => {
     if (step !== 'connecting') return;
-    timer.current = setTimeout(() => { setPreference('bandConnected', true); setStep('connected'); }, 1800);
+    timer.current = setTimeout(() => {
+      setPreference('bandConnected', true);
+      // Signed-in athletes keep the pairing on their account; offline sample builds just remember it.
+      if (firestore && firebaseAuth?.currentUser) savePairing(SERIAL).catch(() => {});
+      setStep('connected');
+    }, 1800);
   }, [step]);
 
   const rise = (delay: number) => (reduced ? undefined : FadeInUp.delay(delay).duration(520));

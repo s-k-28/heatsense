@@ -496,6 +496,41 @@ const trainer = await signUp('trainer');
   });
 }
 
+// HeatSense Band: the athlete's pairing is private; during an open practice the athlete's latest
+// sample is readable by the coach and trainers, written only by that athlete, at most every 10 s.
+{
+  const teamId = invite.teamId;
+  const { addDoc, collection, deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc, Timestamp } = await import('firebase/firestore');
+  const pairing = (user) => doc(user.db, 'athletes', athlete.uid, 'band', 'current');
+  const sample = (extra = {}) => ({ heartRate: 152, skinTempF: 94.1, sweat: 9.7, movement: 64, recovery: 'usual', source: 'simulated', serial: 'HS-02A7', sampledAt: Timestamp.now(), updatedAt: serverTimestamp(), ...extra });
+
+  await test('an athlete saves their own band pairing; nobody else can read it', async () => {
+    await rejects(setDoc(pairing(athlete), { serial: 'band-1', firmware: null, pairedAt: serverTimestamp(), updatedAt: serverTimestamp() }), 'permission-denied', 'malformed serial');
+    await setDoc(pairing(athlete), { serial: 'HS-02A7', firmware: null, pairedAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    equal((await getDoc(pairing(athlete))).data().serial, 'HS-02A7', 'saved serial');
+    await rejects(getDoc(pairing(coach)), 'permission-denied', 'coach reading the pairing');
+    await rejects(getDoc(pairing(stranger)), 'permission-denied', 'stranger reading the pairing');
+    await deleteDoc(pairing(athlete));
+  });
+
+  await test('during practice an approved athlete reports vitals the coach and trainer can read', async () => {
+    const open = await addDoc(collection(coach.db, 'teams', teamId, 'sessions'), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null });
+    const vitals = (user, uid = athlete.uid) => doc(user.db, 'teams', teamId, 'sessions', open.id, 'vitals', uid);
+    await rejects(setDoc(vitals(athlete), sample({ heartRate: 400 })), 'permission-denied', 'impossible heart rate');
+    await rejects(setDoc(vitals(athlete), sample({ source: 'made-up' })), 'permission-denied', 'unknown source');
+    await rejects(setDoc(vitals(athlete, coach.uid), sample()), 'permission-denied', 'athlete writing as someone else');
+    await rejects(setDoc(vitals(trainer, trainer.uid), sample()), 'permission-denied', 'trainer reporting vitals');
+    await setDoc(vitals(athlete), sample());
+    await rejects(setDoc(vitals(athlete), sample({ heartRate: 155 })), 'permission-denied', 'second write within 10 s');
+    equal((await getDoc(vitals(coach))).data().heartRate, 152, 'coach reads the sample');
+    equal((await getDoc(vitals(trainer))).data().heartRate, 152, 'trainer reads the sample');
+    equal((await getDoc(vitals(athlete))).data().heartRate, 152, 'athlete reads their own');
+    await rejects(getDoc(vitals(stranger)), 'permission-denied', 'stranger reading vitals');
+    await updateDoc(doc(coach.db, open.path), { endedAt: serverTimestamp() });
+    await rejects(setDoc(vitals(athlete), sample({ heartRate: 140 })), 'permission-denied', 'vitals after practice ended');
+  });
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 await Promise.all([coach, athlete, stranger, trainer].map((u) => deleteApp(u.app)));
 process.exit(failed ? 1 : 0);
