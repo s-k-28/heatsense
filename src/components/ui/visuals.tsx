@@ -25,7 +25,8 @@ export function SegmentBar({ segments }: { segments: { color: string; flex: numb
       </View>
       <View style={styles.segmentLabels}>
         {segments.map((segment) => (
-          <View key={segment.label} style={{ flex: segment.flex }}>
+          // Short segments (a 4-minute break) still get room for their label.
+          <View key={segment.label} style={{ flex: segment.flex, minWidth: 52 }}>
             <Text numberOfLines={1} style={styles.segmentTime}>{segment.time}</Text>
             <Text numberOfLines={1} style={styles.segmentName}>{segment.label}</Text>
           </View>
