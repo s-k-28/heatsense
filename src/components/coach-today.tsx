@@ -7,7 +7,7 @@ import { FieldCheckSheet } from '@/components/field-check-sheet';
 import { HeatOrb } from '@/components/heat-orb';
 import { SampleTag } from '@/components/whoop-ui';
 import { Ring } from '@/components/ui/visuals';
-import { Palette } from '@/constants/theme';
+import { Face, Palette } from '@/constants/theme';
 import { enter, swap } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { recheckStatus } from '@/services/practice-sessions';
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   hero: { alignItems: 'center', marginTop: 8 },
   orbCopy: { alignItems: 'center' },
-  orbValue: { color: Palette.ink, fontSize: 58, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -1 },
+  orbValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 84, lineHeight: 88 },
   orbUnit: { color: Palette.inkMuted, fontSize: 22, fontWeight: '600' },
   orbZone: { fontSize: 17, fontWeight: '600', marginTop: 2 },
   orbMeta: { color: Palette.inkMuted, fontSize: 16, marginTop: 6 },
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   measured: { color: Palette.inkMuted, fontSize: 15, marginTop: 12 },
   rings: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 28, paddingHorizontal: 4 },
   metric: { alignItems: 'center', gap: 4, width: '32%' },
-  ringValue: { color: Palette.ink, fontSize: 20, fontVariant: ['tabular-nums'], fontWeight: '700' },
+  ringValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 28, lineHeight: 32 },
   metricLabel: { color: Palette.ink, fontSize: 16, fontWeight: '600', marginTop: 10 },
   section: { color: Palette.ink, fontSize: 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 12, marginTop: 34 },
   cards: { gap: 12 },

@@ -53,13 +53,24 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
   };
 
   const code = mine?.invite.code;
+  // The coach reads their own team; a trainer reads the team they belong to.
+  const membership = useMembership(role !== 'coach');
+  const team = role === 'coach' ? mine?.team : membership?.status === 'active' ? membership.team : null;
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
-      <Text style={styles.teamName}>{mine?.team.teamName ?? 'Your team'}</Text>
-      <Text style={styles.teamMeta}>{mine ? [mine.team.school, mine.team.sport, mine.team.level].filter(Boolean).join(' · ') : mine === null ? 'Not set up yet.' : ' '}</Text>
+      <Card message={team ? [team.school, team.sport, 'level' in team ? team.level : null].filter(Boolean).join(' · ') : mine === null && !readOnly ? 'Not set up yet. Create it to get the code athletes join with.' : undefined} title={team?.teamName ?? 'Your team'}>
+        {team ? (
+          <StatRow stats={[
+            { label: 'Athletes', value: String(active.length) },
+            { label: 'Staff', value: String(staff.length) },
+            { label: 'Waiting', value: String(waiting.length), tone: waiting.length && !readOnly ? Palette.coral : undefined },
+          ]} />
+        ) : null}
+      </Card>
 
       {readOnly ? null : <>
+      <View style={styles.gap12} />
       <Rows>
         {mine === null ? (
           <ListRow label="Create your team" onPress={() => router.push('/team/create')} />
@@ -264,8 +275,7 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  teamName: { color: Palette.ink, fontSize: 28, fontWeight: '700', letterSpacing: -0.5, marginTop: 4 },
-  teamMeta: { color: Palette.inkMuted, fontSize: 16, marginTop: 4 },
+  gap12: { height: 12 },
   decide: { flexDirection: 'row', gap: 8 },
   approve: { backgroundColor: Palette.coral, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   approveText: { color: '#1A0E07', fontSize: 15, fontWeight: '600' },

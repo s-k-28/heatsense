@@ -4,7 +4,7 @@ import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { LineChart } from '@/components/ui/charts';
 import { ListRow, MetricTile, Rows, Tiles } from '@/components/whoop-ui';
-import { Palette } from '@/constants/theme';
+import { Face, Palette } from '@/constants/theme';
 import { swap } from '@/lib/motion';
 import type { VitalsRecord } from '@/services/band-vitals';
 import type { RosterMember } from '@/services/team-roster';
@@ -128,14 +128,14 @@ const styles = StyleSheet.create({
   tagDot: { backgroundColor: Palette.info, borderRadius: 3, height: 6, width: 6 },
   tagText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
   statusRow: { alignItems: 'center', flexDirection: 'row', gap: 10 },
-  bpm: { color: Palette.ink, fontSize: 20, fontVariant: ['tabular-nums'], fontWeight: '700' },
+  bpm: { color: Palette.ink, fontFamily: Face.figure, fontSize: 28, lineHeight: 32 },
   bpmUnit: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
   statusDot: { borderRadius: 5, height: 10, width: 10 },
   key: { flexDirection: 'row', gap: 18, marginBottom: 12 },
   keyItem: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   keyText: { color: Palette.inkMuted, fontSize: 15 },
   hero: { alignItems: 'center', gap: 4, marginBottom: 12, marginTop: 4 },
-  hr: { color: Palette.ink, fontSize: 80, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -2 },
+  hr: { color: Palette.ink, fontFamily: Face.figure, fontSize: 112, lineHeight: 116 },
   hrUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
   pill: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 10 },
   pillText: { color: Palette.ink, fontSize: 16, fontWeight: '600' },

@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { SimulatedTag, VitalsDetail } from '@/components/vitals';
 import { MetricTile, Tiles } from '@/components/whoop-ui';
-import { MaxContentWidth, Palette } from '@/constants/theme';
+import { Face, MaxContentWidth, Palette } from '@/constants/theme';
 import { useDemoTeam } from '@/state/demo-team';
 import { useCoachData, useRoster, useTeamVitals, type SessionRole } from '@/state/team-session';
 
@@ -67,7 +67,7 @@ export default function AthleteVitalsScreen() {
 
 const styles = StyleSheet.create({
   liveHero: { alignItems: 'center', gap: 4, marginBottom: 20 },
-  liveHr: { color: Palette.ink, fontSize: 80, fontVariant: ['tabular-nums'], fontWeight: '700', letterSpacing: -2 },
+  liveHr: { color: Palette.ink, fontFamily: Face.figure, fontSize: 112, lineHeight: 116 },
   liveUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
   liveWhen: { color: Palette.inkFaint, fontSize: 14 },
   screen: { backgroundColor: '#0A0B0D', flex: 1 },
