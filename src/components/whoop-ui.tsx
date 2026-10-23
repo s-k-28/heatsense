@@ -7,7 +7,7 @@ import { Face, Palette } from '@/constants/theme';
 import { enter, settle } from '@/lib/motion';
 
 // The dashboard's building blocks: one heading per section, rows grouped on one surface with
-// hairline dividers, and metric tiles. Sentence case throughout, peach only on things you can tap.
+// hairline dividers, stats and cards. Sentence case throughout, peach only on things you can tap.
 
 export function SectionTitle({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
   return (
@@ -32,7 +32,7 @@ const Chevron = () => (
 );
 
 /** One row: a label, an optional detail line, and a value, control or chevron. */
-export function ListRow({ label, detail, value, valueTone, onPress, trailing, destructive }: { label: string; detail?: string; value?: string; valueTone?: string; onPress?: () => void; trailing?: ReactNode; destructive?: boolean }) {
+export function ListRow({ label, detail, value, valueTone, onPress, trailing, destructive, selected }: { label: string; detail?: string; value?: string; valueTone?: string; onPress?: () => void; trailing?: ReactNode; destructive?: boolean; selected?: boolean }) {
   const body = (
     <>
       <View style={styles.rowCopy}>
@@ -44,7 +44,7 @@ export function ListRow({ label, detail, value, valueTone, onPress, trailing, de
     </>
   );
   return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>{body}</Pressable>
+    <Pressable accessibilityRole="button" accessibilityState={selected === undefined ? undefined : { selected }} onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>{body}</Pressable>
   ) : (
     // A row that holds its own controls (approve, a switch) can't be one accessible element, or those controls disappear for VoiceOver.
     <View accessible={!trailing} style={styles.row}>{body}</View>
@@ -61,28 +61,6 @@ export function Rows({ children }: { children: ReactNode }) {
           {i > 0 ? <View style={styles.divider} /> : null}
           {child}
         </Animated.View>
-      ))}
-    </View>
-  );
-}
-
-/** A metric tile: a label, a big value, and an optional status line. */
-export function MetricTile({ label, value, unit, pill, pillTone = Palette.safe }: { label: string; value: string; unit?: string; pill?: string; pillTone?: string }) {
-  return (
-    <View accessible style={styles.tile}>
-      <Text style={styles.tileLabel}>{label}</Text>
-      <Text style={styles.tileValue}>{value}{unit ? <Text style={styles.tileUnit}> {unit}</Text> : null}</Text>
-      {pill ? <View style={styles.pill}><View style={[styles.pillDot, { backgroundColor: pillTone }]} /><Text style={styles.pillText}>{pill}</Text></View> : null}
-    </View>
-  );
-}
-
-export function Tiles({ children }: { children: ReactNode }) {
-  const reduced = useReducedMotion();
-  return (
-    <View style={styles.tiles}>
-      {Children.toArray(children).map((child, i) => (
-        <Animated.View entering={enter(i, reduced)} key={(child as { key?: string }).key ?? i} style={styles.tileSlot}>{child}</Animated.View>
       ))}
     </View>
   );
@@ -142,6 +120,7 @@ export function Card({ title, message, children, onPress }: { title: string; mes
 export function SampleTag() {
   return (
     <View accessible accessibilityLabel="Sample data" style={styles.sample}>
+      <View style={styles.sampleDot} />
       <Text style={styles.sampleText}>Sample data</Text>
     </View>
   );
@@ -160,15 +139,6 @@ const styles = StyleSheet.create({
   rowLabel: { color: Palette.ink, fontSize: 17, fontWeight: '500' },
   rowDetail: { color: Palette.inkMuted, fontSize: 15, lineHeight: 20 },
   rowValue: { color: Palette.ink, fontSize: 17, fontVariant: ['tabular-nums'], fontWeight: '600' },
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tileSlot: { width: '48.5%' },
-  tile: { backgroundColor: Palette.surface, borderRadius: 16, gap: 6, minHeight: 112, padding: 16 },
-  tileLabel: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
-  tileValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 42, lineHeight: 46, letterSpacing: 0.2 },
-  tileUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 24 },
-  pill: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  pillDot: { borderRadius: 4, height: 8, width: 8 },
-  pillText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
   fact: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, paddingHorizontal: 18, paddingVertical: 16 },
   factDot: { borderRadius: 5, height: 10, marginTop: 7, width: 10 },
   factText: { color: Palette.inkMuted, flex: 1, fontSize: 17, lineHeight: 24 },
@@ -182,6 +152,7 @@ const styles = StyleSheet.create({
   cardTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   cardTitle: { color: Palette.ink, flex: 1, fontSize: 18, fontWeight: '600' },
   cardMessage: { color: Palette.inkMuted, fontSize: 17, lineHeight: 24, marginTop: -6 },
-  sample: { alignSelf: 'flex-start', borderColor: Palette.border, borderRadius: 999, borderWidth: 1, marginBottom: 12, paddingHorizontal: 10, paddingVertical: 3 },
-  sampleText: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },
+  sample: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: 6, marginBottom: 12 },
+  sampleDot: { backgroundColor: Palette.info, borderRadius: 3, height: 6, width: 6 },
+  sampleText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
 });

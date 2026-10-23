@@ -32,5 +32,3 @@ export function settle(reduced: boolean) {
   return reduced ? undefined : LinearTransition.duration(260).easing(EASE_OUT);
 }
 
-/** Rings and progress arcs fill to their value. */
-export const FILL_MS = 900;

@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { LineChart } from '@/components/ui/charts';
-import { ListRow, MetricTile, Rows, Tiles } from '@/components/whoop-ui';
+import { ListRow, Rows } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
-import { swap } from '@/lib/motion';
 import type { VitalsRecord } from '@/services/band-vitals';
 import type { RosterMember } from '@/services/team-roster';
 import type { DemoMember } from '@/state/demo-team';
@@ -83,28 +82,42 @@ export function LiveVitalsRows({ records, roster, now }: { records: VitalsRecord
   );
 }
 
-/** The full picture for one athlete: live heart rate, its last six minutes, and the other signals. */
+type Signal = 'heartRate' | 'skinTempF' | 'sweat' | 'movement';
+
+// Every signal the band streams. Fixed chart ranges keep small changes from looking like big swings.
+const SIGNALS: Record<Signal, { label: string; unit: string; min: number; max: number; format: (v: number) => string; spoken: string }> = {
+  heartRate: { label: 'Heart rate', unit: 'bpm', min: 60, max: 190, format: (v) => String(Math.round(v)), spoken: 'beats per minute' },
+  skinTempF: { label: 'Skin temp', unit: '°F', min: 90, max: 96, format: (v) => v.toFixed(1), spoken: 'degrees' },
+  sweat: { label: 'Sweat (GSR)', unit: 'µS', min: 0, max: 20, format: (v) => v.toFixed(1), spoken: 'microsiemens' },
+  movement: { label: 'Movement', unit: '%', min: 0, max: 100, format: (v) => String(Math.round(v)), spoken: 'percent' },
+};
+
+/** The full picture for one athlete: pick any signal to see it live and over the last six minutes. */
 export function VitalsDetail({ member }: { member: DemoMember }) {
-  const reduced = useReducedMotion();
+  const [signal, setSignal] = useState<Signal>('heartRate');
   const { vitals } = member;
+  const spec = SIGNALS[signal];
+  const now = spec.format(vitals[signal]);
   return (
     <>
       <SimulatedTag />
       <View style={styles.hero}>
-        <Animated.Text entering={swap(reduced)} key={vitals.heartRate} style={styles.hr}>{vitals.heartRate}</Animated.Text>
-        <Text style={styles.hrUnit}>bpm · {vitals.phase === 'work' ? 'working' : 'on break'}</Text>
+        <Text style={styles.hr}>{now}<Text style={styles.hrUnitBig}>{signal === 'heartRate' ? '' : spec.unit}</Text></Text>
+        <Text style={styles.hrUnit}>{signal === 'heartRate' ? 'bpm · ' : `${spec.label} · `}{vitals.phase === 'work' ? 'working' : 'on break'}</Text>
         <View style={styles.pill}>
           <View style={[styles.statusDot, { backgroundColor: statusTone(member) }]} />
           <Text style={styles.pillText}>{statusLabel(member)}</Text>
         </View>
       </View>
       <LineChart
+        format={spec.format}
+        key={signal}
         labels={['6 min ago', 'Now']}
-        max={190}
-        min={60}
-        summary={`Heart rate over the last six minutes, now ${vitals.heartRate} beats per minute`}
-        tone={member.status === 'watch' ? Palette.warning : Palette.coral}
-        values={member.history}
+        max={spec.max}
+        min={spec.min}
+        summary={`${spec.label} over the last six minutes, now ${now} ${spec.spoken}`}
+        tone={member.status === 'watch' && signal === 'heartRate' ? Palette.warning : Palette.coral}
+        values={member.history.map((v) => v[signal])}
       />
       {member.status === 'watch' ? (
         <View style={styles.note}>
@@ -113,18 +126,29 @@ export function VitalsDetail({ member }: { member: DemoMember }) {
         </View>
       ) : null}
       <View style={styles.tiles}>
-        <Tiles>
-          <MetricTile label="Skin temp" unit="°F" value={vitals.skinTempF.toFixed(1)} />
-          <MetricTile label="Sweat (GSR)" unit="µS" value={vitals.sweat.toFixed(1)} />
-          <MetricTile label="Movement" unit="%" value={String(vitals.movement)} />
-          <MetricTile label="Resting HR" unit="bpm" value={String(member.athlete.restingHr)} />
-        </Tiles>
+        <Rows>
+          {(Object.keys(SIGNALS) as Signal[]).map((key) => (
+            <ListRow
+              key={key}
+              label={SIGNALS[key].label}
+              onPress={() => setSignal(key)}
+              selected={key === signal}
+              trailing={<View style={[styles.mark, key === signal && styles.markOn]} />}
+              value={`${SIGNALS[key].format(vitals[key])}${key === 'heartRate' || key === 'sweat' ? ' ' : ''}${SIGNALS[key].unit}`}
+              valueTone={key === signal ? Palette.coral : undefined}
+            />
+          ))}
+          <ListRow label="Resting heart rate" value={`${member.athlete.restingHr} bpm`} />
+        </Rows>
       </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  hrUnitBig: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 40 },
+  mark: { borderRadius: 4, height: 8, width: 8 },
+  markOn: { backgroundColor: Palette.coral },
   tag: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: 6, marginBottom: 12 },
   tagDot: { backgroundColor: Palette.info, borderRadius: 3, height: 6, width: 6 },
   tagText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
@@ -136,7 +160,7 @@ const styles = StyleSheet.create({
   keyItem: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   keyText: { color: Palette.inkMuted, fontSize: 15 },
   keyEnd: { marginLeft: 'auto' },
-  hero: { alignItems: 'center', gap: 4, marginBottom: 12, marginTop: 4 },
+  hero: { alignItems: 'flex-start', gap: 4, marginBottom: 12, marginTop: 4 },
   hr: { color: Palette.ink, fontFamily: Face.figure, fontSize: 112, lineHeight: 116 },
   hrUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
   pill: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 10 },

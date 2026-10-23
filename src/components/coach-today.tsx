@@ -3,9 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { FieldCheckSheet } from '@/components/field-check-sheet';
-import { HeatOrb } from '@/components/heat-orb';
-import { SampleTag } from '@/components/whoop-ui';
-import { Ring } from '@/components/ui/visuals';
+import { SampleTag, StatRow } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
 import { enter, swap } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
@@ -13,12 +11,10 @@ import { recheckStatus } from '@/services/practice-sessions';
 import { useTemperature } from '@/state/preferences';
 import { useCoachData, useNow, type SessionRole } from '@/state/team-session';
 
-// Coach Home, after WHOOP's Home: one living orb with the latest field reading, three rings for
-// the practice loop (recheck, readings, acknowledged), then "Get started" cards and today's record.
+// Coach Home: the latest field reading as a plain number on UIL's zone scale, the practice loop as
+// three figures (next recheck, readings, applied), then "Get started" cards and today's record.
 // Everything comes from the team's practice session in Firestore. A build without Firebase shows the
 // sample reading instead, tagged SAMPLE wherever it appears.
-
-const NEUTRAL = '#6B7A82';
 
 export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onInvite?: () => void; readOnly?: boolean; role?: SessionRole }) {
   const data = useCoachData(role);
@@ -30,7 +26,6 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
 
   const latest = data?.readings.at(-1) ?? null;
   const zone: Zone | null = latest?.zone ?? null;
-  const color = zone ? ZONES[zone].color === '#000000' ? '#8E8E93' : ZONES[zone].color : NEUTRAL;
   const session = data?.session ?? null;
   const recheck = session ? recheckStatus(session, latest, now) : null;
   const acked = data?.readings.filter((r) => r.acknowledgedAt).length ?? 0;
@@ -44,50 +39,34 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
 
   return (
     <>
-      <View style={styles.hero}>
-        {data?.sample ? <SampleTag /> : null}
-        <HeatOrb color={color} size={268} still={!latest}>
-          {latest ? (
-            <Animated.View entering={swap(reduced)} key={latest.id} style={styles.orbCopy}>
-              <Text style={styles.orbValue}>{temp.value(latest.wbgtF)}<Text style={styles.orbUnit}>{temp.unit}</Text></Text>
-              <Text style={[styles.orbZone, { color: ZONES[latest.zone].text }]}>{ZONES[latest.zone].label}</Text>
-            </Animated.View>
-          ) : (
-            <>
-              <Text style={styles.orbEmpty}>--</Text>
-              <Text style={styles.orbMeta}>{session ? 'No reading yet' : 'No practice today'}</Text>
-            </>
-          )}
-        </HeatOrb>
-        {canRecord ? (
-          <Pressable accessibilityRole="button" onPress={() => setSheet(true)} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
-            <Text style={styles.ctaText}>{action}</Text>
-          </Pressable>
-        ) : null}
-        {latest ? <Text style={styles.measured}>WBGT measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text> : null}
-      </View>
+      {data?.sample ? <SampleTag /> : null}
+      {latest ? (
+        <Animated.View entering={swap(reduced)} key={latest.id} style={styles.reading}>
+          <Text style={styles.value}>{temp.value(latest.wbgtF)}<Text style={styles.unit}>{temp.unit}</Text></Text>
+          <Text style={[styles.zone, { color: ZONES[latest.zone].text }]}>{ZONES[latest.zone].label}</Text>
+        </Animated.View>
+      ) : (
+        <View style={styles.reading}>
+          <Text style={[styles.value, styles.muted]}>--</Text>
+          <Text style={[styles.zone, styles.muted]}>{session ? 'No reading yet' : 'No practice today'}</Text>
+        </View>
+      )}
+      <ZoneScale zone={zone} />
+      {latest ? <Text style={styles.measured}>WBGT measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text> : null}
+      {canRecord ? (
+        <Pressable accessibilityRole="button" onPress={() => setSheet(true)} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
+          <Text style={styles.ctaText}>{action}</Text>
+        </Pressable>
+      ) : null}
 
-      <Animated.View entering={enter(2, reduced)} style={styles.rings}>
-        <Metric label="Recheck" sub={recheck ? (recheck.overdue ? 'Overdue' : 'Next reading') : 'No session'}>
-          <Ring
-            max={1}
-            segments={[{ color: recheck?.overdue ? Palette.emergency : Palette.coral, value: recheck ? Math.min(1, 1 - Math.max(0, recheck.msLeft) / (session!.recheckMinutes * 60_000)) : 0 }]}
-            size={88}
-            stroke={7}
-            summary={recheck ? (recheck.overdue ? 'Reading overdue' : `Next reading in ${Math.ceil(recheck.msLeft / 60_000)} minutes`) : 'No practice session'}>
-            <Text style={[styles.ringValue, recheck?.overdue && { color: Palette.emergency }]}>{recheck ? (recheck.overdue ? 'LATE' : `${Math.ceil(recheck.msLeft / 60_000)}m`) : '--'}</Text>
-          </Ring>
-        </Metric>
-        <Metric label="Readings" sub="Today">
-          <Ring max={Math.max(total, 4)} segments={(data?.readings ?? []).map((r) => ({ color: ZONES[r.zone].color === '#000000' ? '#8E8E93' : ZONES[r.zone].color, value: 1 }))} size={88} stroke={7} summary={`${total} readings today`}>
-            <Text style={styles.ringValue}>{total || '--'}</Text>
-          </Ring>
-        </Metric>
-        <Metric label="Applied" sub="Guidance">
-          <Ring max={Math.max(total, 1)} segments={[{ color: Palette.safe, value: acked }]} size={88} stroke={7} summary={`${acked} of ${total} readings acknowledged`}>
-            <Text style={styles.ringValue}>{total ? `${acked}/${total}` : '--'}</Text>
-          </Ring>
-        </Metric>
+      <Animated.View entering={enter(2, reduced)} style={styles.stats}>
+        <StatRow stats={[
+          recheck
+            ? { label: 'Next reading', value: recheck.overdue ? 'Late' : String(Math.ceil(recheck.msLeft / 60_000)), unit: recheck.overdue ? undefined : ' min', tone: recheck.overdue ? Palette.emergency : undefined }
+            : { label: 'Next reading', value: '--' },
+          { label: 'Readings', value: String(total) },
+          { label: 'Applied', value: total ? `${acked}/${total}` : '--' },
+        ]} />
       </Animated.View>
 
       {readOnly ? null : <>
@@ -124,11 +103,15 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
   );
 }
 
-function Metric({ children, label, sub }: { children: ReactNode; label: string; sub: string }) {
+const SCALE: Zone[] = ['green', 'yellow', 'orange', 'red', 'black'];
+
+/** Where the reading sits on UIL's five zones: the current one lit, the rest dim. */
+function ZoneScale({ zone }: { zone: Zone | null }) {
   return (
-    <View style={styles.metric}>
-      {children}
-      <Text accessibilityHint={sub} style={styles.metricLabel}>{label}</Text>
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.scale}>
+      {SCALE.map((z) => (
+        <View key={z} style={[styles.scaleStep, { backgroundColor: z === 'black' ? '#8E8E93' : ZONES[z].color, opacity: z === zone ? 1 : 0.2 }]} />
+      ))}
     </View>
   );
 }
@@ -153,20 +136,17 @@ function StartCard({ action, art, body, onAction, onDismiss, title }: { accent?:
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
-  hero: { alignItems: 'center', marginTop: 8 },
-  orbCopy: { alignItems: 'center' },
-  orbValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 84, lineHeight: 88 },
-  orbUnit: { color: Palette.inkMuted, fontSize: 22, fontWeight: '600' },
-  orbZone: { fontSize: 17, fontWeight: '600', marginTop: 2 },
-  orbMeta: { color: Palette.inkMuted, fontSize: 16, marginTop: 6 },
-  orbEmpty: { color: Palette.inkMuted, fontSize: 52, fontWeight: '600' },
-  cta: { backgroundColor: Palette.coral, borderRadius: 999, marginTop: 18, minHeight: 52, justifyContent: 'center', paddingHorizontal: 32 },
-  ctaText: { color: '#1A0E07', fontSize: 17, fontWeight: '600' },
+  reading: { marginTop: 12 },
+  value: { color: Palette.ink, fontFamily: Face.figure, fontSize: 120, lineHeight: 124 },
+  unit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 36 },
+  zone: { fontSize: 22, fontWeight: '700', marginTop: -4 },
+  muted: { color: Palette.inkMuted },
+  scale: { flexDirection: 'row', gap: 4, marginTop: 20 },
+  scaleStep: { borderRadius: 3, flex: 1, height: 6 },
   measured: { color: Palette.inkMuted, fontSize: 15, marginTop: 12 },
-  rings: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 28, paddingHorizontal: 4 },
-  metric: { alignItems: 'center', gap: 4, width: '32%' },
-  ringValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 28, lineHeight: 32 },
-  metricLabel: { color: Palette.ink, fontSize: 16, fontWeight: '600', marginTop: 10 },
+  cta: { alignItems: 'center', backgroundColor: Palette.coral, borderRadius: 14, justifyContent: 'center', marginTop: 24, minHeight: 54 },
+  ctaText: { color: '#1A0E07', fontSize: 17, fontWeight: '600' },
+  stats: { borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, marginTop: 28, paddingTop: 20 },
   section: { color: Palette.ink, fontSize: 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 12, marginTop: 34 },
   cards: { gap: 12 },
   card: { backgroundColor: Palette.surface, borderRadius: 16, flexDirection: 'row', gap: 12, padding: 18 },

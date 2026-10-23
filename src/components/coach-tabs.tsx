@@ -3,7 +3,7 @@ import { signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { Card, CapsLabel, Facts, ListRow, MetricTile, Rows, SampleTag, SectionTitle, StatRow, Tiles } from '@/components/whoop-ui';
+import { Card, CapsLabel, Facts, ListRow, Rows, SampleTag, SectionTitle, StatRow } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION } from '@/lib/uil-wbgt';
@@ -183,7 +183,7 @@ export function PlanTab() {
   );
 }
 
-/** What UIL requires for the latest reading's zone, as tiles, with the source. */
+/** What UIL requires for the latest reading's zone, one rule per row, with the source. */
 export function ZoneRules({ latest, uilClass, hideSummary = false }: { latest: FieldReading | null; uilClass: 2 | 3; hideSummary?: boolean }) {
   const guidance = latest ? UIL_GUIDANCE[latest.zone] : null;
   return (
@@ -191,12 +191,12 @@ export function ZoneRules({ latest, uilClass, hideSummary = false }: { latest: F
       {guidance ? (
         <>
           {hideSummary ? <View style={styles.gap12} /> : <Text style={styles.summary}>{guidance.summary}</Text>}
-          <Tiles>
-            <MetricTile label="Rest breaks" unit={guidance.breaksPerHour ? 'per hr' : 'min/hr'} value={guidance.breaksPerHour ? `${guidance.breaksPerHour}+` : guidance.restMinutesPerHour ? String(guidance.restMinutesPerHour) : '--'} />
-            <MetricTile label="Break length" unit="min" value={guidance.breakMinutes ? `${guidance.breakMinutes}+` : '--'} />
-            <MetricTile label="Max practice" unit={guidance.maxPracticeMinutes ? 'hr' : undefined} value={guidance.maxPracticeMinutes ? String(guidance.maxPracticeMinutes / 60) : guidance.outdoorAllowed ? 'No limit' : 'None'} />
-            <MetricTile label="Cooling zone" value={guidance.coolingZoneRequired ? 'Required' : 'Optional'} />
-          </Tiles>
+          <Rows>
+            <ListRow label="Rest breaks" value={guidance.breaksPerHour ? `${guidance.breaksPerHour}+ per hour` : guidance.restMinutesPerHour ? `${guidance.restMinutesPerHour} min per hour` : '--'} />
+            <ListRow label="Break length" value={guidance.breakMinutes ? `${guidance.breakMinutes}+ min` : '--'} />
+            <ListRow label="Max practice" value={guidance.maxPracticeMinutes ? `${guidance.maxPracticeMinutes / 60} hr` : guidance.outdoorAllowed ? 'No limit' : 'None outdoors'} />
+            <ListRow label="Cooling zone" value={guidance.coolingZoneRequired ? 'Required' : 'Optional'} />
+          </Rows>
           {guidance.football ? <Facts items={[{ title: 'Football equipment', body: guidance.football }]} /> : null}
         </>
       ) : null}
@@ -284,8 +284,8 @@ const styles = StyleSheet.create({
   summary: { color: Palette.ink, fontSize: 17, lineHeight: 24, marginBottom: 14, marginTop: 16 },
   sourceRow: { marginTop: 16 },
   identity: { alignItems: 'center', flexDirection: 'row', gap: 16, marginTop: 8 },
-  avatar: { alignItems: 'center', backgroundColor: Palette.coral, borderRadius: 34, height: 68, justifyContent: 'center', width: 68 },
-  avatarText: { color: '#1A0E07', fontSize: 24, fontWeight: '800' },
+  avatar: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 34, height: 68, justifyContent: 'center', width: 68 },
+  avatarText: { color: Palette.ink, fontSize: 22, fontWeight: '600' },
   identityName: { color: Palette.ink, fontSize: 24, fontWeight: '700' },
   identityMeta: { color: Palette.inkMuted, fontSize: 15, marginTop: 2 },
   logout: { alignItems: 'center', alignSelf: 'center', borderColor: Palette.border, borderRadius: 999, borderWidth: 1, marginTop: 32, paddingHorizontal: 40, paddingVertical: 14 },
