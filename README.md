@@ -693,7 +693,8 @@ flowchart TD
     Role -->|athlete| SetupAthlete["/setup/athlete<br/>enter team code"]
     Role -->|athletic trainer| SetupTrainer["/setup/trainer<br/>enter team code"]
 
-    SetupCoach --> TeamCreate["/team/create<br/>incl. UIL class"]
+    SetupCoach -->|create a team| TeamCreate["/team/create<br/>incl. UIL class"]
+    SetupCoach -->|join as staff| SetupTrainer
     TeamCreate --> TeamInvite["/team/invite<br/>share 6-digit code"]
     TeamInvite --> Ready["/ready<br/>what to expect"]
     SetupTrainer --> Ready
@@ -703,7 +704,7 @@ flowchart TD
     Profile --> Body["/athlete/body"]
     Body --> Safety["/athlete/safety<br/>+ consent"]
     Safety --> Pair["/pair-band<br/>simulated pairing"]
-    Pair --> Alerts["/notifications<br/>heat alerts"]
+    Pair --> Alerts["/notifications<br/>asks for heat alerts"]
     Alerts --> Done["/athlete/done"]
     Done --> Dash
 
@@ -711,7 +712,6 @@ flowchart TD
     Dash --> FieldCheck["Practice sheet<br/>session, readings, history"]
     Dash --> Vitals["/athlete-vitals<br/>one athlete's vitals"]
     Dash --> PlanEditor["/plan-editor<br/>coach"]
-    Dash --> Detail["/detail"]
 ```
 
 The practice sheet opens over the dashboard rather than as its own route.
