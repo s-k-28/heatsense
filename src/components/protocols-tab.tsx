@@ -402,8 +402,8 @@ function SweatRate() {
   );
 }
 
-function ZonePicker() {
-  const data = useCoachData('trainer');
+export function ZonePicker({ role = 'trainer' }: { role?: 'trainer' | 'athlete' }) {
+  const data = useCoachData(role);
   const latestZone = data?.readings.at(-1)?.zone ?? 'green';
   const [zone, setZone] = useState<Zone | null>(null);
   const shown = zone ?? latestZone;
