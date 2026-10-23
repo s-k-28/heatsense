@@ -58,7 +58,6 @@ export const SAMPLE_READING: FieldReading = {
   guidance: 'Modify work and rest intervals before athletes take the field.',
 };
 
-export const SAMPLE_PLAN: PracticePlan = { workMinutes: 20, restMinutes: 10, waterEveryMinutes: WATER_BREAK_MINUTES, equipment: 'Off during breaks', zone: TODAY.zone };
 
 /**
  * What the coach should do next, from the reading and plan we actually have.

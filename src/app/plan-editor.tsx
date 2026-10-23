@@ -21,6 +21,10 @@ import {
   type Equipment,
   type PracticePlan,
 } from '@/state/practice-plans';
+import { ZONES } from '@/lib/practice';
+import { checkPlan } from '@/lib/plan-check';
+import { UIL_GUIDANCE } from '@/lib/uil-wbgt';
+import { useCoachData } from '@/state/team-session';
 
 const minus = { ios: 'minus', android: 'remove', web: 'remove' } as const;
 const plus = { ios: 'plus', android: 'add', web: 'add' } as const;
@@ -117,6 +121,8 @@ export default function PlanEditorScreen() {
             </Text>
           </View>
 
+          <ZoneCheck onFix={(fix) => setPlan((current) => ({ ...current, ...fix }))} plan={plan} />
+
           <Pressable accessibilityRole="button" onPress={useToday} style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
             <Text style={styles.primaryText}>Use for today</Text>
           </Pressable>
@@ -138,6 +144,50 @@ export default function PlanEditorScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
+  );
+}
+
+/**
+ * Today's zone against the plan: the break count, break length, rest per hour and practice length
+ * UIL requires, each checked, with a one-tap fix that spaces the breaks the way the chart allows.
+ */
+function ZoneCheck({ plan, onFix }: { plan: PracticePlan; onFix: (fix: Partial<PracticePlan>) => void }) {
+  const data = useCoachData('coach');
+  const zone = data?.readings.at(-1)?.zone ?? null;
+  if (!zone) {
+    return (
+      <>
+        <Text style={styles.label}>Today’s zone</Text>
+        <View style={styles.card}><Text style={styles.checkEmpty}>Take a field reading and this plan is checked against its UIL zone.</Text></View>
+      </>
+    );
+  }
+  const { ok, rows, fix } = checkPlan(plan, UIL_GUIDANCE[zone]);
+  const outdoor = UIL_GUIDANCE[zone].outdoorAllowed;
+  const tone = zone === 'black' ? '#8E8E93' : ZONES[zone].color;
+  return (
+    <>
+      <Text style={styles.label}>Today’s zone</Text>
+      <View style={styles.card}>
+        <View style={styles.checkHead}>
+          <View style={[styles.checkDot, { backgroundColor: tone }]} />
+          <Text style={styles.checkTitle}>{ok ? `Meets ${ZONES[zone].label} rules` : `Doesn’t meet ${ZONES[zone].label} rules`}</Text>
+        </View>
+        {rows.map((r) => (
+          <View accessibilityLabel={`${r.label}: plan ${r.plan}, UIL ${r.rule}, ${r.ok ? 'meets' : 'does not meet'}`} accessible key={r.label} style={styles.checkRow}>
+            <Text style={[styles.checkMark, { color: r.ok ? Palette.safe : Palette.emergency }]}>{r.ok ? '✓' : '✕'}</Text>
+            <Text style={styles.checkLabel}>{r.label}</Text>
+            <Text style={[styles.checkPlan, !r.ok && { color: Palette.emergency }]}>{r.plan}</Text>
+            <Text style={styles.checkRule}>{r.rule}</Text>
+          </View>
+        ))}
+        {fix ? (
+          <Pressable accessibilityRole="button" onPress={() => onFix(fix)} style={({ pressed }) => [styles.fix, pressed && styles.pressed]}>
+            <Text style={styles.fixText}>Fix to meet UIL</Text>
+          </Pressable>
+        ) : !outdoor ? <Text style={styles.checkEmpty}>Move practice indoors or wait for the WBGT to drop.</Text> : null}
+      </View>
+    </>
   );
 }
 
@@ -183,6 +233,17 @@ const styles = StyleSheet.create({
   secondaryRow: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one },
   secondary: { alignItems: 'center', backgroundColor: Palette.fill, borderCurve: 'continuous', borderRadius: 14, flex: 1, justifyContent: 'center', minHeight: 50 },
   secondaryText: { color: Palette.ink, ...Type.headline },
+  checkEmpty: { color: Palette.inkMuted, ...Type.footnote, paddingVertical: Spacing.two },
+  checkHead: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two, paddingBottom: Spacing.two, paddingTop: Spacing.two },
+  checkDot: { borderRadius: 5, height: 10, width: 10 },
+  checkTitle: { color: Palette.ink, ...Type.headline },
+  checkRow: { alignItems: 'center', borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.two, minHeight: 46 },
+  checkMark: { fontSize: 16, fontWeight: '700', width: 18 },
+  checkLabel: { color: Palette.ink, flex: 1, ...Type.body },
+  checkPlan: { color: Palette.ink, ...Type.figure, fontSize: 18 },
+  checkRule: { color: Palette.inkMuted, ...Type.footnote, minWidth: 74, textAlign: 'right' },
+  fix: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 12, justifyContent: 'center', marginBottom: Spacing.two, marginTop: Spacing.two, minHeight: 44 },
+  fixText: { color: Palette.coral, ...Type.headline },
   delete: { alignItems: 'center', marginTop: Spacing.four, minHeight: 44, justifyContent: 'center' },
   deleteText: { color: Palette.emergency, ...Type.body },
 });

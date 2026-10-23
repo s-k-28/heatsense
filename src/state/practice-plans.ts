@@ -33,10 +33,11 @@ const STANDARD: PracticePlan = {
   id: 'orange-standard',
   lengthMinutes: 72,
   name: 'Standard practice',
-  restMinutes: 10,
+  // 16 on, 4 off: three 4-minute breaks an hour, which meets UIL's Green and Yellow zones.
+  restMinutes: 4,
   startMinutes: 16 * 60,
   waterEveryMinutes: 10,
-  workMinutes: 20,
+  workMinutes: 16,
 };
 
 type Store = { activeId: string; plans: PracticePlan[] };

@@ -5,6 +5,7 @@ import { Alert, Linking, Pressable, Share, StyleSheet, Text, View } from 'react-
 import { Card, Facts, ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
+import { checkPlan } from '@/lib/plan-check';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION } from '@/lib/uil-wbgt';
 import type { FieldReading } from '@/services/practice-sessions';
 import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
@@ -138,15 +139,20 @@ export function PlanTab() {
 
       <SectionTitle action="New" onAction={() => router.push('/plan-editor')} title="Practice plans" />
       <Rows>
-        {plans.map((plan) => (
-          <ListRow
-            key={plan.id}
-            label={plan.name}
-            onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })}
-            value={plan.id === active.id ? 'Today' : `${clockTime(plan.startMinutes, true)} · ${plan.lengthMinutes} min`}
-            valueTone={plan.id === active.id ? Palette.coral : undefined}
-          />
-        ))}
+        {plans.map((plan) => {
+          // A plan that breaks today's zone rules says so here, before anyone opens it.
+          const fails = latest ? !checkPlan(plan, UIL_GUIDANCE[latest.zone]).ok : false;
+          const when = plan.id === active.id ? 'Today' : `${clockTime(plan.startMinutes, true)} · ${plan.lengthMinutes} min`;
+          return (
+            <ListRow
+              key={plan.id}
+              label={plan.name}
+              onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })}
+              value={fails ? `${plan.id === active.id ? 'Today · ' : ''}needs changes` : when}
+              valueTone={fails ? Palette.emergency : plan.id === active.id ? Palette.coral : undefined}
+            />
+          );
+        })}
       </Rows>
     </>
   );
