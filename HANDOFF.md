@@ -84,7 +84,7 @@ This file covers what was built in the last working session, how the app is put 
   - Coach Team tab: `TeamVitalsRows` for sample athletes, `LiveVitalsRows` for real ones.
   - Trainer Monitor tab.
   - The `/athlete-vitals` detail screen.
-- **Tests:** `scripts/test-team-invites.mjs` has 47 passing checks, covering invites, roles, trainer readings, band pairing and vitals rules.
+- **Tests:** `scripts/test-team-invites.mjs` has 48 passing checks, covering invites, roles, trainer readings, band pairing and vitals rules.
 
 ### UI de-vibe-coding (several passes)
 - **References:** WHOOP screens studied from Mobbin. Strava on Mobbin is Pro-only, so it was skipped.
@@ -150,7 +150,7 @@ npx eslint src                   # lint — must be clean (0 warnings at handoff
 node scripts/check-band-simulator.ts
 node scripts/check-uil-wbgt.ts
 node scripts/check-plan-check.ts
-npm run test:invites             # Firestore rules + flows on emulators (47/47)
+npm run test:invites             # Firestore rules + flows on emulators (48/48)
 npm run check:auth               # auth config sanity
 ```
 
@@ -175,7 +175,7 @@ npm run check:auth               # auth config sanity
 | 7 | README team names + AI-use disclosure | blocked | Required by the contest; the team must supply the wording. |
 | 8 | Live sign-in test on a real account | blocked | The user does it (no automated real-credential entry). |
 | 9 | Real band over Bluetooth | future | Replace the simulator in `useBandUplink` with BLE packets (marked `ponytail:` there). The Firestore path and the UI stay. |
-| 11 | Share Protocols data with staff | future | Emergency plan, readiness and incident log live on one phone (`state/stored.ts`); move to the team doc so all staff see them. |
+| 11 | Share Protocols data with staff | partly done | The emergency action plan is the team's (`teams/{teamId}/safety/eap`, athletes read it on Learn). Readiness checks and the incident log still live on one phone (`state/stored.ts`). |
 | 12 | Profile photo for teammates | future | Stored on the phone only (Firebase Storage needs the Blaze plan). |
 | 10 | Server push for zone changes | future | Needs Cloud Functions (Blaze plan). Today, zone alerts fire only when the phone sees the new reading. |
 
