@@ -121,7 +121,7 @@ We want to be clear about what is real and what is not yet.
 | 🟢 **Works today** | Athlete profile onboarding (profile → body → safety) | Profile saved to Firestore; health and contact answers are **not** saved in production yet |
 | 🟢 **Works today** | iOS Live Activity / Dynamic Island practice widget | Shows the team's latest real reading, practice clock and next water break; the sample reading appears only in the offline sample build |
 | 🟢 **Works today** | Heat alerts: recheck reminders and zone changes | Local notifications (`expo-notifications`), no server. Reminders fire with the app closed; zone-change alerts need the app running. See [Heat alerts](#heat-alerts) |
-| 🟢 **Works today** | Coach Home | Heat orb shows the session's latest real reading; rings for recheck, readings and applied guidance; alerts derived from the practice record |
+| 🟢 **Works today** | Coach Home | Home shows the session's latest real reading; rings for recheck, readings and applied guidance; alerts derived from the practice record |
 | 🟢 **Works today** | Three role-specific apps: coach (team-centred), athlete (their own band, past practices), athletic trainer (logs readings, watches vitals) | See [Roles](#roles). Access is enforced in `firebase/firestore.rules` |
 | 🧪 **Simulated** | Band vitals for a demo team (heart rate, skin temperature, sweat, movement, recovery check) | `src/lib/band-simulator.ts`. Every screen labels it **SIMULATED BAND DATA**; on by default only in builds without Firebase |
 | 🔵 **Planned** | Custom (non-UIL) school heat policies | Every session already stores its policy version (`uil-wbgt@2025-26`), so a second policy can be added without migrating data |
@@ -187,7 +187,7 @@ HeatSense is three apps in one, chosen on the role screen during onboarding. The
 |---|---|---|---|
 | Joins a team by | Creating it (gets the invite code) | Entering the coach's code, then approval | Entering the coach's code, then approval |
 | Tabs | Plan · Team · **Home** · Alerts · Profile | Monitor · Athletes · **Home** · Protocols · Profile | Band · Sessions · **Home** · Learn · Profile |
-| Home | Heat orb with the latest reading, recheck/readings/applied rings, get-started cards, today's readings | Same orb and rings, plus *Add a reading* once the coach starts practice | Same orb, read-only, plus today's UIL rules and their athletic trainer |
+| Home | Latest reading on UIL's zone scale, next reading/readings/applied figures, get-started cards, today's readings | Same orb and rings, plus *Add a reading* once the coach starts practice | Same orb, read-only, plus today's UIL rules and their athletic trainer |
 | Vitals | Team tab: every athlete's live vitals, tap for detail | Monitor tab: the same team view | Band tab: their own vitals in depth |
 | Can record readings | Yes, and starts or ends practice | Yes, during a practice the coach started; can't start or end it | No (rules refuse) |
 | Can invite | Yes, shares the code | No | No, only enters a code |
@@ -725,7 +725,7 @@ Captured from the iOS Simulator (iPhone 17 Pro Max). Dashboard screens run in sa
 
 | Welcome | Choose a role | Pair the band | Coach Today |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/readme/welcome.png" width="200" alt="Welcome screen with the HeatSense Band"> | <img src="docs/screenshots/readme/role.png" width="200" alt="Role screen with the band resting above the choices"> | <img src="docs/screenshots/readme/pairing.png" width="200" alt="Pair your HeatSense Band"> | <img src="docs/screenshots/readme/home.png" width="200" alt="Coach Today: 84°F Yellow zone orb, recheck, readings and applied rings"> |
+| <img src="docs/screenshots/readme/welcome.png" width="200" alt="Welcome screen with the HeatSense Band"> | <img src="docs/screenshots/readme/role.png" width="200" alt="Role screen with the band resting above the choices"> | <img src="docs/screenshots/readme/pairing.png" width="200" alt="Pair your HeatSense Band"> | <img src="docs/screenshots/readme/home.png" width="200" alt="Coach Today: 84°F Yellow zone on the UIL zone scale, with next reading, readings and applied"> |
 | Read the heat. Ready the team. | Coach, athlete or athletic trainer | Part of athlete onboarding | One reading, the zone, the next recheck |
 
 **Coach.** One screen per job: today's rules, the team, what needs attention.
@@ -786,8 +786,7 @@ heatsense/
 │   ├── components/              UI building blocks
 │   │   ├── field-check-sheet.tsx  Core loop: reading → guidance → acknowledge → recheck → history → share
 │   │   ├── dashboard-*.tsx      Dashboard shell, role content, and empty/offline/alert states
-│   │   ├── coach-today.tsx      Home: heat orb, recheck/readings/applied rings, get-started cards
-│   │   ├── heat-orb.tsx         The zone-tinted animated orb
+│   │   ├── coach-today.tsx      Home: latest reading on the zone scale, next reading/readings/applied, get-started cards
 │   │   ├── coach-tabs.tsx       Plan, Team (roster + live vitals) and Profile tabs
 │   │   ├── alerts-tab.tsx       Alerts derived from the practice record and slow-recovery checks
 │   │   ├── role-tabs.tsx        Athlete (Band, Sessions, Learn) and trainer (Monitor, Protocols) tabs
@@ -878,7 +877,7 @@ heatsense/
 | Database | Cloud Firestore | (firebase ^12.4) | Live listeners keep every phone on the team in sync |
 | Backend | Firestore security rules | rules v2 | Free plan, nothing to host; the rules validate every field and recompute every zone |
 | Motion | React Native Reanimated | 4.5.1 | Runs animations on the UI thread; built-in Reduce Motion support |
-| Graphics | React Native SVG, Skia | 15.15, ^2.6 | Heat orb, rings and charts |
+| Graphics | React Native SVG, Skia | 15.15, ^2.6 | Charts |
 | iOS extras | expo-widgets | ~57.0 | Practice Live Activity / Dynamic Island |
 | Device | expo-location, expo-maps, expo-crypto | ~57.0 | Practice location; secure random invite codes |
 | Testing | Firebase Emulator Suite, firebase-admin, Node test scripts | firebase-admin ^14.5 | 47 backend tests against the real rules; self-checks for the heat engine and band simulator |
@@ -1021,7 +1020,7 @@ gantt
 - [x] Server-side zone check and append-only readings in Firestore rules
 - [x] Coach acknowledgment, recheck countdown, and overdue state
 - [x] Session history synced to the team through Firestore, with a shareable text record
-- [x] Coach Home shows the session's latest reading (heat orb, rings, alerts)
+- [x] Coach Home shows the session's latest reading (zone scale, practice figures, alerts)
 - [x] Coach, athlete and athletic-trainer roles, enforced by the rules
 - [x] Simulated band vitals with a recovery check, clearly labelled
 - [x] Free-plan backend: rules-only, no Cloud Functions

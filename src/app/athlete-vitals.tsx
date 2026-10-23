@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { SimulatedTag, VitalsDetail } from '@/components/vitals';
-import { MetricTile, Tiles } from '@/components/whoop-ui';
+import { ListRow, Rows } from '@/components/whoop-ui';
 import { Face, MaxContentWidth, Palette } from '@/constants/theme';
 import { useDemoTeam } from '@/state/demo-team';
 import { useCoachData, useRoster, useTeamVitals, type SessionRole } from '@/state/team-session';
@@ -49,12 +49,12 @@ export default function AthleteVitalsScreen() {
                 <Text style={styles.liveUnit}>bpm · {live.recovery === 'watch' ? 'slow recovery' : 'usual range'}</Text>
                 <Text style={styles.liveWhen}>Updated {live.updatedAt ? live.updatedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : 'just now'}</Text>
               </View>
-              <Tiles>
-                <MetricTile label="Skin temp" unit="°F" value={live.skinTempF?.toFixed(1) ?? '--'} />
-                <MetricTile label="Sweat (GSR)" unit="µS" value={live.sweat?.toFixed(1) ?? '--'} />
-                <MetricTile label="Movement" unit="%" value={String(Math.round(live.movement))} />
-                <MetricTile label="Band" value={live.serial ?? '--'} />
-              </Tiles>
+              <Rows>
+                <ListRow label="Skin temp" value={live.skinTempF ? `${live.skinTempF.toFixed(1)}°F` : '--'} />
+                <ListRow label="Sweat (GSR)" value={live.sweat ? `${live.sweat.toFixed(1)} µS` : '--'} />
+                <ListRow label="Movement" value={`${Math.round(live.movement)}%`} />
+                <ListRow label="Band" value={live.serial ?? '--'} />
+              </Rows>
             </>
           ) : (
             <Text style={styles.empty}>No band data from {name.split(' ')[0]} yet. Vitals appear during practice once their HeatSense Band is paired and their app is open.</Text>
@@ -66,7 +66,7 @@ export default function AthleteVitalsScreen() {
 }
 
 const styles = StyleSheet.create({
-  liveHero: { alignItems: 'center', gap: 4, marginBottom: 20 },
+  liveHero: { alignItems: 'flex-start', gap: 4, marginBottom: 20 },
   liveHr: { color: Palette.ink, fontFamily: Face.figure, fontSize: 112, lineHeight: 116 },
   liveUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
   liveWhen: { color: Palette.inkFaint, fontSize: 14 },

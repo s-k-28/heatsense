@@ -12,7 +12,7 @@ import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
 import { recentSessions, type SessionSummary } from '@/services/practice-sessions';
 import { usePreferences, useTemperature } from '@/state/preferences';
 import { LiveVitalsRows, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
-import { useDemoTeam } from '@/state/demo-team';
+import { useDemoTeam, useOwnBand } from '@/state/demo-team';
 import { useCoachData, useMembership, useNow, useRoster, useTeamVitals, useTrainers } from '@/state/team-session';
 
 // Athlete and athletic-trainer tabs on the same WHOOP-style kit as the coach's. Athletes see their
@@ -80,8 +80,10 @@ export function AthleteBand() {
   const { bandConnected } = usePreferences();
   const data = useCoachData('athlete');
   const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
-  const me = demo.members[0];
-  if (demo.enabled && me) {
+  // Sample athletes on: the demo athlete stands in. Otherwise a paired band shows the athlete's own signals.
+  const own = useOwnBand(!demo.enabled && bandConnected, data?.readings.at(-1)?.zone ?? 'yellow');
+  const me = demo.members[0] ?? own;
+  if (me) {
     return (
       <>
         <VitalsDetail member={{ ...me, athlete: { ...me.athlete, name: 'You', position: 'Your band' } }} />
@@ -96,7 +98,7 @@ export function AthleteBand() {
       <View style={styles.bandHero}>
         <Image accessibilityIgnoresInvertColors contentFit="contain" source={BAND} style={styles.band} />
         <Text style={styles.bandState}>{bandConnected ? 'Band connected' : 'No band paired'}</Text>
-        <Text style={styles.bandNote}>Personal signals (heart rate, skin temperature, movement) appear here once the band’s firmware ships. Field readings already guide every practice.</Text>
+        <Text style={styles.bandNote}>Pair your band to see heart rate, skin temperature, sweat and movement here. Field readings already guide every practice.</Text>
       </View>
       <Rows>
         <ListRow label="HeatSense Band" onPress={() => router.push('/pair-band')} value={bandConnected ? 'Connected' : 'Pair'} valueTone={bandConnected ? Palette.safe : Palette.coral} />
