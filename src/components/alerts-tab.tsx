@@ -5,9 +5,10 @@ import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { ActionButton } from '@/components/ui/action-button';
 import { FieldCheckSheet } from '@/components/field-check-sheet';
-import { Segmented } from '@/components/motion/segmented';
+import { SlidingTabs } from '@/components/sliding-tabs';
 import { SampleTag } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
+import { CoachPalette, CoachRadius, CoachType } from '@/constants/coach-theme';
 import { enter, leave, settle } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { checkPlan } from '@/lib/plan-check';
@@ -124,16 +125,7 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
       {data?.sample ? <SampleTag /> : null}
       <StatusBar latest={latest} now={now} overdue={Boolean(recheck?.overdue)} msLeft={recheck?.msLeft ?? null} unit={temp.unit} value={latest ? temp.value(latest.wbgtF) : null} />
 
-      <View style={styles.segmentsGap}>
-        <Segmented
-          onChange={setView}
-          options={(['open', 'resolved'] as const).map((key) => {
-            const count = key === 'open' ? open.length : closed.length;
-            return { key, label: key === 'open' ? 'Open' : 'Resolved', badge: <View style={[styles.badge, key === 'open' && count > 0 && { backgroundColor: Palette.emergency }]}><Text style={styles.badgeText}>{count}</Text></View> };
-          })}
-          value={view}
-        />
-      </View>
+      <View style={styles.segmentWrap}><SlidingTabs label="Alert status" onChange={(index) => setView(index === 0 ? 'open' : 'resolved')} options={[`Open ${open.length}`, `Resolved ${closed.length}`]} selected={view === 'open' ? 0 : 1} variant="coach" /></View>
 
       {list.length === 0 ? (
         <View style={styles.clear}>
@@ -194,10 +186,10 @@ function AlertCard({ item, now, onResolve, resolvedAt }: { item: Item; now: numb
         {!done && (item.action || onResolve) ? (
           <View style={styles.actions}>
             {item.action ? (
-              <ActionButton label={item.action.label} onPress={item.action.onPress} variant="secondary" />
+              <ActionButton label={item.action.label} onPress={item.action.onPress} style={styles.primary} variant="secondary" />
             ) : null}
             {onResolve ? (
-              <ActionButton label="Resolve" onPress={onResolve} variant="text" />
+              <ActionButton label="Resolve" onPress={onResolve} style={styles.secondary} variant="text" />
             ) : null}
           </View>
         ) : null}
@@ -208,33 +200,39 @@ function AlertCard({ item, now, onResolve, resolvedAt }: { item: Item; now: numb
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
-  status: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 16, flexDirection: 'row', gap: 14, overflow: 'hidden', paddingRight: 18 },
+  status: { alignItems: 'center', backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, flexDirection: 'row', gap: 14, minHeight: 104, overflow: 'hidden', paddingRight: 20 },
   statusEdge: { alignSelf: 'stretch', width: 6 },
-  statusCopy: { flex: 1, minWidth: 100, gap: 2, paddingVertical: 16 },
-  statusZone: { color: Palette.ink, fontSize: 20, fontWeight: '700' },
-  statusMeta: { color: Palette.inkMuted, fontSize: 15 },
-  countdown: { alignItems: 'flex-end', flexShrink: 1, paddingVertical: 12 },
-  countdownValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 34, lineHeight: 38 },
-  countdownLabel: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },
+  statusCopy: {  gap: 2, paddingVertical: 16, flex: 1, minWidth: 100 },
+  statusZone: { color: CoachPalette.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.4 },
+  statusMeta: { color: CoachPalette.muted, fontSize: 15, fontWeight: '600' },
+  countdown: { alignItems: 'flex-end', flexShrink: 1 },
+  countdownValue: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 36, lineHeight: 40 },
+  countdownLabel: { color: CoachPalette.muted, ...CoachType.label },
   segmentsGap: { marginTop: 20 },
-  badge: { alignItems: 'center', backgroundColor: 'rgba(235,235,245,0.18)', borderRadius: 10, height: 20, justifyContent: 'center', minWidth: 20, paddingHorizontal: 6 },
+  badge: { alignItems: 'center', backgroundColor: 'rgba(235,235,245,0.18)', borderRadius: 10, height: 20, justifyContent: 'center',  paddingHorizontal: 6, minWidth: 20 },
   badgeText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  clear: { alignItems: 'center', gap: 6, paddingVertical: 48 },
-  clearTitle: { color: Palette.ink, fontSize: 22, fontWeight: '700' },
-  clearBody: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22, maxWidth: 300, textAlign: 'center' },
-  list: { gap: 10, marginTop: 14 },
-  card: { backgroundColor: Palette.surface, borderRadius: 16, flexDirection: 'row', overflow: 'hidden' },
-  cardDone: { backgroundColor: 'rgba(26,32,36,0.6)' },
+  clear: { alignItems: 'center', backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, gap: 7, marginTop: 14, paddingHorizontal: 28, paddingVertical: 44 },
+  clearTitle: { color: CoachPalette.text, ...CoachType.card },
+  clearBody: { color: CoachPalette.muted, ...CoachType.body,   maxWidth: 300, textAlign: 'center' },
+  list: { gap: 12, marginTop: 14 },
+  card: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, flexDirection: 'row', overflow: 'hidden' },
+  cardDone: { backgroundColor: CoachPalette.surfaceAlt },
   edge: { width: 4 },
   edgeDone: { opacity: 0.4 },
-  cardCopy: { flex: 1, gap: 4, padding: 16 },
-  cardTop: { alignItems: 'flex-start', gap: 4 },
-  cardTitle: { color: Palette.ink, flexShrink: 1, fontSize: 17, fontWeight: '600' },
-  cardTime: { color: Palette.inkMuted, fontSize: 14, fontVariant: ['tabular-nums'] },
-  cardBody: { color: Palette.inkMuted, fontSize: 15, lineHeight: 21 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  primary: { borderRadius: 10, justifyContent: 'center', minHeight: 40, paddingHorizontal: 16 },
+  cardCopy: {  gap: 6, padding: 20, flex: 1 },
+  cardTop: { alignItems: 'flex-start', flexDirection: 'column', gap: 4 },
+  cardTitle: { color: CoachPalette.text, fontSize: 19, fontWeight: '700', letterSpacing: -0.25, flexShrink: 1 },
+  cardTime: { color: CoachPalette.muted, fontSize: 13, fontVariant: ['tabular-nums'], fontWeight: '600' },
+  cardBody: { color: CoachPalette.textSecondary, ...CoachType.body },
+  actions: { flexDirection: 'row', gap: 10, marginTop: 10, flexWrap: 'wrap' },
+  primary: { borderRadius: CoachRadius.pill, justifyContent: 'center', minHeight: 44, paddingHorizontal: 18 },
   primaryText: { color: '#101416', fontSize: 15, fontWeight: '700' },
-  secondary: { backgroundColor: 'rgba(235,235,245,0.1)', borderRadius: 10, justifyContent: 'center', minHeight: 40, paddingHorizontal: 16 },
-  secondaryText: { color: Palette.ink, fontSize: 15, fontWeight: '600' },
+  secondary: { backgroundColor: CoachPalette.interactive, borderRadius: CoachRadius.pill, justifyContent: 'center', minHeight: 44, paddingHorizontal: 18 },
+  secondaryText: { color: CoachPalette.text, fontSize: 15, fontWeight: '700' },
+  segmentWrap: { marginTop: 18 },
+  segments: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.pill, flexDirection: 'row', gap: 4, marginTop: 18, padding: 5 },
+  segment: { alignItems: 'center', borderRadius: CoachRadius.pill, flex: 1, flexDirection: 'row', gap: 8, justifyContent: 'center', minHeight: 46 },
+  segmentOn: { backgroundColor: CoachPalette.interactive },
+  segmentText: { color: CoachPalette.muted, fontSize: 16, fontWeight: '700' },
+  segmentTextOn: { color: CoachPalette.text },
 });

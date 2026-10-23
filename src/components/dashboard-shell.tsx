@@ -13,6 +13,7 @@ import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { TextLink } from '@/components/ui/list';
 import { PersonGlyph } from '@/components/whoop-ui';
 import { Face, Palette, Spacing, Type } from '@/constants/theme';
+import { CoachPalette, CoachRadius, CoachType } from '@/constants/coach-theme';
 import { markNotificationsRead, usePreferences } from '@/state/preferences';
 
 export type DashboardRole = 'coach' | 'trainer' | 'athlete';
@@ -69,6 +70,7 @@ export function DashboardHeader({
   onProfile,
   scrollY,
   title,
+  variant = 'default',
 }: {
   band?: HeaderBand;
   name: string;
@@ -77,6 +79,7 @@ export function DashboardHeader({
   onProfile: () => void;
   scrollY: SharedValue<number>;
   title: string;
+  variant?: 'coach' | 'default';
 }) {
   const Palette = useAthletePalette();
   const styles = useAthleteStyles(baseStyles);
@@ -91,10 +94,10 @@ export function DashboardHeader({
 
   return (
     <View pointerEvents="box-none" style={[styles.headerWrap, { paddingTop: insets.top }]}>
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.headerBackdrop, backdrop]} />
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.headerBackdrop, variant === 'coach' && styles.coachHeaderBackdrop, backdrop]} />
     <View style={styles.header}>
       <HeatSenseLogo height={28} />
-      <Animated.Text accessibilityElementsHidden importantForAccessibility="no" numberOfLines={1} style={[styles.headerTitle, backdrop]}>{title}</Animated.Text>
+      <Animated.Text accessibilityElementsHidden importantForAccessibility="no" numberOfLines={1} style={[styles.headerTitle, variant === 'coach' && styles.coachHeaderTitle, backdrop]}>{title}</Animated.Text>
       <View style={styles.headerActions}>
         {band ? <BandChip band={band} /> : null}
         {onAlerts ? (
@@ -119,6 +122,11 @@ export function LargeTitle({ title }: { title: string }) {
   return <Text accessibilityRole="header" style={[styles.largeTitle, athlete && title === 'Band' && { fontFamily: 'Inter_700Bold', fontWeight: 'normal' }]}>{title}</Text>;
 }
 
+export function CoachLargeTitle({ title }: { title: string }) {
+  const styles = baseStyles;
+  return <Text accessibilityRole="header" style={styles.coachLargeTitle}>{title}</Text>;
+}
+
 export function SectionHeader({ action, onActionPress, tight, title }: { action?: string; onActionPress?: () => void; tight?: boolean; title: string }) {
   const styles = useAthleteStyles(baseStyles);
   return (
@@ -130,7 +138,7 @@ export function SectionHeader({ action, onActionPress, tight, title }: { action?
 }
 
 /** Floating pill with a smaller pill inside it that slides to the selected tab. */
-export function TabBar({ activeTab, onChange, tabs }: { activeTab: string; onChange: (tab: string) => void; tabs: DashboardTab[] }) {
+export function TabBar({ activeTab, onChange, tabs, variant = 'default' }: { activeTab: string; onChange: (tab: string) => void; tabs: DashboardTab[]; variant?: 'coach' | 'default' }) {
   const styles = useAthleteStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
@@ -155,10 +163,10 @@ export function TabBar({ activeTab, onChange, tabs }: { activeTab: string; onCha
   const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }], width: tabWidth }));
 
   return (
-    <View style={[styles.pillWrap, { bottom: Math.max(insets.bottom - 6, Spacing.three) }]}>
-      <GlassSurface radius={PILL_HEIGHT / 2} style={styles.pill}>
+    <View style={[styles.pillWrap, variant === 'coach' && styles.coachPillWrap, { bottom: Math.max(insets.bottom - 6, Spacing.three) }]}>
+      <GlassSurface radius={PILL_HEIGHT / 2} style={[styles.pill, variant === 'coach' && styles.coachPill]}>
         <View onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)} style={styles.pillInner}>
-          {tabWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.indicator, indicator]} /> : null}
+          {tabWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.indicator, variant === 'coach' && styles.coachIndicator, indicator]} /> : null}
           {tabs.map((tab, position) => (
             <TabItem
               active={tab.id === activeTab}
@@ -167,6 +175,7 @@ export function TabBar({ activeTab, onChange, tabs }: { activeTab: string; onCha
               onPress={() => onChange(tab.id)}
               tab={tab}
               tabWidth={tabWidth}
+              variant={variant}
               x={x}
             />
           ))}
@@ -180,7 +189,7 @@ export function TabBar({ activeTab, onChange, tabs }: { activeTab: string; onCha
  * One tab. The orange layer fades in as the pill arrives and out as it leaves, so the color
  * travels with the pill instead of jumping when the press lands.
  */
-function TabItem({ active, index, onPress, tab, tabWidth, x }: { active: boolean; index: number; onPress: () => void; tab: DashboardTab; tabWidth: number; x: SharedValue<number> }) {
+function TabItem({ active, index, onPress, tab, tabWidth, x, variant }: { active: boolean; index: number; onPress: () => void; tab: DashboardTab; tabWidth: number; x: SharedValue<number>; variant: 'coach' | 'default' }) {
   const athlete = useAthleteAppearance();
   const Palette = useAthletePalette();
   const styles = useAthleteStyles(baseStyles);
@@ -207,8 +216,8 @@ function TabItem({ active, index, onPress, tab, tabWidth, x }: { active: boolean
       accessibilityState={{ selected: active }}
       onPress={onPress}
       style={({ pressed }) => [styles.tab, pressed && !active && styles.tabPressed]}>
-      <Animated.View pointerEvents="none" style={[styles.tabLayer, dim]}>{content(athlete ? '#FFFFFF' : TAB_MUTED, [styles.tabLabelMuted, athlete && { color: '#FFFFFF' }])}</Animated.View>
-      <Animated.View pointerEvents="none" style={[styles.tabLayer, styles.tabLayerLit, lit]}>{content(Palette.coral, styles.tabLabelActive)}</Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.tabLayer, dim]}>{content(athlete ? '#FFFFFF' : variant === 'coach' ? CoachPalette.muted : TAB_MUTED, [styles.tabLabelMuted, athlete && { color: '#FFFFFF' }])}</Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.tabLayer, styles.tabLayerLit, lit]}>{content(variant === 'coach' ? CoachPalette.peach : Palette.coral, styles.tabLabelActive)}</Animated.View>
     </Pressable>
   );
 }
@@ -217,8 +226,10 @@ const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.55 },
   headerWrap: { left: 0, position: 'absolute', right: 0, top: 0, zIndex: 10 },
   headerBackdrop: { backgroundColor: '#1E2329', borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
+  coachHeaderBackdrop: { backgroundColor: 'rgba(11,13,14,0.96)', borderBottomColor: CoachPalette.hairline },
   headerTitleWrap: { alignItems: 'center', height: HEADER_ROW, justifyContent: 'center', left: 0, position: 'absolute', right: 0 },
   headerTitle: { color: Palette.ink, ...Type.headline, flex: 1, minWidth: 0, marginHorizontal: 12 },
+  coachHeaderTitle: { color: CoachPalette.text, fontSize: 17, fontWeight: '700', letterSpacing: -0.3 },
   header: { alignItems: 'center', flexDirection: 'row', height: HEADER_ROW, justifyContent: 'space-between', paddingHorizontal: Spacing.four },
   headerActions: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
@@ -228,14 +239,18 @@ const baseStyles = StyleSheet.create({
   avatar: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, overflow: 'hidden', height: 44, justifyContent: 'center', width: 44 },
   avatarText: { color: Palette.ink, ...Type.footnote, fontWeight: '600' },
   largeTitle: { color: Palette.ink, ...Type.largeTitle, marginTop: Spacing.one },
+  coachLargeTitle: { color: CoachPalette.text, ...CoachType.page, marginBottom: 20, marginTop: 8 },
   sectionHeader: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.two, marginTop: Spacing.seven },
   sectionHeaderTight: { marginTop: Spacing.five },
   sectionTitle: { color: Palette.ink, ...Type.title3, fontWeight: '700' },
   pillWrap: { elevation: 10, left: Spacing.four, position: 'absolute', right: Spacing.four, shadowColor: '#000', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.45, shadowRadius: 18 },
+  coachPillWrap: { left: 14, right: 14, shadowOffset: { height: 10, width: 0 }, shadowOpacity: 0.56, shadowRadius: 22 },
   // The translucent fill keeps labels readable over scrolled content wherever glass blur isn't available.
   pill: { backgroundColor: 'rgba(32,32,32,0.86)', borderColor: 'rgba(191,192,203,0.08)', borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, height: PILL_HEIGHT },
+  coachPill: { backgroundColor: 'rgba(21,24,25,0.97)', borderColor: 'transparent', borderRadius: CoachRadius.pill },
   pillInner: { flex: 1, flexDirection: 'row', padding: PILL_PADDING },
   indicator: { backgroundColor: 'rgba(69,69,69,0.92)', borderCurve: 'continuous', borderRadius: (PILL_HEIGHT - PILL_PADDING * 2) / 2, bottom: PILL_PADDING, left: PILL_PADDING, position: 'absolute', top: PILL_PADDING },
+  coachIndicator: { backgroundColor: CoachPalette.interactive },
   tab: { flex: 1 },
   tabPressed: { opacity: 0.7 },
   tabLayer: { alignItems: 'center', bottom: 0, gap: 3, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
