@@ -62,11 +62,11 @@ export function Rows({ children }: { children: ReactNode }) {
 }
 
 /** A metric tile: small caps label, a big value, and an optional status pill. */
-export function MetricTile({ label, value, unit, pill, pillTone = Palette.safe }: { label: string; value: string; unit?: string; pill?: string; pillTone?: string }) {
+export function MetricTile({ compact = false, label, value, unit, pill, pillTone = Palette.safe }: { compact?: boolean; label: string; value: string; unit?: string; pill?: string; pillTone?: string }) {
   return (
-    <View accessible style={styles.tile}>
-      <Text style={styles.tileLabel}>{label.toUpperCase()}</Text>
-      <Text style={styles.tileValue}>{value}{unit ? <Text style={styles.tileUnit}> {unit}</Text> : null}</Text>
+    <View accessible style={[styles.tile, compact && styles.tileCompact]}>
+      <Text style={[styles.tileLabel, compact && styles.tileLabelCompact]}>{label.toUpperCase()}</Text>
+      <Text style={[styles.tileValue, compact && styles.tileValueCompact]}>{value}{unit ? <Text style={[styles.tileUnit, compact && styles.tileUnitCompact]}> {unit}</Text> : null}</Text>
       {pill ? <View style={[styles.pill, { borderColor: pillTone }]}><Text style={[styles.pillText, { color: pillTone }]}>{pill}</Text></View> : null}
     </View>
   );
@@ -105,6 +105,10 @@ const styles = StyleSheet.create({
   tileLabel: { color: Palette.inkMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1.3 },
   tileValue: { color: Palette.ink, fontSize: 30, fontVariant: ['tabular-nums'], fontWeight: '700' },
   tileUnit: { color: Palette.inkMuted, fontSize: 16, fontWeight: '600' },
+  tileCompact: { gap: 4, minHeight: 0, paddingHorizontal: 14, paddingVertical: 12 },
+  tileLabelCompact: { fontSize: 11 },
+  tileValueCompact: { fontSize: 22 },
+  tileUnitCompact: { fontSize: 13 },
   pill: { alignSelf: 'flex-start', borderRadius: 999, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 3 },
   pillText: { fontSize: 12, fontWeight: '700' },
   sample: { color: Palette.inkMuted, fontSize: 11, fontWeight: '700', letterSpacing: 1.6, marginBottom: 6, textAlign: 'center' },

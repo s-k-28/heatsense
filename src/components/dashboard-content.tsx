@@ -1,20 +1,24 @@
 import type { ComponentProps } from 'react';
-import { createContext, useContext } from 'react';
-import { Alert, Share, StyleSheet, Text, View } from 'react-native';
+import { createContext, useContext, useState } from 'react';
+import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { LargeTitle, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
 import { AlertsTab } from '@/components/alerts-tab';
 import { PlanTab, ProfileTab, TeamTab } from '@/components/coach-tabs';
-import { CoachToday } from '@/components/coach-today';
+import { GetStarted, PracticeRings, TodaysReadings } from '@/components/coach-today';
+import { FieldCheckSheet } from '@/components/field-check-sheet';
+import { FieldHero } from '@/components/field-hero';
 import { AthleteBand, AthleteHome, AthleteSessions, LearnTab, ProtocolsTab, TrainerHome, TrainerMonitor } from '@/components/role-tabs';
 import { LineChart } from '@/components/ui/charts';
-import { Card, CardHeader } from '@/components/ui/list';
+import { Card, CardHeader, chevron } from '@/components/ui/list';
 import { Palette, Spacing, Type } from '@/constants/theme';
 import { TODAY, ZONES } from '@/lib/practice';
 import { ensureTeamInvite, getMyTeamInvite } from '@/services/team-invites';
 import { useTeamDraft, type TeamDraft } from '@/state/onboarding';
 import { usePreferences, useTemperature } from '@/state/preferences';
+import { EQUIPMENT_LABEL, usePracticePlans } from '@/state/practice-plans';
+import { useCoachData, type CoachData } from '@/state/team-session';
 
 type IconName = ComponentProps<typeof HeatIcon>['name'];
 
@@ -92,14 +96,36 @@ function AthleteContent({ tab }: { tab: string }) {
 /* ─────────────────────────────── Home screens ─────────────────────────────── */
 
 
-/** Coach Home: the WHOOP-style orb, practice rings, get-started cards and today's readings. */
+/** Coach Home: the field card (photo, WBGT, trend, next action), the practice loop,
+ *  get-started cards and today's readings. */
 function CoachHome() {
   const { draft } = useTeam();
+  const data = useCoachData('coach');
+  const [sheet, setSheet] = useState(false);
   return (
     <>
       <LargeTitle title="Today" />
-      <CoachToday onInvite={() => shareTeamCode(draft)} />
+      <FieldHero data={data} onAction={() => setSheet(true)} />
+      <PracticeCard data={data} />
+      <GetStarted onInvite={() => shareTeamCode(draft)} onReading={() => setSheet(true)} showReading={!data?.readings.length} />
+      <TodaysReadings data={data} />
+      <FieldCheckSheet onClose={() => setSheet(false)} visible={sheet} />
     </>
+  );
+}
+
+/** The practice loop rings, with the active plan's water and equipment rules on one line beneath. */
+function PracticeCard({ data }: { data: CoachData | null }) {
+  const go = useContext(NavContext);
+  const { active: plan } = usePracticePlans();
+  return (
+    <Card style={styles.todayBar}>
+      <PracticeRings data={data} style={styles.practiceRings} />
+      <Pressable accessibilityLabel={`Water every ${plan.waterEveryMinutes} minutes. Equipment ${EQUIPMENT_LABEL[plan.equipment].toLowerCase()}. Opens the plan.`} accessibilityRole="button" onPress={() => go('plan')} style={({ pressed }) => [styles.todayPlanLine, pressed && styles.pressed]}>
+        <Text numberOfLines={1} style={styles.todayPlanText}>Water every {plan.waterEveryMinutes} min · Equipment {EQUIPMENT_LABEL[plan.equipment].toLowerCase()}</Text>
+        <HeatIcon name={chevron} size={10} tintColor={Palette.inkMuted} weight="bold" />
+      </Pressable>
+    </Card>
   );
 }
 
@@ -247,24 +273,10 @@ const styles = StyleSheet.create({
   identityStats: { marginTop: Spacing.five },
   contextBelow: { marginTop: Spacing.four },
   firstBlock: { marginTop: Spacing.three },
-  hero: { backgroundColor: Palette.surface, borderCurve: 'continuous', borderRadius: 18, justifyContent: 'flex-end', marginTop: Spacing.three, minHeight: 250, overflow: 'hidden' },
-  zoneTag: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, flexDirection: 'row', gap: 6, left: Spacing.four, paddingHorizontal: 9, paddingVertical: 6, position: 'absolute', top: Spacing.four },
-  zoneTagText: { color: '#FFFFFF', ...Type.labelSmall, fontSize: 13, lineHeight: 15 },
-  heroCopy: { padding: Spacing.four },
-  heroTitle: { color: '#FFFFFF', fontSize: 28, fontWeight: '600', letterSpacing: 0.3, lineHeight: 33 },
-  heroButton: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.2)', borderCurve: 'continuous', borderRadius: 18, flexDirection: 'row', gap: 6, marginTop: Spacing.three, minHeight: 40, paddingHorizontal: Spacing.four },
-  heroButtonText: { color: '#FFFFFF', ...Type.subhead, fontWeight: '600' },
   todayBar: { gap: Spacing.one, marginTop: Spacing.three, paddingHorizontal: Spacing.two, paddingTop: Spacing.four, paddingBottom: Spacing.two },
-  todayItem: { alignItems: 'center', flex: 1, gap: 2, paddingBottom: Spacing.three },
-  todayRow: { flexDirection: 'row' },
-  todayPlanLine: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, marginHorizontal: Spacing.three, paddingBottom: Spacing.one, paddingTop: Spacing.three },
-  todayPlanText: { color: Palette.inkMuted, ...Type.footnote },
-  inviteRow: { marginTop: Spacing.three },
-  todayNumber: { color: Palette.ink, ...Type.figure, fontSize: 26, lineHeight: 28 },
-  todayNumberSmall: { fontSize: 19, lineHeight: 21 },
-  todayLabelRow: { alignItems: 'center', flexDirection: 'row', gap: 4, marginTop: Spacing.two },
-  todayValue: { color: Palette.inkMuted, ...Type.footnote },
-  todayLabel: { color: Palette.ink, ...Type.label, fontSize: 14 },
+  practiceRings: { marginTop: 0, paddingBottom: Spacing.three },
+  todayPlanLine: { alignItems: 'center', borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 6, justifyContent: 'space-between', marginHorizontal: Spacing.three, paddingBottom: Spacing.one, paddingTop: Spacing.three },
+  todayPlanText: { color: Palette.inkMuted, flexShrink: 1, ...Type.footnote },
   sheet: { backgroundColor: Palette.canvas, flex: 1 },
   sheetBar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.three, paddingHorizontal: Spacing.five, paddingTop: Spacing.five },
   sheetTitle: { color: Palette.ink, ...Type.title2 },
@@ -272,7 +284,6 @@ const styles = StyleSheet.create({
   sheetLead: { color: Palette.ink, ...Type.body },
   sheetHeading: { color: Palette.ink, ...Type.headline, marginTop: Spacing.three },
   sheetBody: { color: Palette.inkMuted, ...Type.body },
-  block: { marginTop: Spacing.three },
   contextLine: { color: Palette.inkMuted, ...Type.subhead, marginTop: 2 },
   cardName: { color: Palette.ink, ...Type.title2, marginTop: Spacing.three },
   cardNameFirst: { color: Palette.ink, ...Type.title2 },

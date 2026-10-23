@@ -17,6 +17,7 @@ export function Ring({
   size = 132,
   stroke = 14,
   summary,
+  track = 'rgba(255,255,255,0.08)',
 }: {
   children?: ReactNode;
   /** The value a full ring stands for. Leave it out and the segments fill the whole ring. */
@@ -25,6 +26,8 @@ export function Ring({
   size?: number;
   stroke?: number;
   summary: string;
+  /** The unfilled ring behind the segments. */
+  track?: string;
 }) {
   const reduced = useReducedMotion();
   const r = (size - stroke) / 2;
@@ -46,7 +49,7 @@ export function Ring({
   return (
     <View accessible accessibilityLabel={summary} style={{ height: size, width: size }}>
       <Svg height={size} width={size}>
-        <Circle cx={size / 2} cy={size / 2} fill="none" r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+        <Circle cx={size / 2} cy={size / 2} fill="none" r={r} stroke={track} strokeWidth={stroke} />
         {segments.map((segment, index) => (segment.value <= 0 ? null : (
           <RingSegment
             circumference={c}

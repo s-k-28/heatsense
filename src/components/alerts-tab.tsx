@@ -7,14 +7,16 @@ import { FieldCheckSheet } from '@/components/field-check-sheet';
 import { Palette } from '@/constants/theme';
 import { enter, leave, settle } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
+import { UIL_GUIDANCE, zoneThresholds } from '@/lib/uil-wbgt';
 import { recheckStatus } from '@/services/practice-sessions';
 import { useDemoTeam } from '@/state/demo-team';
+import { buildSchedule, usePracticePlans } from '@/state/practice-plans';
 import { useTemperature } from '@/state/preferences';
 import { useCoachData, useNow, useRoster } from '@/state/team-session';
 
 // Alerts are derived from what actually happened in today's practice: a late recheck, guidance not
-// yet applied, the field changing zones, athletes waiting to join. Nothing here is invented, so an
-// empty list means the practice record is in order.
+// yet applied, the field nearing or changing zones, the next water break, athletes waiting to join.
+// With the Demo team switched on, simulated band alerts join them, each marked Simulated.
 
 type Item = {
   id: string;
@@ -28,6 +30,7 @@ type Item = {
 
 const zoneColor = (zone: Zone) => (zone === 'black' ? '#8E8E93' : ZONES[zone].color);
 const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const ORDER: Zone[] = ['green', 'yellow', 'orange', 'red', 'black'];
 
 export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void }) {
   const data = useCoachData();
@@ -37,6 +40,7 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
   const [sheet, setSheet] = useState(false);
   const reduced = useReducedMotion();
   const openSheet = { label: 'Open practice', onPress: () => setSheet(true) };
+  const { active: plan } = usePracticePlans();
 
   const items: Item[] = [];
   const readings = data?.readings ?? [];
@@ -52,10 +56,36 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
   if (latest && !latest.acknowledgedAt) {
     items.push({ id: `ack-${latest.id}`, tone: Palette.warning, open: true, at: latest.measuredAt, title: 'Guidance not applied yet', detail: `${temp.value(latest.wbgtF)}${temp.unit} · ${ZONES[latest.zone].label}. Confirm you’ve made the UIL changes.`, action: openSheet });
   }
+  // Close to the next zone: say what changes when it gets there.
+  if (latest && latest.zone !== 'black') {
+    const next = ORDER[ORDER.indexOf(latest.zone) + 1] as Exclude<Zone, 'green'>;
+    const headroom = zoneThresholds(session?.uilClass ?? 3)[next] - latest.wbgtF;
+    if (headroom <= 3) {
+      items.push({ id: `near-${latest.id}`, tone: zoneColor(next), open: true, at: latest.measuredAt, title: `${headroom.toFixed(1).replace(/\.0$/, '')}° from ${ZONES[next].label}`, detail: `At ${ZONES[next].label}: ${UIL_GUIDANCE[next].summary}`, action: { label: 'View rules', onPress: () => onNavigate('plan') } });
+    }
+  }
+  // The plan's next water break, when it's close.
+  const clock = new Date(now);
+  const nowMinutes = clock.getHours() * 60 + clock.getMinutes();
+  const nextBreak = session ? buildSchedule(plan).find((b) => b.kind === 'rest' && b.start >= nowMinutes) : undefined;
+  if (nextBreak && nextBreak.start - nowMinutes <= 15) {
+    const at = new Date(clock);
+    at.setHours(Math.floor(nextBreak.start / 60), nextBreak.start % 60, 0, 0);
+    items.push({ id: `break-${nextBreak.start}`, tone: Palette.info, open: true, at, title: `${nextBreak.title} in ${nextBreak.start - nowMinutes} min`, detail: `Shade and water for ${nextBreak.minutes} min${plan.equipment === 'on' ? '' : ', gear off'}.` });
+  }
   const demo = useDemoTeam(latest?.zone ?? 'yellow');
   demo.members.filter((m) => m.status === 'watch').forEach((m) => {
     items.push({ id: `vitals-${m.athlete.id}`, tone: Palette.warning, open: true, at: null, title: `${m.athlete.name}: slow recovery`, detail: `Heart rate ${m.vitals.heartRate} bpm and staying high through this break. Simulated band data.`, action: { label: 'View vitals', onPress: () => router.push({ pathname: '/athlete-vitals', params: { id: m.athlete.id } }) } });
   });
+  // Simulated band alerts for the demo team, so the feed shows what a practice with bands looks like.
+  if (demo.enabled && demo.members.length >= 4) {
+    const [a, b, c, d] = demo.members;
+    const ago = (minutes: number) => new Date(now - minutes * 60_000);
+    items.push({ id: 'sim-offline', tone: Palette.warning, open: true, at: ago(4), title: `${d.athlete.name}: band offline`, detail: 'No data for 4 min. Check the band is on and in range. Simulated.', action: { label: 'View vitals', onPress: () => router.push({ pathname: '/athlete-vitals', params: { id: d.athlete.id } }) } });
+    items.push({ id: 'sim-recovered', tone: Palette.safe, open: false, at: ago(38), title: `${a.athlete.name} back to resting rate`, detail: 'Heart rate 92 bpm after 6 min in the cooling zone. Simulated.' });
+    items.push({ id: 'sim-break', tone: Palette.info, open: false, at: ago(55), title: 'Water break completed', detail: `All ${demo.members.length} athletes checked in at the water station. Simulated.` });
+    items.push({ id: 'sim-peak', tone: Palette.emergency, open: false, at: ago(72), title: `${b.athlete.name} peaked at 191 bpm`, detail: `Pulled for 8 min and cleared by the athletic trainer. ${c.athlete.name} covered the drill. Simulated.` });
+  }
   const waiting = roster?.filter((m) => m.status === 'pending') ?? [];
   if (waiting.length) {
     items.push({ id: 'join', tone: Palette.info, open: true, at: waiting[0].requestedAt, title: `${waiting.length} ${waiting.length === 1 ? 'athlete is' : 'athletes are'} waiting to join`, detail: 'Approve them so they see the field zone and practice plan.', action: { label: 'Review', onPress: () => onNavigate('team') } });

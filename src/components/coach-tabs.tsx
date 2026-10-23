@@ -5,15 +5,17 @@ import { Alert, Linking, Pressable, Share, StyleSheet, Switch, Text, View } from
 
 import { CapsLabel, ListRow, MetricTile, Rows, SampleTag, SectionTitle, Tiles } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
-import { ZONES } from '@/lib/practice';
-import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, zoneRange } from '@/lib/uil-wbgt';
+import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION } from '@/lib/uil-wbgt';
 import { firebaseAuth } from '@/services/firebase';
 import type { FieldReading } from '@/services/practice-sessions';
 import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, type TeamSummary } from '@/services/team-invites';
-import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
+import { setPreference, usePreferences } from '@/state/preferences';
 import { buildSchedule, clockTime, usePracticePlans } from '@/state/practice-plans';
 import { useAuthSession } from '@/state/auth-session';
+import { PracticeChecklist } from '@/components/practice-checklist';
+import { BandCard, ProfileHero, ProfileStats } from '@/components/profile-hero';
 import { SimulatedTag, TeamVitalsRows } from '@/components/vitals';
+import { WeekSwitcher } from '@/components/week-switcher';
 import { useDemoTeam } from '@/state/demo-team';
 import { useCoachData, useRoster, useTrainers, type SessionRole } from '@/state/team-session';
 
@@ -125,7 +127,6 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
 
 export function PlanTab() {
   const data = useCoachData();
-  const temp = useTemperature();
   const { active, plans } = usePracticePlans();
   const latest = data?.readings.at(-1) ?? null;
   const session = data?.session ?? null;
@@ -133,16 +134,12 @@ export function PlanTab() {
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
-      <CapsLabel>Today</CapsLabel>
-      <View style={styles.planHead}>
-        <View style={[styles.zoneDot, { backgroundColor: latest ? (latest.zone === 'black' ? '#8E8E93' : ZONES[latest.zone].color) : Palette.inkFaint }]} />
-        <View style={styles.flex}>
-          <Text style={styles.planZone}>{latest ? ZONES[latest.zone].label : 'No reading yet'}</Text>
-          <Text style={styles.planMeta}>{latest ? `${temp.value(latest.wbgtF)}${temp.unit} WBGT · ${zoneRange(latest.zone, uilClass)}` : 'Take a field reading to see today’s rules.'}</Text>
-        </View>
-      </View>
+      <View style={styles.forecast}><WeekSwitcher today={latest ? { wbgtF: latest.wbgtF, zone: latest.zone } : null} /></View>
+      {latest ? <CompactRules uilClass={uilClass} zone={latest.zone} /> : null}
+      {latest && UIL_GUIDANCE[latest.zone].football ? <ListRow detail={UIL_GUIDANCE[latest.zone].football} label="Football equipment" /> : null}
 
-      <ZoneRules latest={latest} uilClass={uilClass} />
+      <SectionTitle title="Today’s checklist" />
+      <PracticeChecklist />
 
       <SectionTitle action="New" onAction={() => router.push('/plan-editor')} title="Practice plans" />
       <Rows>
@@ -160,7 +157,25 @@ export function PlanTab() {
           );
         })}
       </Rows>
+      <Pressable accessibilityRole="link" onPress={() => Linking.openURL(UIL_SOURCE_URL)}>
+        <Text style={styles.source}>Zone rules: UIL WBGT activity guidelines {UIL_VERSION}, Class {uilClass}. Your school’s plan may be stricter.</Text>
+      </Pressable>
     </>
+  );
+}
+
+/** Today's UIL rules as four small tiles, right under the weather card. */
+function CompactRules({ uilClass, zone }: { uilClass: 2 | 3; zone: FieldReading['zone'] }) {
+  const g = UIL_GUIDANCE[zone];
+  return (
+    <View style={styles.rules}>
+      <Tiles>
+        <MetricTile compact label="Rest breaks" pill={`UIL Class ${uilClass}`} pillTone={Palette.inkMuted} unit={g.breaksPerHour ? 'per hr' : 'min/hr'} value={g.breaksPerHour ? `${g.breaksPerHour}+` : g.restMinutesPerHour ? String(g.restMinutesPerHour) : '--'} />
+        <MetricTile compact label="Break length" unit="min" value={g.breakMinutes ? `${g.breakMinutes}+` : '--'} />
+        <MetricTile compact label="Max practice" unit={g.maxPracticeMinutes ? 'hr' : undefined} value={g.maxPracticeMinutes ? String(g.maxPracticeMinutes / 60) : g.outdoorAllowed ? 'No limit' : 'None'} />
+        <MetricTile compact label="Cooling zone" pill={g.coolingZoneRequired ? 'Required' : 'Optional'} pillTone={g.coolingZoneRequired ? Palette.warning : Palette.safe} value={g.coolingZoneRequired ? 'Tub' : '--'} />
+      </Tiles>
+    </View>
   );
 }
 
@@ -198,6 +213,9 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
   const mine = useMyTeam();
   const { bandConnected, celsius, demoTeam, practiceLiveActivity } = usePreferences();
   const name = user?.displayName?.trim() || 'Your profile';
+  const roster = useRoster(role === 'Athlete' ? null : member?.teamId ?? null);
+  const demo = useDemoTeam('yellow');
+  const athletes = roster ? roster.filter((m) => m.role === 'athlete' && m.status === 'active').length : demo.enabled ? demo.members.length : null;
   const initials = name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 
   const confirmSignOut = () =>
@@ -208,13 +226,9 @@ export function ProfileTab({ role }: { role: 'Coach' | 'Athletic trainer' | 'Ath
 
   return (
     <>
-      <View style={styles.identity}>
-        <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
-        <View style={styles.flex}>
-          <Text style={styles.identityName}>{name}</Text>
-          <Text style={styles.identityMeta}>{role}{mine?.team ? ` · ${mine.team.teamName}` : ''}</Text>
-        </View>
-      </View>
+      <ProfileHero initials={initials} name={name} role={role} team={mine?.team.teamName ?? null} />
+      <ProfileStats athletes={athletes} data={member} />
+      <BandCard athlete={role === 'Athlete'} connected={bandConnected} />
 
       <CapsLabel>Account</CapsLabel>
       <Rows>
@@ -257,17 +271,10 @@ const styles = StyleSheet.create({
   decline: { borderColor: Palette.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   declineText: { color: Palette.inkMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1 },
   empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22 },
-  planHead: { alignItems: 'center', flexDirection: 'row', gap: 14 },
-  zoneDot: { borderRadius: 12, height: 24, width: 24 },
-  planZone: { color: Palette.ink, fontSize: 26, fontWeight: '700' },
-  planMeta: { color: Palette.inkMuted, fontSize: 15, marginTop: 2 },
+  forecast: { marginTop: 4 },
+  rules: { marginTop: 12 },
   summary: { color: Palette.ink, fontSize: 17, lineHeight: 24, marginBottom: 14, marginTop: 16 },
   source: { color: Palette.inkMuted, fontSize: 13, lineHeight: 18, marginTop: 14, textDecorationLine: 'underline' },
-  identity: { alignItems: 'center', flexDirection: 'row', gap: 16, marginTop: 8 },
-  avatar: { alignItems: 'center', backgroundColor: Palette.coral, borderRadius: 34, height: 68, justifyContent: 'center', width: 68 },
-  avatarText: { color: '#1A0E07', fontSize: 24, fontWeight: '800' },
-  identityName: { color: Palette.ink, fontSize: 24, fontWeight: '700' },
-  identityMeta: { color: Palette.inkMuted, fontSize: 15, marginTop: 2 },
   logout: { alignItems: 'center', alignSelf: 'center', borderColor: Palette.border, borderRadius: 999, borderWidth: 1, marginTop: 32, paddingHorizontal: 40, paddingVertical: 14 },
   logoutText: { color: Palette.ink, fontSize: 14, fontWeight: '800', letterSpacing: 1.4 },
 });

@@ -1,18 +1,20 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { StepLink, StepScreen, caps } from '@/components/step-kit';
 import { Entry } from '@/constants/entry-theme';
+import { connectBand, prepareBluetooth, startScan, stopScan, useBand, type FoundBand } from '@/state/band-ble';
 import { setPreference } from '@/state/preferences';
 
 // Pairing the HeatSense Band, told as WHOOP tells it: get the band ready, put it on, look for the
-// pairing light, pick your band, connect. There is no Bluetooth layer yet (see README, "HeatSense
-// Band"), so finding and connecting are simulated, and every screen says it's a demo.
+// pairing light, pick your band, connect. On a phone, finding and connecting use Bluetooth
+// (state/band-ble). Where there's no Bluetooth radio (the iOS Simulator, the web) the same steps run
+// as a demo, and those screens say so.
 
 const BAND = require('@/assets/images/heatsense-band-refined.png');
 const SERIAL = 'HS-02A7';
@@ -36,7 +38,43 @@ function BandShot({ size = 260, light = false }: { size?: number; light?: boolea
 }
 
 function DemoNote() {
-  return <Text style={styles.demo}>Demo pairing. Bluetooth arrives with the band firmware.</Text>;
+  return <Text style={styles.demo}>Demo pairing: this device has no Bluetooth, so finding and connecting are simulated.</Text>;
+}
+
+/** What to show while choosing a band over real Bluetooth. */
+function RealBandList({ onPick }: { onPick: (band: FoundBand) => void }) {
+  const band = useBand();
+  if (band.radio === 'off') return <Text style={styles.help}>Turn on Bluetooth to find your band.</Text>;
+  if (band.radio === 'unauthorized') {
+    return (
+      <>
+        <Text style={styles.help}>HeatSense needs Bluetooth permission to find your band.</Text>
+        <StepLink label="Open Settings" onPress={() => Linking.openSettings()} />
+      </>
+    );
+  }
+  return (
+    <>
+      {band.found.map((found) => (
+        <Pressable accessibilityHint="Connects to this band" accessibilityRole="button" key={found.id} onPress={() => onPick(found)} style={({ pressed }) => [styles.device, pressed && { opacity: 0.7 }]}>
+          <View>
+            <Text style={[caps, { color: Entry.ink, fontSize: 13 }]}>{found.name}</Text>
+            {found.rssi !== null ? <Text style={styles.signal}>{found.rssi > -60 ? 'Strong signal' : found.rssi > -80 ? 'Good signal' : 'Weak signal: move closer'}</Text> : null}
+          </View>
+          <Svg fill="none" height={20} stroke={Entry.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={20}><Path d="m9 6 6 6-6 6" /></Svg>
+        </Pressable>
+      ))}
+      {band.status === 'scanning' ? (
+        <Text accessibilityLiveRegion="polite" style={[caps, styles.searching]}>Looking for bands nearby…</Text>
+      ) : band.found.length === 0 ? (
+        <>
+          <Text style={styles.help}>No band found. Make sure it’s switched on and close to your phone.</Text>
+          <StepLink label="Search again" onPress={startScan} />
+        </>
+      ) : null}
+      {band.error ? <Text style={styles.error}>{band.error}</Text> : null}
+    </>
+  );
 }
 
 /** Phone ⋯ band, with dots travelling between them, then a check once connected. */
@@ -73,6 +111,15 @@ export default function PairBandScreen() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
+  // Real Bluetooth when this device has a radio; the demo flow otherwise.
+  const band = useBand();
+  useEffect(() => { prepareBluetooth(); }, []);
+  const real = band.radio === 'on' || band.radio === 'off' || band.radio === 'unauthorized';
+  const pick = (choice: FoundBand) => {
+    go('connecting');
+    connectBand(choice).then((ok) => setStep(ok ? 'connected' : 'select'));
+  };
+
   const index = STEPS.indexOf(step);
   const go = (next: Step) => { setHelp(false); if (next === 'select') setFound(false); setStep(next); };
   const finish = () => (inSetup ? router.replace('/notifications') : router.canGoBack() ? router.back() : router.replace('/dashboard?role=athlete&tab=profile'));
@@ -80,17 +127,21 @@ export default function PairBandScreen() {
   const progress = inSetup ? 0.9 + index * 0.012 : (index + 1) / STEPS.length;
   const skip = inSetup ? <StepLink label="I don’t have a band yet" onPress={finish} /> : null;
 
-  // Searching for nearby bands.
+  // Searching for nearby bands: a real scan, or the demo's short wait.
   useEffect(() => {
     if (step !== 'select') return;
+    if (real) {
+      if (band.radio === 'on') startScan();
+      return stopScan;
+    }
     timer.current = setTimeout(() => setFound(true), 1200);
-  }, [step]);
+  }, [band.radio, real, step]);
 
-  // Connecting, then connected.
+  // Demo only: connecting, then connected. Real connections finish in `pick`.
   useEffect(() => {
-    if (step !== 'connecting') return;
+    if (step !== 'connecting' || real) return;
     timer.current = setTimeout(() => { setPreference('bandConnected', true); setStep('connected'); }, 1800);
-  }, [step]);
+  }, [real, step]);
 
   switch (step) {
     case 'ready':
@@ -123,7 +174,7 @@ export default function PairBandScreen() {
     case 'select':
       return (
         <StepScreen icon={<BandShot size={200} />} onBack={back} progress={progress} title="Select your band" top="tight">
-          {found ? (
+          {real ? <RealBandList onPick={pick} /> : found ? (
             <Pressable accessibilityHint="Pairs this band" accessibilityRole="button" onPress={() => go('connecting')} style={({ pressed }) => [styles.device, pressed && { opacity: 0.7 }]}>
               <Text style={[caps, { color: Entry.ink, fontSize: 13 }]}>HeatSense Band {SERIAL}</Text>
               <Svg fill="none" height={20} stroke={Entry.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={20}><Path d="m9 6 6 6-6 6" /></Svg>
@@ -131,7 +182,7 @@ export default function PairBandScreen() {
           ) : (
             <Text accessibilityLiveRegion="polite" style={[caps, styles.searching]}>Looking for bands nearby…</Text>
           )}
-          <DemoNote />
+          {real ? null : <DemoNote />}
         </StepScreen>
       );
     case 'connecting':
@@ -141,9 +192,9 @@ export default function PairBandScreen() {
         <StepScreen
           footer={connected ? <StepContinue onPress={finish} /> : undefined}
           onBack={connected ? undefined : back}
-          title={connected ? `${SERIAL} connected` : 'Connecting'}>
+          title={connected ? `${real ? band.device?.name ?? 'Band' : SERIAL} connected` : 'Connecting'}>
           <Link connected={connected} />
-          <DemoNote />
+          {real ? null : <DemoNote />}
         </StepScreen>
       );
     }
@@ -166,6 +217,8 @@ const styles = StyleSheet.create({
   helpList: { gap: 8 },
   device: { alignItems: 'center', backgroundColor: Entry.raised, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', minHeight: 58, paddingHorizontal: 18 },
   searching: { color: Entry.muted, paddingVertical: 20, textAlign: 'center' },
+  signal: { color: Entry.subtle, fontSize: 12, marginTop: 2 },
+  error: { color: Entry.error, fontSize: 13, lineHeight: 18 },
   link: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginVertical: 24 },
   phone: { alignItems: 'center', backgroundColor: '#000', borderColor: Entry.line, borderRadius: 18, borderWidth: 1, height: 110, justifyContent: 'center', width: 62 },
   track: { alignItems: 'center', flex: 1, height: 40, justifyContent: 'center', marginHorizontal: 8 },
