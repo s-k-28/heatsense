@@ -31,7 +31,7 @@ const statusLabel = (member: DemoMember) => (member.status === 'watch' ? 'Slow r
 export function TeamVitalsRows({ members, role = 'coach' }: { members: DemoMember[]; role?: 'coach' | 'trainer' }) {
   return (
     <>
-    <StatusKey />
+    <StatusKey simulated />
     <Rows>
       {members.map((m) => (
         <ListRow
@@ -46,12 +46,13 @@ export function TeamVitalsRows({ members, role = 'coach' }: { members: DemoMembe
   );
 }
 
-/** What the dots mean, said once above the list rather than under every athlete. */
-function StatusKey() {
+/** One line above the list: what the dots mean, and whether the numbers are simulated. */
+function StatusKey({ simulated = false }: { simulated?: boolean }) {
   return (
     <View style={styles.key}>
-      <View style={styles.keyItem}><View style={[styles.statusDot, { backgroundColor: Palette.safe }]} /><Text style={styles.keyText}>Usual range</Text></View>
+      <View style={styles.keyItem}><View style={[styles.statusDot, { backgroundColor: Palette.safe }]} /><Text style={styles.keyText}>Usual</Text></View>
       <View style={styles.keyItem}><View style={[styles.statusDot, { backgroundColor: Palette.warning }]} /><Text style={styles.keyText}>Slow recovery</Text></View>
+      {simulated ? <Text accessibilityLabel={`Simulated band data, ${DEMO_SPEED} times speed`} style={[styles.keyText, styles.keyEnd]}>Simulated · {DEMO_SPEED}×</Text> : null}
     </View>
   );
 }
@@ -63,7 +64,7 @@ export function LiveVitalsRows({ records, roster, now }: { records: VitalsRecord
   const name = (uid: string) => roster?.find((m) => m.userId === uid)?.displayName ?? 'Athlete';
   return (
     <>
-    <StatusKey />
+    <StatusKey simulated={records.some((r) => r.source === 'simulated')} />
     <Rows>
       {records.map((r) => {
         const stale = !r.updatedAt || now - r.updatedAt.getTime() > STALE_MS;
@@ -129,11 +130,12 @@ const styles = StyleSheet.create({
   tagText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
   statusRow: { alignItems: 'center', flexDirection: 'row', gap: 10 },
   bpm: { color: Palette.ink, fontFamily: Face.figure, fontSize: 28, lineHeight: 32 },
-  bpmUnit: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
+  bpmUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 18 },
   statusDot: { borderRadius: 5, height: 10, width: 10 },
   key: { flexDirection: 'row', gap: 18, marginBottom: 12 },
   keyItem: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   keyText: { color: Palette.inkMuted, fontSize: 15 },
+  keyEnd: { marginLeft: 'auto' },
   hero: { alignItems: 'center', gap: 4, marginBottom: 12, marginTop: 4 },
   hr: { color: Palette.ink, fontFamily: Face.figure, fontSize: 112, lineHeight: 116 },
   hrUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },

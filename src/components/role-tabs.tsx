@@ -11,7 +11,7 @@ import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
 import { recentSessions, type SessionSummary } from '@/services/practice-sessions';
 import { usePreferences, useTemperature } from '@/state/preferences';
-import { LiveVitalsRows, SimulatedTag, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
+import { LiveVitalsRows, TeamVitalsRows, VitalsDetail } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
 import { useCoachData, useMembership, useNow, useRoster, useTeamVitals, useTrainers } from '@/state/team-session';
 
@@ -260,10 +260,7 @@ export function TrainerMonitor() {
   }
   if (demo.enabled) {
     return (
-      <>
-        <SimulatedTag />
-        <TeamVitalsRows members={demo.members} role="trainer" />
-      </>
+      <TeamVitalsRows members={demo.members} role="trainer" />
     );
   }
   return (

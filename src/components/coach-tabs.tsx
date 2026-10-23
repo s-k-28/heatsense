@@ -13,7 +13,7 @@ import { getMyTeamInvite, NETWORK_ERROR, respondToJoinRequest, type TeamInvite, 
 import { setPreference, usePreferences, useTemperature } from '@/state/preferences';
 import { clockTime, usePracticePlans } from '@/state/practice-plans';
 import { useAuthSession } from '@/state/auth-session';
-import { LiveVitalsRows, SimulatedTag, TeamVitalsRows } from '@/components/vitals';
+import { LiveVitalsRows, TeamVitalsRows } from '@/components/vitals';
 import { useDemoTeam } from '@/state/demo-team';
 import { useCoachData, useMembership, useNow, useRoster, useTeamVitals, useTrainers, type SessionRole } from '@/state/team-session';
 
@@ -59,7 +59,7 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
-      <Card message={team ? [team.school, team.sport, 'level' in team ? team.level : null].filter(Boolean).join(' · ') : mine === null && !readOnly ? 'Not set up yet. Create it to get the code athletes join with.' : undefined} title={team?.teamName ?? 'Your team'}>
+      <Card message={team ? [team.school, team.sport, 'level' in team ? team.level : null].filter(Boolean).join(' · ') : mine === null && !readOnly ? 'Not set up yet. Create it to get the code athletes join with.' : readOnly && !team ? 'Join your team to see its athletes. Enter the code from your coach in Profile.' : undefined} title={team?.teamName ?? 'Your team'}>
         {team ? (
           <StatRow stats={[
             { label: 'Athletes', value: String(active.length) },
@@ -134,7 +134,6 @@ export function TeamTab({ readOnly = false, role = 'coach' }: { readOnly?: boole
       {demo.enabled ? (
         <>
           <SectionTitle title={`Sample athletes · ${demo.members.length}`} />
-          <SimulatedTag />
           <TeamVitalsRows members={demo.members} role={role === 'trainer' ? 'trainer' : 'coach'} />
         </>
       ) : null}
@@ -155,7 +154,7 @@ export function PlanTab() {
     <>
       {data?.sample ? <SampleTag /> : null}
       {latest ? (
-        <Card title="Today">
+        <Card message={UIL_GUIDANCE[latest.zone].summary} title="Today">
           <StatRow stats={[
             { label: 'WBGT', value: String(temp.value(latest.wbgtF)), unit: temp.unit },
             { label: 'Zone', value: ZONES[latest.zone].label.replace(' zone', ''), tone: latest.zone === 'black' ? Palette.inkMuted : ZONES[latest.zone].color },
@@ -166,7 +165,7 @@ export function PlanTab() {
         <Card message="Take a field reading to see today’s rules." title="Today" />
       )}
 
-      <ZoneRules latest={latest} uilClass={uilClass} />
+      <ZoneRules hideSummary latest={latest} uilClass={uilClass} />
 
       <SectionTitle action="New" onAction={() => router.push('/plan-editor')} title="Practice plans" />
       <Rows>
@@ -185,13 +184,13 @@ export function PlanTab() {
 }
 
 /** What UIL requires for the latest reading's zone, as tiles, with the source. */
-export function ZoneRules({ latest, uilClass }: { latest: FieldReading | null; uilClass: 2 | 3 }) {
+export function ZoneRules({ latest, uilClass, hideSummary = false }: { latest: FieldReading | null; uilClass: 2 | 3; hideSummary?: boolean }) {
   const guidance = latest ? UIL_GUIDANCE[latest.zone] : null;
   return (
     <>
       {guidance ? (
         <>
-          <Text style={styles.summary}>{guidance.summary}</Text>
+          {hideSummary ? <View style={styles.gap12} /> : <Text style={styles.summary}>{guidance.summary}</Text>}
           <Tiles>
             <MetricTile label="Rest breaks" unit={guidance.breaksPerHour ? 'per hr' : 'min/hr'} value={guidance.breaksPerHour ? `${guidance.breaksPerHour}+` : guidance.restMinutesPerHour ? String(guidance.restMinutesPerHour) : '--'} />
             <MetricTile label="Break length" unit="min" value={guidance.breakMinutes ? `${guidance.breakMinutes}+` : '--'} />
