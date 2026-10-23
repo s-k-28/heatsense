@@ -45,7 +45,7 @@ function Spark({ values, color }: { values: number[]; color: string }) {
   return <Svg height={h} width="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none"><Polyline fill="none" points={pts} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} /></Svg>;
 }
 
-function Tile({ a }: { a: AthleteView }) {
+function Tile({ a, role }: { a: AthleteView; role: 'trainer' | 'coach' }) {
   const live = a.live!;
   const pct = hrPercent(live.heartRate);
   const tone = live.stale ? Palette.inkFaint : effortTone(pct);
@@ -54,7 +54,7 @@ function Tile({ a }: { a: AthleteView }) {
     <Pressable
       accessibilityLabel={`${a.name}, ${live.stale ? 'no recent signal' : `${live.heartRate} beats per minute, ${pct} percent of max`}${live.status === 'watch' ? ', slow recovery' : ''}`}
       accessibilityRole="button"
-      onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role: 'trainer' } })}
+      onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })}
       style={({ pressed }) => [styles.tile, live.status === 'watch' && styles.tileWatch, pressed && styles.pressed]}>
       <View style={styles.tileTop}>
         <Text numberOfLines={1} style={styles.tileName}>{first} {rest.map((p) => p[0]).join('')}</Text>
@@ -71,10 +71,10 @@ function Tile({ a }: { a: AthleteView }) {
   );
 }
 
-export function TrainerMonitor() {
-  const data = useCoachData('trainer');
+export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach' }) {
+  const data = useCoachData(role);
   const temp = useTemperature();
-  const { athletes, sample } = useAthletes('trainer');
+  const { athletes, sample } = useAthletes(role);
   const demo = useDemoTeam(data?.readings.at(-1)?.zone ?? 'yellow');
   const now = useNow(5_000);
   const reduced = useReducedMotion();
@@ -133,7 +133,7 @@ export function TrainerMonitor() {
                     <Pressable accessibilityRole="button" onPress={() => setChecked({ ...checked, [a.id]: new Date() })} style={({ pressed }) => [styles.primary, pressed && styles.pressed]}>
                       <Text style={styles.primaryText}>Checked in</Text>
                     </Pressable>
-                    <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role: 'trainer' } })} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
+                    <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })} style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}>
                       <Text style={styles.secondaryText}>Vitals</Text>
                     </Pressable>
                   </View>
@@ -148,7 +148,7 @@ export function TrainerMonitor() {
       ) : null}
 
       <View style={styles.gridHead}>
-        <Text accessibilityRole="header" style={styles.sectionInline}>Live</Text>
+        <Text accessibilityRole="header" style={styles.sectionInline}>Right now</Text>
         <View accessibilityRole="tablist" style={styles.sort}>
           {(['effort', 'name'] as const).map((key) => (
             <Pressable accessibilityRole="tab" accessibilityState={{ selected: sort === key }} key={key} onPress={() => setSort(key)} style={[styles.sortItem, sort === key && styles.sortOn]}>
@@ -158,7 +158,7 @@ export function TrainerMonitor() {
         </View>
       </View>
       <View style={styles.grid}>
-        {sorted.map((a) => <Animated.View key={a.id} layout={settle(reduced)} style={styles.cell}><Tile a={a} /></Animated.View>)}
+        {sorted.map((a) => <Animated.View key={a.id} layout={settle(reduced)} style={styles.cell}><Tile a={a} role={role} /></Animated.View>)}
       </View>
 
       <View style={styles.team}>

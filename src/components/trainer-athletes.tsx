@@ -49,8 +49,8 @@ function BandMark({ a }: { a: AthleteView }) {
   );
 }
 
-export function TrainerAthletes() {
-  const { athletes, pending, sample, loading } = useAthletes('trainer');
+export function TrainerAthletes({ role = 'trainer', embedded = false }: { role?: 'trainer' | 'coach'; embedded?: boolean }) {
+  const { athletes, pending, sample, loading } = useAthletes(role);
   const reduced = useReducedMotion();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -61,7 +61,7 @@ export function TrainerAthletes() {
 
   return (
     <>
-      {sample ? <SampleTag /> : null}
+      {sample && !embedded ? <SampleTag /> : null}
       <View style={styles.search}>
         <Svg fill="none" height={18} stroke={Palette.inkMuted} strokeLinecap="round" strokeWidth={2} viewBox="0 0 24 24" width={18}><Circle cx={11} cy={11} r={7} /><Path d="m20 20-3.5-3.5" /></Svg>
         <TextInput
@@ -87,18 +87,18 @@ export function TrainerAthletes() {
         })}
       </View>
 
-      {pending.length ? <Text style={styles.pending}>{pending.length} waiting for your coach to approve</Text> : null}
+      {pending.length && !embedded ? <Text style={styles.pending}>{pending.length} waiting for your coach to approve</Text> : null}
 
       {loading ? (
         <Text style={styles.empty}>Loading the roster…</Text>
       ) : shown.length === 0 ? (
-        <Text style={styles.empty}>{athletes.length ? 'No athletes match.' : 'No athletes yet. Once your coach approves athletes, they appear here.'}</Text>
+        <Text style={styles.empty}>{athletes.length ? 'No athletes match.' : role === 'coach' ? 'No athletes yet. Share your team code to invite them.' : 'No athletes yet. Once your coach approves athletes, they appear here.'}</Text>
       ) : (
         <View style={styles.list}>
           {shown.map((a, i) => (
             <Animated.View entering={enter(i, reduced)} key={a.id} layout={settle(reduced)}>
               {i > 0 ? <View style={styles.divider} /> : null}
-              <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role: 'trainer' } })} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+              <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
                 <View style={styles.avatar}><Text style={styles.avatarText}>{initials(a.name)}</Text></View>
                 <Text numberOfLines={1} style={styles.name}>{a.name}</Text>
                 <AcclimatizationPill day={a.acclimatizationDay} />
