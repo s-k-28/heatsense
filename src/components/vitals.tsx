@@ -1,11 +1,8 @@
-import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { VitalCards } from '@/components/vital-cards';
 import { ListRow, Rows } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
-import type { VitalsRecord } from '@/services/band-vitals';
-import type { RosterMember } from '@/services/team-roster';
 import type { DemoMember } from '@/state/demo-team';
 import { DEMO_SPEED } from '@/state/demo-team';
 
@@ -24,62 +21,6 @@ export function SimulatedTag() {
 
 const statusTone = (member: DemoMember) => (member.status === 'watch' ? Palette.warning : Palette.safe);
 const statusLabel = (member: DemoMember) => (member.status === 'watch' ? 'Slow recovery' : 'Usual range');
-
-/** One row per athlete: name, live heart rate, and whether recovery looks usual. */
-export function TeamVitalsRows({ members, role = 'coach' }: { members: DemoMember[]; role?: 'coach' | 'trainer' }) {
-  return (
-    <>
-    <StatusKey simulated />
-    <Rows>
-      {members.map((m) => (
-        <ListRow
-          key={m.athlete.id}
-          label={m.athlete.name}
-          onPress={() => router.push({ pathname: '/athlete-vitals', params: { id: m.athlete.id, role } })}
-          trailing={<View accessibilityLabel={statusLabel(m)} accessible style={styles.statusRow}><Text style={styles.bpm}>{m.vitals.heartRate}<Text style={styles.bpmUnit}> bpm</Text></Text><View style={[styles.statusDot, { backgroundColor: statusTone(m) }]} /></View>}
-        />
-      ))}
-    </Rows>
-    </>
-  );
-}
-
-/** One line above the list: what the dots mean, and whether the numbers are simulated. */
-function StatusKey({ simulated = false }: { simulated?: boolean }) {
-  return (
-    <View style={styles.key}>
-      <View style={styles.keyItem}><View style={[styles.statusDot, { backgroundColor: Palette.safe }]} /><Text style={styles.keyText}>Usual</Text></View>
-      <View style={styles.keyItem}><View style={[styles.statusDot, { backgroundColor: Palette.warning }]} /><Text style={styles.keyText}>Slow recovery</Text></View>
-      {simulated ? <Text accessibilityLabel={`Simulated band data, ${DEMO_SPEED} times speed`} style={[styles.keyText, styles.keyEnd]}>Simulated · {DEMO_SPEED}×</Text> : null}
-    </View>
-  );
-}
-
-const STALE_MS = 2 * 60_000;
-
-/** Real athletes' latest band samples during practice. A sample older than two minutes reads as no signal. */
-export function LiveVitalsRows({ records, roster, now }: { records: VitalsRecord[]; roster: RosterMember[] | null; now: number }) {
-  const name = (uid: string) => roster?.find((m) => m.userId === uid)?.displayName ?? 'Athlete';
-  return (
-    <>
-    <StatusKey simulated={records.some((r) => r.source === 'simulated')} />
-    <Rows>
-      {records.map((r) => {
-        const stale = !r.updatedAt || now - r.updatedAt.getTime() > STALE_MS;
-        const tone = stale ? Palette.inkFaint : r.recovery === 'watch' ? Palette.warning : Palette.safe;
-        const state = stale ? 'No recent signal' : r.recovery === 'watch' ? 'Slow recovery' : 'Usual range';
-        return (
-          <ListRow
-            key={r.athleteUid}
-            label={name(r.athleteUid)}
-            trailing={<View accessibilityLabel={state} accessible style={styles.statusRow}><Text style={[styles.bpm, stale && { color: Palette.inkMuted }]}>{stale ? '--' : r.heartRate}<Text style={styles.bpmUnit}> bpm</Text></Text><View style={[styles.statusDot, { backgroundColor: tone }]} /></View>}
-          />
-        );
-      })}
-    </Rows>
-    </>
-  );
-}
 
 /** The full picture for one athlete: live heart rate, then every band signal in its own card. */
 export function VitalsDetail({ member }: { member: DemoMember }) {
@@ -115,14 +56,7 @@ const styles = StyleSheet.create({
   tag: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: 6, marginBottom: 12 },
   tagDot: { backgroundColor: Palette.info, borderRadius: 3, height: 6, width: 6 },
   tagText: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
-  statusRow: { alignItems: 'center', flexDirection: 'row', gap: 10 },
-  bpm: { color: Palette.ink, fontFamily: Face.figure, fontSize: 28, lineHeight: 32 },
-  bpmUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 18 },
   statusDot: { borderRadius: 5, height: 10, width: 10 },
-  key: { flexDirection: 'row', gap: 18, marginBottom: 12 },
-  keyItem: { alignItems: 'center', flexDirection: 'row', gap: 6 },
-  keyText: { color: Palette.inkMuted, fontSize: 15 },
-  keyEnd: { marginLeft: 'auto' },
   hero: { alignItems: 'flex-start', gap: 4, marginBottom: 12, marginTop: 4 },
   hr: { color: Palette.ink, fontFamily: Face.figure, fontSize: 112, lineHeight: 116 },
   hrUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
