@@ -33,9 +33,14 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F6F3EC",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#101416",
+          "image": "./assets/images/heatsense-logo.png",
+          "imageWidth": 120,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#101416",
+            "image": "./assets/images/heatsense-logo.png"
+          }
         }
       ],
       "expo-image",

@@ -1,13 +1,13 @@
 import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { Easing, interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassSurface } from '@/components/glass-surface';
 import { HeatIcon } from '@/components/heat-icon';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
-import { Group, IconTile, Row, TextLink } from '@/components/ui/list';
+import { TextLink } from '@/components/ui/list';
 import { Palette, Spacing, Type } from '@/constants/theme';
 import { markNotificationsRead, usePreferences } from '@/state/preferences';
 
@@ -31,15 +31,6 @@ const SLIDE_EASE = Easing.bezier(0.22, 1, 0.36, 1);
 const TAB_MUTED = 'rgba(193,193,193,0.8)';
 
 const bell = { ios: 'bell.fill', android: 'notifications', web: 'notifications' } as const;
-const sun = { ios: 'cloud.sun.fill', android: 'partly_cloudy_day', web: 'partly_cloudy_day' } as const;
-const gauge = { ios: 'gauge.with.needle.fill', android: 'speed', web: 'speed' } as const;
-const shield = { ios: 'exclamationmark.shield.fill', android: 'health_and_safety', web: 'health_and_safety' } as const;
-
-const NOTIFICATIONS = [
-  { icon: sun, title: 'WBGT rose to the Orange zone', detail: 'Practice plan updated', time: '2 min ago' },
-  { icon: gauge, title: 'Field sensor reading refreshed', detail: 'Memorial Stadium', time: '9 min ago' },
-  { icon: shield, title: 'Reduce equipment use during breaks', detail: 'Part of today’s Orange-zone plan', time: 'Today' },
-] as const;
 
 function initialsOf(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]!.toUpperCase()).join('');
@@ -51,22 +42,24 @@ function initialsOf(name: string) {
  */
 export function DashboardHeader({
   name,
+  onAlerts,
   onProfile,
   scrollY,
   title,
 }: {
   name: string;
+  /** Opens the role's real alerts; no bell when the role has none. */
+  onAlerts?: () => void;
   onProfile: () => void;
   scrollY: SharedValue<number>;
   title: string;
 }) {
   const insets = useSafeAreaInsets();
-  const [open, setOpen] = useState(false);
   const backdrop = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.value, [36, 52], [0, 1], 'clamp') }));
   const { unreadNotifications } = usePreferences();
-  const close = () => {
-    setOpen(false);
+  const openAlerts = () => {
     markNotificationsRead();
+    onAlerts?.();
   };
 
   return (
@@ -78,35 +71,17 @@ export function DashboardHeader({
     <View style={styles.header}>
       <HeatSenseLogo height={28} />
       <View style={styles.headerActions}>
-        <Pressable accessibilityLabel={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} new` : 'Notifications'} accessibilityRole="button" hitSlop={4} onPress={() => setOpen(true)} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
-          <HeatIcon name={bell} size={20} tintColor={Palette.ink} />
-          {unreadNotifications > 0 ? <View style={styles.badge} /> : null}
-        </Pressable>
+        {onAlerts ? (
+          <Pressable accessibilityLabel={unreadNotifications > 0 ? `Alerts, ${unreadNotifications} new` : 'Alerts'} accessibilityRole="button" hitSlop={4} onPress={openAlerts} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}>
+            <HeatIcon name={bell} size={20} tintColor={Palette.ink} />
+            {unreadNotifications > 0 ? <View style={styles.badge} /> : null}
+          </Pressable>
+        ) : null}
         <Pressable accessibilityLabel={`${name}, account`} accessibilityRole="button" onPress={onProfile} style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}>
           <Text style={styles.avatarText}>{initialsOf(name)}</Text>
         </Pressable>
       </View>
 
-      <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={open}>
-        <View style={styles.sheet}>
-          <View style={styles.sheetBar}>
-            <Text style={styles.sheetTitle}>Notifications</Text>
-            <TextLink label="Done" onPress={close} />
-          </View>
-          <ScrollView contentContainerStyle={styles.sheetContent}>
-            <Group inset={59}>
-              {NOTIFICATIONS.map((item) => (
-                <Row
-                  detail={`${item.detail} · ${item.time}`}
-                  key={item.title}
-                  leading={<IconTile icon={item.icon} />}
-                  title={item.title}
-                />
-              ))}
-            </Group>
-          </ScrollView>
-        </View>
-      </Modal>
     </View>
     </View>
   );
@@ -217,10 +192,6 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: Palette.emergency, borderColor: Palette.canvas, borderRadius: 5, borderWidth: 1.5, height: 10, position: 'absolute', right: 10, top: 9, width: 10 },
   avatar: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 18, height: 36, justifyContent: 'center', width: 36 },
   avatarText: { color: Palette.ink, ...Type.footnote, fontWeight: '600' },
-  sheet: { backgroundColor: Palette.canvas, flex: 1 },
-  sheetBar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.three, paddingHorizontal: Spacing.five, paddingTop: Spacing.five },
-  sheetTitle: { color: Palette.ink, ...Type.title2 },
-  sheetContent: { paddingHorizontal: Spacing.four, paddingTop: Spacing.two },
   largeTitle: { color: Palette.ink, ...Type.largeTitle, marginTop: Spacing.one },
   sectionHeader: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.two, marginTop: Spacing.seven },
   sectionHeaderTight: { marginTop: Spacing.five },
