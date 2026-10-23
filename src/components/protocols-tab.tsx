@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Keyboard, Linking, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
@@ -8,13 +8,16 @@ import { Face, Palette } from '@/constants/theme';
 import { enter, settle } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { UIL_GUIDANCE, zoneRange } from '@/lib/uil-wbgt';
+import type { EmergencyPlan } from '@/services/team-safety';
+import { useEmergencyPlan } from '@/state/emergency-plan';
 import { useStored } from '@/state/stored';
 import { useCoachData } from '@/state/team-session';
 
 // Protocols as tools for the sideline, in three parts:
 // Respond: pick what you're seeing, work the steps (each stamped with the time), call 911, run the
 //   cold-water immersion clock, and save the response to an incident log you can share.
-// Prepare: today's readiness checks (they reset each day) and the venue's emergency action plan.
+// Prepare: today's readiness checks (they reset each day, on this phone) and the team's emergency
+//   action plan, shared with every coach, trainer and athlete on the team.
 // Tools: a sweat-rate calculator and the UIL zones.
 // Steps follow the Korey Stringer Institute / NATA guidance on exertional heat illness.
 
@@ -68,7 +71,7 @@ const READINESS = [
   { id: 'plan', label: 'Emergency plan reviewed with staff' },
 ];
 
-const EAP_FIELDS = [
+const EAP_FIELDS: { id: keyof EmergencyPlan; label: string; placeholder: string }[] = [
   { id: 'venue', label: 'Venue address', placeholder: '1200 Stadium Dr' },
   { id: 'hospital', label: 'Nearest hospital', placeholder: 'Name and distance' },
   { id: 'access', label: 'EMS entrance', placeholder: 'Gate or road ambulances use' },
@@ -258,11 +261,14 @@ function Respond() {
 /* ───────────────────────────── Prepare ───────────────────────────── */
 
 function Prepare() {
+  const data = useCoachData('trainer');
   const [today] = useState(() => new Date().toDateString());
   const [ready, setReady] = useStored<{ date: string; done: Record<string, number> }>('readiness', { date: today, done: {} });
-  const [eap, setEap] = useStored<Record<string, string>>('eap', {});
+  // Shared with the whole team when there is one; athletes read it on Learn.
+  const [eap, setEap] = useEmergencyPlan(data?.sample ? null : data?.teamId ?? null);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState<EmergencyPlan>({});
+  const fields = useRef<(TextInput | null)[]>([]);
   const done = ready.date === today ? ready.done : {};
   const count = READINESS.filter((r) => done[r.id]).length;
   const toggle = (id: string) => {
@@ -297,15 +303,19 @@ function Prepare() {
       <Heading action={editing ? undefined : { label: filled ? 'Edit' : 'Set up', onPress: () => { setDraft(eap); setEditing(true); } }}>Emergency action plan</Heading>
       {editing ? (
         <View style={styles.card}>
-          {EAP_FIELDS.map((f) => (
+          {EAP_FIELDS.map((f, i) => (
             <View key={f.id} style={styles.field}>
-              <Text style={styles.fieldLabel}>{f.label}</Text>
+              <Text accessibilityElementsHidden importantForAccessibility="no" style={styles.fieldLabel}>{f.label}</Text>
               <TextInput
                 accessibilityLabel={f.label}
                 onChangeText={(text) => setDraft({ ...draft, [f.id]: text })}
+                onSubmitEditing={() => fields.current[i + 1]?.focus()}
                 placeholder={f.placeholder}
                 placeholderTextColor={Palette.inkFaint}
+                ref={(el) => { fields.current[i] = el; }}
+                returnKeyType={i === EAP_FIELDS.length - 1 ? 'done' : 'next'}
                 style={styles.input}
+                submitBehavior={i === EAP_FIELDS.length - 1 ? 'blurAndSubmit' : 'submit'}
                 value={draft[f.id] ?? ''}
               />
             </View>
@@ -370,7 +380,7 @@ function SweatRate() {
       <View style={styles.calcGrid}>
         {fields.map((f) => (
           <View key={f.label} style={styles.calcField}>
-            <Text style={styles.fieldLabel}>{f.label}</Text>
+            <Text accessibilityElementsHidden importantForAccessibility="no" style={styles.fieldLabel}>{f.label}</Text>
             <View style={styles.calcInputRow}>
               <TextInput accessibilityLabel={`${f.label} in ${f.unit}`} keyboardType="decimal-pad" onBlur={() => setEditing(false)} onFocus={() => setEditing(true)} onChangeText={f.set} placeholder="–" placeholderTextColor={Palette.inkFaint} style={styles.calcInput} value={f.value} />
               <Text style={styles.calcUnit}>{f.unit}</Text>

@@ -533,6 +533,25 @@ const trainer = await signUp('trainer');
   });
 }
 
+// The emergency action plan: coach and approved trainers write it, approved members read it.
+{
+  const teamId = invite.teamId;
+  const { doc, getDoc, serverTimestamp, setDoc } = await import('firebase/firestore');
+  const eap = (user) => doc(user.db, 'teams', teamId, 'safety', 'eap');
+  const plan = (user, extra = {}) => ({ aed: 'Field house, by the door', tub: 'North end zone', updatedBy: user.uid, updatedAt: serverTimestamp(), ...extra });
+
+  await test('coach and trainer keep the emergency plan; athletes read it; strangers can’t', async () => {
+    await setDoc(eap(coach), plan(coach));
+    await setDoc(eap(trainer), plan(trainer, { caller: 'Head athletic trainer' }));
+    equal((await getDoc(eap(athlete))).data().caller, 'Head athletic trainer', 'athlete reads the plan');
+    await rejects(setDoc(eap(athlete), plan(athlete)), 'permission-denied', 'athlete editing the plan');
+    await rejects(setDoc(eap(trainer), plan(trainer, { secret: 'x' })), 'permission-denied', 'unknown field');
+    await rejects(setDoc(eap(trainer), plan(trainer, { aed: 'x'.repeat(200) })), 'permission-denied', 'field too long');
+    await rejects(setDoc(eap(trainer), plan(coach)), 'permission-denied', 'writing as someone else');
+    await rejects(getDoc(eap(stranger)), 'permission-denied', 'stranger reading the plan');
+  });
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 await Promise.all([coach, athlete, stranger, trainer].map((u) => deleteApp(u.app)));
 process.exit(failed ? 1 : 0);

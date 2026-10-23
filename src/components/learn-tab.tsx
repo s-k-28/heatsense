@@ -3,12 +3,15 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { ZonePicker } from '@/components/protocols-tab';
-import { SectionTitle } from '@/components/whoop-ui';
+import { ListRow, Rows, SectionTitle } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { enter } from '@/lib/motion';
+import { useEmergencyPlan } from '@/state/emergency-plan';
+import { useCoachData } from '@/state/team-session';
 
 // Learn, for athletes, as things to do rather than read: check how you feel and get told what to do,
-// check your hydration against the urine color chart trainers use, and explore the UIL zones.
+// see where help is (the team's emergency plan), check your hydration against the urine color chart
+// trainers use, and explore the UIL zones.
 
 type Level = 'severe' | 'moderate' | 'mild';
 
@@ -98,11 +101,28 @@ function HydrationCheck() {
   );
 }
 
+/** Where help is: the team's emergency action plan, as the coach and trainers keep it. */
+function WhereHelpIs() {
+  const data = useCoachData('athlete');
+  const [plan] = useEmergencyPlan(data?.sample ? null : data?.teamId ?? null);
+  const rows = ([['aed', 'AED'], ['tub', 'Cooling tub'], ['hospital', 'Hospital'], ['caller', 'Calls 911']] as const).filter(([k]) => plan[k]?.trim());
+  if (!rows.length) return null;
+  return (
+    <>
+      <SectionTitle title="If something goes wrong" />
+      <Rows>
+        {rows.map(([k, label]) => <ListRow key={k} label={label} value={plan[k]!.trim()} />)}
+      </Rows>
+    </>
+  );
+}
+
 export function LearnTab() {
   return (
     <>
       <SectionTitle title="How do you feel?" />
       <SelfCheck />
+      <WhereHelpIs />
       <SectionTitle title="Check your hydration" />
       <HydrationCheck />
       <ZonePicker role="athlete" />

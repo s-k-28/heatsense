@@ -306,6 +306,21 @@ service cloud.firestore {
       }
     }
 
+    // The team's emergency action plan. The coach and approved trainers keep it current; every
+    // approved member reads it, so athletes know where the AED and the cooling tub are.
+    match /teams/{teamId}/safety/eap {
+      function text(d, k) { return !(k in d) || (d[k] is string && d[k].size() <= 160); }
+      function validEap(d) {
+        return d.keys().hasOnly(['venue', 'hospital', 'access', 'aed', 'tub', 'caller', 'updatedBy', 'updatedAt'])
+          && text(d, 'venue') && text(d, 'hospital') && text(d, 'access') && text(d, 'aed') && text(d, 'tub') && text(d, 'caller')
+          && d.updatedBy == request.auth.uid
+          && d.updatedAt == request.time;
+      }
+      allow read: if isCoach(teamId) || isActiveMember(teamId);
+      allow create, update: if (isCoach(teamId) || isActiveTrainer(teamId)) && validEap(request.resource.data);
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
