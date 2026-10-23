@@ -11,7 +11,7 @@ import { Face, Palette } from '@/constants/theme';
 import { enter, settle } from '@/lib/motion';
 import { ZONES } from '@/lib/practice';
 import { hrPercent, useAthletes, type AthleteView } from '@/state/athletes';
-import { DEMO_SPEED, useDemoTeam } from '@/state/demo-team';
+import { useDemoTeam } from '@/state/demo-team';
 import { useTemperature } from '@/state/preferences';
 import { useCoachData, useNow } from '@/state/team-session';
 
@@ -170,7 +170,6 @@ export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach
           { label: 'Highest', value: hrs.length ? String(Math.max(...hrs)) : '--', unit: ' bpm' },
           { label: 'Watch', value: String(onBand.filter((a) => a.live!.status === 'watch').length), tone: onBand.some((a) => a.live!.status === 'watch') ? Palette.warning : undefined },
         ]} />
-        {demo.enabled ? <Text style={styles.note}>Practice clock runs at {DEMO_SPEED}× in sample mode.</Text> : null}
       </View>
     </>
   );
@@ -227,5 +226,4 @@ const styles = StyleSheet.create({
   tileMeta: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },
   sparkEmpty: { height: 30 },
   team: { backgroundColor: Palette.surface, borderRadius: 16, marginTop: 14, padding: 16 },
-  note: { color: Palette.inkMuted, fontSize: 13, marginTop: 10 },
 });
