@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { ZONES } from '@/lib/practice';
+import { setActivityReading } from '@/lib/practice-activity';
 import { UIL_GUIDANCE } from '@/lib/uil-wbgt';
 import { alertZoneChange, scheduleRecheck } from '@/services/heat-alerts';
 import { firebaseAuth } from '@/services/firebase';
@@ -22,6 +23,14 @@ export function useHeatAlerts(role: SessionRole) {
     if (!logs) return;
     scheduleRecheck(dueAt).catch(() => {});
   }, [dueAt, logs]);
+
+  // The Lock Screen and Dynamic Island follow the team's real latest reading.
+  const wbgtF = latest?.wbgtF;
+  const zone = latest?.zone;
+  useEffect(() => {
+    if (!live) return;
+    setActivityReading(wbgtF !== undefined && zone ? { wbgtF, zone } : null);
+  }, [live, wbgtF, zone]);
 
   // A zone change is announced once per new reading, never for the readings already there on open,
   // and not to the person who just entered it.

@@ -2,12 +2,25 @@ import { Asset } from 'expo-asset';
 import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
-import { INCIDENT, TODAY, ZONES, formatWbgt } from '@/lib/practice';
+import { INCIDENT, TODAY, ZONES, formatWbgt, type Zone } from '@/lib/practice';
+import { firestore } from '@/services/firebase';
 import { getActivePlan } from '@/state/practice-plans';
 
 // The sample session starts the first time this runs in an app launch.
 const session = { startedAt: Date.now() };
 const shared = new Map<string, string>();
+
+type StartOptions = { celsius: boolean; incidentOpen?: boolean; startedAt?: number | null };
+// A build connected to Firebase shows only the team's real readings (none until one arrives);
+// the sample reading and incident are for the offline sample build.
+let team: { reading: { wbgtF: number; zone: Zone } | null } | null = firestore ? { reading: null } : null;
+let shown: StartOptions | null = null;
+
+/** Feeds the team's latest real reading (or none yet) to the island, refreshing it if it's showing. */
+export function setActivityReading(reading: { wbgtF: number; zone: Zone } | null) {
+  team = { reading };
+  if (shown) void startPracticeActivity(shown);
+}
 
 /** The island can't read the app's bundle, so its images are copied into the folder the widget shares. */
 async function shareImage(widgetsDirectory: string, name: string, source: number) {
@@ -23,8 +36,12 @@ async function shareImage(widgetsDirectory: string, name: string, source: number
 }
 
 /** Starts the practice Live Activity, or refreshes it if it's already running. Never throws. */
-export async function startPracticeActivity({ celsius, incidentOpen = true, startedAt: practiceStart }: { celsius: boolean; incidentOpen?: boolean; startedAt?: number | null }) {
+export async function startPracticeActivity(options: StartOptions) {
+  const { celsius, startedAt: practiceStart } = options;
+  // The sample incident belongs to the sample practice only; a real team's island shows no made-up athlete.
+  const incidentOpen = (options.incidentOpen ?? true) && team === null;
   if (Platform.OS !== 'ios') return;
+  shown = options;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- iOS-only widget code, loaded lazily
     const { widgetsDirectory } = require('expo-widgets') as typeof import('expo-widgets');
@@ -41,9 +58,11 @@ export async function startPracticeActivity({ celsius, incidentOpen = true, star
     const breakMs = plan.waterEveryMinutes * 60_000;
     const nextBreak = start + Math.max(1, Math.ceil((Date.now() - start) / breakMs)) * breakMs;
     const props = {
-      zone: TODAY.zone,
-      zoneLabel: ZONES[TODAY.zone].label,
-      wbgt: formatWbgt(TODAY.wbgtF, celsius),
+      ...(() => {
+        const reading = team ? team.reading : TODAY;
+        if (!reading) return { zone: 'none' as const, zoneLabel: 'No reading yet', wbgt: '--' };
+        return { zone: reading.zone, zoneLabel: ZONES[reading.zone].label, wbgt: formatWbgt(reading.wbgtF, celsius) };
+      })(),
       startedAt: startedAt.toISOString(),
       endsAt: new Date(start + plan.lengthMinutes * 60_000).toISOString(),
       nextBreakAt: new Date(nextBreak).toISOString(),
@@ -71,6 +90,7 @@ export async function startPracticeActivity({ celsius, incidentOpen = true, star
 }
 
 export async function endPracticeActivity() {
+  shown = null;
   if (Platform.OS !== 'ios') return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- iOS-only widget code, loaded lazily
