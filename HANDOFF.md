@@ -116,7 +116,7 @@ References: WHOOP (Mobbin downloads in `~/Downloads/WHOOP iOS *.zip`), Strava, P
 - **Band vitals (`src/components/vital-cards.tsx`):** five signals over the last 30 minutes, each with its own chart: heart rate (trend + time in zones), skin temp (against usual range), sweat (bars), movement (work/rest strip), blood oxygen (gauge). SpO₂ added to the simulator, uplink and rules (optional, range-checked, tested).
 - **Home (`coach-today.tsx`):** readings timeline over the UIL zone bands (`readings-timeline.tsx`); week/month heat history (`heat-calendar.tsx`) with tap-a-day detail. Sample mode has a ~100-day season and a three-reading afternoon.
 - **Trainer:**
-  - Monitor (`trainer-monitor.tsx`): needs attention + Checked in, live tile grid (HR, % of max, trend), team figures.
+  - Monitor (`trainer-monitor.tsx`): needs attention + Checked in, live tile grid (HR, % of max, trend from `vitalsHistory` for real athletes), team figures.
   - Athletes (`trainer-athletes.tsx`): searchable roster with filters, heat-acclimatization day (`src/lib/acclimatization.ts`, NATA 14-day phases) and band status.
   - One athlete model for both: `src/state/athletes.ts`.
 - **Coach Team (`coach-tabs.tsx` TeamTab):** Roster (code, approvals, roster, staff) | Live (the Monitor grid).
@@ -167,7 +167,7 @@ npm run check:auth               # auth config sanity
 | # | Item | State | Notes |
 |---|---|---|---|
 | 1 | README screenshots | done | Recaptured Oct 23. |
-| 2 | Trends for real athletes | todo | A real athlete's detail shows only the latest sample (Firestore keeps one doc per athlete). Keep a short rolling history to feed `VitalCards`. |
+| 2 | Trends for real athletes | done | Kept in memory on the watching phone (`vitalsHistory` in `state/team-session.ts`). |
 | 3 | Dev warnings (yellow LogBox bar) | done | Was a require cycle; fixed in `wristband-asset.ts`. |
 | 4 | First tap on *Save reading* only dismisses the keyboard | needs a real device | Seen only under automation; `keyboardShouldPersistTaps="always"` is already set. |
 | 5 | Swap in the 8 band angle renders | blocked | The image file isn't in the repo yet; the current render is used. |
