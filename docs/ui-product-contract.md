@@ -50,14 +50,16 @@ Before a screen is accepted:
 
 | Step | Product purpose | Required content |
 | --- | --- | --- |
-| 1 | Establish the hierarchy | WBGT is primary; athlete context is additive |
-| 2 | Explain field risk | Current WBGT, school-specific zone, check timing, recent trend |
-| 3 | Explain the practice plan | Work, rest, water, and equipment adjustments |
-| 4 | Explain optional hardware | Four physiological features and the athlete's personal baseline |
-| 5 | Explain movement context | Why the same heart rate means something different during exertion and rest |
-| 6 | Explain alerts | Normal, Caution, Warning, Emergency, and the collapse override |
-| 7 | Establish the user context | School/team example, hydration and emergency readiness, role selection |
-| Completion | Begin real setup | School and team required; wristband pairing optional |
+| 1 | Welcome | State the field-to-athlete safety promise; wristband remains optional |
+| 2 | Establish an account | Apple, Google, or a clearly labeled demo path for reviewers |
+| 3 | Identify the person | First and last name only; explain why the team needs it |
+| 4 | Establish the role | Coach, athletic trainer, or athlete workspace |
+| 5 | Establish program context | School or organization required; sport or activity optional |
+| 6 | Explain field risk | Current WBGT, school-specific zone, check timing, recent trend |
+| 7 | Explain the practice plan | Work, rest, water, and equipment adjustments |
+| 8 | Explain optional hardware | Personal-baseline signals and why movement supplies context |
+| 9 | Explain alerts | Normal, Caution, Warning, Emergency, and the collapse override |
+| 10 | Review and enter | Confirm workspace and program; defer invitations and permissions |
 
 ## Role workspaces
 
