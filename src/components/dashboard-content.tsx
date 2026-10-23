@@ -8,7 +8,7 @@ import { HeatIcon } from '@/components/heat-icon';
 import { AlertsTab } from '@/components/alerts-tab';
 import { PlanTab, TeamTab } from '@/components/coach-tabs';
 import { ProfileTab } from '@/components/profile-tab';
-import { CoachToday } from '@/components/coach-today';
+import { CoachHome as CoachHomeScreen } from '@/components/coach-home';
 import { LearnTab } from '@/components/learn-tab';
 import { AthleteBand, AthleteHome, AthleteSessions, TrainerHome } from '@/components/role-tabs';
 import { TrainerAthletes } from '@/components/trainer-athletes';
@@ -102,12 +102,9 @@ function AthleteContent({ tab }: { tab: string }) {
 
 /** Coach Home: the WHOOP-style orb, practice rings, get-started cards and today's readings. */
 function CoachHome() {
+  const go = useContext(NavContext);
   const { draft } = useTeam();
-  return (
-    <>
-      <CoachToday onInvite={() => shareTeamCode(draft)} />
-    </>
-  );
+  return <CoachHomeScreen onInvite={() => shareTeamCode(draft)} onOpenPlan={() => go('plan')} />;
 }
 
 /** Today's field reading: the one card every role shares. The figure, how it got there, and what it means. */
