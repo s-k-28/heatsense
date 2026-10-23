@@ -8,7 +8,8 @@ import { HeatIcon } from '@/components/heat-icon';
 import { SlidingTabs } from '@/components/sliding-tabs';
 import { TextLink } from '@/components/ui/list';
 import { SegmentBar, StatStrip } from '@/components/ui/visuals';
-import { Palette, Radius, Spacing, Type } from '@/constants/theme';
+import { Palette, Spacing, Type } from '@/constants/theme';
+import { CoachPalette, CoachRadius, CoachType } from '@/constants/coach-theme';
 import {
   EQUIPMENT_LABEL,
   buildSchedule,
@@ -102,7 +103,7 @@ export default function PlanEditorScreen() {
           </View>
 
           <Text style={styles.label}>Equipment</Text>
-          <SlidingTabs label="Equipment" onChange={(index) => set('equipment', EQUIPMENT[index])} options={EQUIPMENT.map((item) => EQUIPMENT_LABEL[item])} selected={EQUIPMENT.indexOf(plan.equipment)} />
+          <SlidingTabs label="Equipment" onChange={(index) => set('equipment', EQUIPMENT[index])} options={EQUIPMENT.map((item) => EQUIPMENT_LABEL[item])} selected={EQUIPMENT.indexOf(plan.equipment)} variant="coach" />
 
           <Text style={styles.label}>How it runs</Text>
           <View style={styles.card}>
@@ -210,40 +211,40 @@ function Stepper({ format, label, last, max, min, onChange, step, value }: { for
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: Palette.canvas, flex: 1 },
+  screen: { backgroundColor: CoachPalette.canvas, flex: 1 },
   flex: { flex: 1 },
-  pressed: { opacity: 0.6 },
-  bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.three, paddingHorizontal: Spacing.four },
-  barTitle: { color: Palette.ink, ...Type.headline },
+  pressed: { opacity: 0.86, transform: [{ scale: 0.98 }] },
+  bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.four, paddingHorizontal: Spacing.four },
+  barTitle: { color: CoachPalette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
   barEnd: { width: 56 },
   content: { gap: Spacing.two, paddingHorizontal: Spacing.four },
-  label: { color: Palette.inkMuted, ...Type.label, fontSize: 13, marginTop: Spacing.four },
-  input: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, color: Palette.ink, ...Type.body, minHeight: 50, paddingHorizontal: Spacing.four },
-  card: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: Spacing.four, paddingVertical: Spacing.two },
-  stepper: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 60 },
-  stepperDivider: { borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
-  stepLabel: { color: Palette.ink, ...Type.body },
-  stepValue: { color: Palette.ink, ...Type.figure, fontSize: 20, lineHeight: 24, minWidth: 74, textAlign: 'center' },
-  round: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: 16, height: 32, justifyContent: 'center', width: 32 },
+  label: { color: CoachPalette.textSecondary, ...CoachType.label, marginTop: Spacing.five },
+  input: { backgroundColor: CoachPalette.surface, borderCurve: 'continuous', borderRadius: CoachRadius.input, color: CoachPalette.text, ...CoachType.body, minHeight: 58, paddingHorizontal: Spacing.five },
+  card: { backgroundColor: CoachPalette.surface, borderCurve: 'continuous', borderRadius: CoachRadius.card, paddingHorizontal: Spacing.five, paddingVertical: Spacing.three },
+  stepper: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 68 },
+  stepperDivider: { borderBottomColor: CoachPalette.hairline, borderBottomWidth: StyleSheet.hairlineWidth },
+  stepLabel: { color: CoachPalette.textSecondary, ...CoachType.body },
+  stepValue: { color: CoachPalette.text, ...Type.figure, fontSize: 22, lineHeight: 26, minWidth: 76, textAlign: 'center' },
+  round: { alignItems: 'center', backgroundColor: CoachPalette.interactive, borderRadius: 21, height: 42, justifyContent: 'center', width: 42 },
   roundOff: { opacity: 0.35 },
   preview: { marginTop: Spacing.four },
-  breaks: { color: Palette.inkMuted, ...Type.footnote, marginBottom: Spacing.two, marginTop: Spacing.three },
-  primary: { alignItems: 'center', backgroundColor: Palette.coral, borderCurve: 'continuous', borderRadius: 14, justifyContent: 'center', marginTop: Spacing.six, minHeight: 54 },
-  primaryText: { color: '#1A0E07', ...Type.label, fontSize: 17 },
+  breaks: { color: CoachPalette.muted, ...Type.footnote, marginBottom: Spacing.two, marginTop: Spacing.three },
+  primary: { alignItems: 'center', backgroundColor: CoachPalette.peach, borderCurve: 'continuous', borderRadius: CoachRadius.pill, justifyContent: 'center', marginTop: Spacing.six, minHeight: 56 },
+  primaryText: { color: CoachPalette.peachInk, fontSize: 17, fontWeight: '800' },
   secondaryRow: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one },
-  secondary: { alignItems: 'center', backgroundColor: Palette.fill, borderCurve: 'continuous', borderRadius: 14, flex: 1, justifyContent: 'center', minHeight: 50 },
-  secondaryText: { color: Palette.ink, ...Type.headline },
-  checkEmpty: { color: Palette.inkMuted, ...Type.footnote, paddingVertical: Spacing.two },
+  secondary: { alignItems: 'center', backgroundColor: CoachPalette.interactive, borderCurve: 'continuous', borderRadius: CoachRadius.pill, flex: 1, justifyContent: 'center', minHeight: 52 },
+  secondaryText: { color: CoachPalette.text, ...Type.headline },
+  checkEmpty: { color: CoachPalette.muted, ...CoachType.body, paddingVertical: Spacing.two },
   checkHead: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two, paddingBottom: Spacing.two, paddingTop: Spacing.two },
   checkDot: { borderRadius: 5, height: 10, width: 10 },
-  checkTitle: { color: Palette.ink, ...Type.headline },
-  checkRow: { alignItems: 'center', borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.two, minHeight: 46 },
+  checkTitle: { color: CoachPalette.text, ...Type.headline },
+  checkRow: { alignItems: 'center', borderTopColor: CoachPalette.hairline, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: Spacing.two, minHeight: 50 },
   checkMark: { fontSize: 16, fontWeight: '700', width: 18 },
-  checkLabel: { color: Palette.ink, flex: 1, ...Type.body },
-  checkPlan: { color: Palette.ink, ...Type.figure, fontSize: 18 },
-  checkRule: { color: Palette.inkMuted, ...Type.footnote, minWidth: 74, textAlign: 'right' },
-  fix: { alignItems: 'center', backgroundColor: Palette.fill, borderRadius: 12, justifyContent: 'center', marginBottom: Spacing.two, marginTop: Spacing.two, minHeight: 44 },
-  fixText: { color: Palette.coral, ...Type.headline },
+  checkLabel: { color: CoachPalette.textSecondary, flex: 1, ...Type.body },
+  checkPlan: { color: CoachPalette.text, ...Type.figure, fontSize: 18 },
+  checkRule: { color: CoachPalette.muted, ...Type.footnote, minWidth: 74, textAlign: 'right' },
+  fix: { alignItems: 'center', backgroundColor: CoachPalette.interactive, borderRadius: CoachRadius.pill, justifyContent: 'center', marginBottom: Spacing.two, marginTop: Spacing.two, minHeight: 46 },
+  fixText: { color: CoachPalette.peach, ...Type.headline },
   delete: { alignItems: 'center', marginTop: Spacing.four, minHeight: 44, justifyContent: 'center' },
   deleteText: { color: Palette.emergency, ...Type.body },
 });

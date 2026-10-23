@@ -16,6 +16,7 @@ import {
   type DashboardTab,
 } from '@/components/dashboard-shell';
 import { MaxContentWidth, Palette, Spacing } from '@/constants/theme';
+import { CoachPalette } from '@/constants/coach-theme';
 import { endPracticeActivity, startPracticeActivity } from '@/lib/practice-activity';
 import { useAuthSession } from '@/state/auth-session';
 import { useAthletes } from '@/state/athletes';
@@ -143,7 +144,7 @@ export default function DashboardScreen() {
       : undefined;
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, role === 'coach' && { backgroundColor: CoachPalette.canvas }]}>
       <StatusBar style="light" />
       <Animated.ScrollView
         contentContainerStyle={[
@@ -162,8 +163,8 @@ export default function DashboardScreen() {
           {reviewState ? <DashboardState state={reviewState} /> : <DashboardContent onNavigate={select} role={role} tab={activeTab} />}
         </View>
       </Animated.ScrollView>
-      <DashboardHeader band={headerBand} name={accountName} onAlerts={role === 'coach' ? () => select('alerts') : role === 'trainer' ? () => select('monitor') : undefined} onProfile={() => select('profile')} scrollY={scrollY} title={title} />
-      <TabBar activeTab={activeTab} onChange={select} tabs={tabs} />
+      <DashboardHeader band={headerBand} name={accountName} onAlerts={role === 'coach' ? () => select('alerts') : role === 'trainer' ? () => select('monitor') : undefined} onProfile={() => select('profile')} scrollY={scrollY} title={title} variant={role === 'coach' ? 'coach' : 'default'} />
+      <TabBar activeTab={activeTab} onChange={select} tabs={tabs} variant={role === 'coach' ? 'coach' : 'default'} />
     </View>
   );
 }

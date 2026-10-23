@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-nativ
 import Animated, { Easing, interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 
 import { Palette, Type } from '@/constants/theme';
+import { CoachPalette } from '@/constants/coach-theme';
 
 // The same sliding pill as the tab bar: 250ms on a long soft landing, the label color travelling
 // with the pill. The pill takes each segment's measured frame, so it also works when segments
@@ -15,7 +16,7 @@ const MUTED = 'rgba(193,193,193,0.8)';
 
 type Frame = { width: number; x: number };
 
-export function SlidingTabs({ label, onChange, options, selected }: { label: string; onChange: (index: number) => void; options: string[]; selected: number }) {
+export function SlidingTabs({ label, onChange, options, selected, variant = 'default' }: { label: string; onChange: (index: number) => void; options: string[]; selected: number; variant?: 'coach' | 'default' }) {
   const reduced = useReducedMotion();
   const [frames, setFrames] = useState<(Frame | undefined)[]>(() => options.map(() => undefined));
   const x = useSharedValue(0);
@@ -48,8 +49,8 @@ export function SlidingTabs({ label, onChange, options, selected }: { label: str
   };
 
   return (
-    <View accessibilityLabel={label} accessibilityRole="tablist" style={styles.bar}>
-      {ready ? <Animated.View pointerEvents="none" style={[styles.pill, pill]} /> : null}
+    <View accessibilityLabel={label} accessibilityRole="tablist" style={[styles.bar, variant === 'coach' && styles.coachBar]}>
+      {ready ? <Animated.View pointerEvents="none" style={[styles.pill, variant === 'coach' && styles.coachPill, pill]} /> : null}
       {options.map((option, index) => (
         <Segment
           active={index === selected}
@@ -59,6 +60,7 @@ export function SlidingTabs({ label, onChange, options, selected }: { label: str
           onLayout={measure(index)}
           onPress={() => onChange(index)}
           position={position}
+          variant={variant}
         />
       ))}
     </View>
@@ -66,13 +68,13 @@ export function SlidingTabs({ label, onChange, options, selected }: { label: str
 }
 
 /** One segment: the muted label fades out and the orange one in as the pill arrives. */
-function Segment({ active, index, label, onLayout, onPress, position }: { active: boolean; index: number; label: string; onLayout: (event: LayoutChangeEvent) => void; onPress: () => void; position: SharedValue<number> }) {
+function Segment({ active, index, label, onLayout, onPress, position, variant }: { active: boolean; index: number; label: string; onLayout: (event: LayoutChangeEvent) => void; onPress: () => void; position: SharedValue<number>; variant: 'coach' | 'default' }) {
   const lit = useAnimatedStyle(() => ({ opacity: interpolate(position.value, [index - 1, index, index + 1], [0, 1, 0], 'clamp') }));
   const dim = useAnimatedStyle(() => ({ opacity: 1 - interpolate(position.value, [index - 1, index, index + 1], [0, 1, 0], 'clamp') }));
   return (
     <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }} hitSlop={4} onLayout={onLayout} onPress={onPress} style={styles.segment}>
-      <Animated.Text numberOfLines={1} style={[styles.label, { color: MUTED }, dim]}>{label}</Animated.Text>
-      <Animated.Text numberOfLines={1} style={[styles.label, styles.labelLit, lit]}>{label}</Animated.Text>
+      <Animated.Text numberOfLines={1} style={[styles.label, { color: variant === 'coach' ? CoachPalette.muted : MUTED }, dim]}>{label}</Animated.Text>
+      <Animated.Text numberOfLines={1} style={[styles.label, styles.labelLit, variant === 'coach' && styles.coachLabelLit, lit]}>{label}</Animated.Text>
     </Pressable>
   );
 }
@@ -84,4 +86,7 @@ const styles = StyleSheet.create({
   segment: { alignItems: 'center', flexGrow: 1, height: HEIGHT, justifyContent: 'center', paddingHorizontal: 14 },
   label: { ...Type.subhead, fontWeight: '600' },
   labelLit: { color: Palette.coral, position: 'absolute' },
+  coachBar: { backgroundColor: CoachPalette.surface, borderColor: 'transparent', padding: 5 },
+  coachPill: { backgroundColor: CoachPalette.interactive, height: 36, top: 5 },
+  coachLabelLit: { color: CoachPalette.text },
 });
