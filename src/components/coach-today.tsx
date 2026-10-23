@@ -3,12 +3,15 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { FieldCheckSheet } from '@/components/field-check-sheet';
+import { HeatHistory } from '@/components/heat-calendar';
+import { ReadingsTimeline } from '@/components/readings-timeline';
 import { SampleTag, StatRow } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
 import { enter, swap } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { recheckStatus } from '@/services/practice-sessions';
 import { useTemperature } from '@/state/preferences';
+import { usePastSessions } from '@/state/past-sessions';
 import { useCoachData, useNow, type SessionRole } from '@/state/team-session';
 
 // Coach Home: the latest field reading as a plain number on UIL's zone scale, the practice loop as
@@ -30,6 +33,8 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
   const recheck = session ? recheckStatus(session, latest, now) : null;
   const acked = data?.readings.filter((r) => r.acknowledgedAt).length ?? 0;
   const total = data?.readings.length ?? 0;
+  const past = usePastSessions(role !== 'athlete' ? data?.teamId ?? null : null, Boolean(data?.sample), 40);
+  const todayPeak = (data?.readings ?? []).reduce<{ wbgtF: number; zone: Zone } | null>((hot, r) => (!hot || r.wbgtF > hot.wbgtF ? { wbgtF: r.wbgtF, zone: r.zone } : hot), null);
   const minutesAgo = latest ? Math.max(0, Math.round((now - latest.measuredAt.getTime()) / 60_000)) : 0;
 
   const action = !session ? 'Start practice' : latest ? 'Add a reading' : 'Take first reading';
@@ -81,20 +86,19 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach' }: { onI
       </Animated.View>
       </>}
 
-      {total > 0 ? (
+      {total > 0 && session ? (
         <>
           <Text accessibilityRole="header" style={styles.section}>Today’s readings</Text>
-          <View style={styles.list}>
-            {[...(data?.readings ?? [])].reverse().map((r) => (
-              <View key={r.id} style={styles.row}>
-                <View style={[styles.dot, { backgroundColor: ZONES[r.zone].color === '#000000' ? '#8E8E93' : ZONES[r.zone].color }]} />
-                <View style={styles.rowCopy}>
-                  <Text style={styles.rowTitle}>{temp.value(r.wbgtF)}{temp.unit} · {r.measuredAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
-                </View>
-                <Text style={[styles.rowState, { color: r.acknowledgedAt ? Palette.safe : Palette.inkMuted }]}>{r.acknowledgedAt ? 'Applied' : 'Pending'}</Text>
-              </View>
-            ))}
+          <View style={styles.panel}>
+            <ReadingsTimeline now={now} readings={data?.readings ?? []} startedAt={session.startedAt} temp={temp} uilClass={session.uilClass} />
           </View>
+        </>
+      ) : null}
+
+      {role !== 'athlete' ? (
+        <>
+          <Text accessibilityRole="header" style={styles.section}>Heat history</Text>
+          <HeatHistory past={past ?? []} temp={temp} today={todayPeak} />
         </>
       ) : null}
 
@@ -147,6 +151,7 @@ const styles = StyleSheet.create({
   cta: { alignItems: 'center', backgroundColor: Palette.coral, borderRadius: 14, justifyContent: 'center', marginTop: 24, minHeight: 54 },
   ctaText: { color: '#1A0E07', fontSize: 17, fontWeight: '600' },
   stats: { borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, marginTop: 28, paddingTop: 20 },
+  panel: { backgroundColor: Palette.surface, borderRadius: 16, padding: 16 },
   section: { color: Palette.ink, fontSize: 22, fontWeight: '700', letterSpacing: -0.3, marginBottom: 12, marginTop: 34 },
   cards: { gap: 12 },
   card: { backgroundColor: Palette.surface, borderRadius: 16, flexDirection: 'row', gap: 12, padding: 18 },
@@ -157,10 +162,4 @@ const styles = StyleSheet.create({
   cardArt: { alignItems: 'center', justifyContent: 'center', width: 84 },
   close: { position: 'absolute', right: 14, top: 10 },
   closeText: { color: Palette.inkMuted, fontSize: 22 },
-  list: { backgroundColor: Palette.card, borderRadius: 20, paddingHorizontal: 16 },
-  row: { alignItems: 'center', borderBottomColor: 'rgba(255,255,255,0.06)', borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12, minHeight: 64 },
-  dot: { borderRadius: 6, height: 12, width: 12 },
-  rowCopy: { flex: 1, gap: 2 },
-  rowTitle: { color: Palette.ink, fontSize: 16, fontWeight: '600' },
-  rowState: { fontSize: 13, fontWeight: '700' },
 });

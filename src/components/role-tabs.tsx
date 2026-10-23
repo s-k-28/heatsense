@@ -175,7 +175,7 @@ export function AthleteSessions() {
         <Text style={styles.empty}>Loading past practices…</Text>
       ) : past.length ? (
         <View style={styles.cards}>
-          {past.map(({ session, readingCount, peak }) => {
+          {past.slice(0, 5).map(({ session, readingCount, peak }) => {
             const minutes = session.endedAt ? Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000) : null;
             return (
               <Card key={session.id} title={dayLabel(session.startedAt)}>

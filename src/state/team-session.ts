@@ -66,8 +66,8 @@ export function useTeamSession(role: SessionRole = 'coach'): TeamSession {
 export type CoachData = { sample: boolean; teamId: string | null; session: PracticeSession | null; readings: FieldReading[] };
 
 /**
- * What the coach tabs render: the live session, or, in a build with no Firebase at all, one sample
- * reading so the screens can be reviewed. Screens must label sample data wherever it shows.
+ * What the coach tabs render: the live session, or, in a build with no Firebase at all, a sample
+ * practice with three readings so the screens can be reviewed. Screens must label sample data wherever it shows.
  */
 export function useCoachData(role: SessionRole = 'coach'): CoachData | null {
   const team = useTeamSession(role);
@@ -78,8 +78,13 @@ export function useCoachData(role: SessionRole = 'coach'): CoachData | null {
     return {
       sample: true,
       teamId: null,
-      session: { id: 'sample', teamId: 'sample', venue: SAMPLE_READING.location, uilClass: 3, recheckMinutes: 30, startedAt: new Date(base - 40 * 60_000), endedAt: null },
-      readings: [{ id: 'sample', wbgtF: SAMPLE_READING.wbgtF, enteredValue: SAMPLE_READING.wbgtF, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(base - 12 * 60_000), zone: SAMPLE_READING.zone, recordedBy: 'sample', acknowledgedAt: null }],
+      session: { id: 'sample', teamId: 'sample', venue: SAMPLE_READING.location, uilClass: 3, recheckMinutes: 30, startedAt: new Date(base - 75 * 60_000), endedAt: null },
+      // The afternoon heating up: Green at the start, Yellow by the second check, the latest not yet applied.
+      readings: [
+        { id: 'sample-1', wbgtF: 80.4, enteredValue: 80.4, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(base - 72 * 60_000), zone: 'green', recordedBy: 'sample', acknowledgedAt: new Date(base - 71 * 60_000) },
+        { id: 'sample-2', wbgtF: 82.6, enteredValue: 82.6, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(base - 42 * 60_000), zone: 'yellow', recordedBy: 'sample', acknowledgedAt: new Date(base - 40 * 60_000) },
+        { id: 'sample', wbgtF: SAMPLE_READING.wbgtF, enteredValue: SAMPLE_READING.wbgtF, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(base - 12 * 60_000), zone: SAMPLE_READING.zone, recordedBy: 'sample', acknowledgedAt: null },
+      ],
     };
   }
   if (team.status === 'no-team') return { sample: false, teamId: null, session: null, readings: [] };
