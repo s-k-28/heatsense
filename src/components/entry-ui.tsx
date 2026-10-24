@@ -195,10 +195,10 @@ export const entryStyles = StyleSheet.create({
   trackFill: { height: '100%', borderRadius: 2, backgroundColor: Entry.peach },
   back: { height: 44, width: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, borderColor: Entry.line, borderWidth: 1, backgroundColor: Entry.canvas },
   headline: { color: Entry.ink, fontFamily: Entry.heading, fontSize: 40, lineHeight: 46, letterSpacing: -1.4 },
-  headlineCompact: { fontSize: 35, lineHeight: 40, letterSpacing: -1.2 },
+  headlineCompact: { fontSize: 36, lineHeight: 42, letterSpacing: -1.2 },
   // Form pages: the same face, smaller so the fields stay the focus.
-  formHeadline: { color: Entry.ink, fontFamily: Entry.heading, fontSize: 32, lineHeight: 38, letterSpacing: -1 },
-  formHeadlineCompact: { fontSize: 28, lineHeight: 34, letterSpacing: -0.8 },
+  formHeadline: { color: Entry.ink, fontFamily: Entry.heading, fontSize: 38, lineHeight: 44, letterSpacing: -1 },
+  formHeadlineCompact: { fontSize: 36, lineHeight: 42, letterSpacing: -0.8 },
   description: { color: Entry.muted, fontFamily: Entry.body, fontSize: 15.5, lineHeight: 23, marginTop: 12, maxWidth: 340 },
   buttonWrap: { borderRadius: 999 },
   buttonRing: { position: 'absolute', top: -5, bottom: -5, left: -5, right: -5, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,177,131,0.32)' },

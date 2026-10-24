@@ -85,8 +85,8 @@ export function OnboardingSelectionSurface({ title, description, selected, onPre
 
 const styles = StyleSheet.create({
   surface: { borderWidth: 1, borderRadius: 26, paddingHorizontal: 22, paddingVertical: 18, justifyContent: 'center', gap: 5 },
-  title: { fontFamily: Entry.heading, fontSize: 20, letterSpacing: -0.5 },
-  titleLarge: { fontSize: 23, letterSpacing: -0.7 },
+  title: { fontFamily: Entry.strong, fontSize: 20, letterSpacing: -0.5 },
+  titleLarge: { fontSize: 21, letterSpacing: -0.7 },
   description: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   indicator: { width: 22, height: 22 },
   indicatorRing: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 11, borderWidth: 1, borderColor: Entry.muted },
