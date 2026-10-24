@@ -110,7 +110,7 @@ export default function SignInScreen() {
       <EntryHeader onBack={() => router.canGoBack() ? router.back() : router.replace('/welcome')} />
       <View style={[styles.hero, compact && styles.heroCompact, emailMode && styles.heroForm]} />
       <EntryHeading accent="starts here." compact={compact} delay={200} lead="Your team" size="hero" />
-      <Text style={entryStyles.description}>Sign in to set up your team or join with a coach’s invite.</Text>
+      <Text style={entryStyles.description}>Sign in to create or join a team.</Text>
       {signedInUid ? <View style={styles.formActions}>
         {navigationError ? <>
           <ErrorPanel message={navigationError} title="Couldn’t open your account" />
@@ -136,7 +136,7 @@ export default function SignInScreen() {
           <View style={styles.gap} />
           <EntryButton label="Continue with email" onPress={() => switchMode('signin')} secondary />
           {error ? <ErrorPanel message={error} title={errorTitle} /> : null}
-          <Text style={styles.privacy}>Google sign-in keeps your password with Google. Email accounts are secured by Firebase.</Text>
+          <Text style={styles.privacy}>Your Google password stays with Google.</Text>
         </View>
       )}
     </>}</EntryScreen>

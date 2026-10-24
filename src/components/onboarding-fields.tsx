@@ -91,7 +91,7 @@ type TextFieldProps = {
   hideLabel?: boolean;
   /** Outline the field as invalid without a message under it (the message is shown elsewhere). */
   invalid?: boolean;
-} & Pick<TextInputProps, 'returnKeyType' | 'onSubmitEditing' | 'autoCapitalize' | 'textContentType' | 'autoComplete' | 'maxLength' | 'submitBehavior' | 'keyboardType' | 'inputMode' | 'accessibilityHint' | 'autoCorrect' | 'secureTextEntry'>;
+} & Pick<TextInputProps, 'returnKeyType' | 'onSubmitEditing' | 'autoCapitalize' | 'textContentType' | 'autoComplete' | 'maxLength' | 'submitBehavior' | 'keyboardType' | 'inputMode' | 'accessibilityLabel' | 'accessibilityHint' | 'autoCorrect' | 'secureTextEntry'>;
 
 export function OnboardingTextField({ label, value, onChangeText, placeholder, error, height = 60, inputRef, onFocus, onBlur, hideLabel, invalid, ...inputProps }: TextFieldProps) {
   const ms = useMs();
@@ -142,6 +142,7 @@ function Chevron({ open }: { open: boolean }) {
 
 type SelectFieldProps = {
   label: string;
+  accessibilityLabel?: string;
   placeholder: string;
   options: readonly string[];
   value: string | null;
@@ -156,7 +157,7 @@ type SelectFieldProps = {
 
 // The menu opens inline, pushing the fields below it down, so it can never be
 // clipped by the phone frame or the scroll view.
-export function OnboardingSelectField({ label, placeholder, options, value, onChange, open, onOpenChange, error, height = 60, maxVisibleRows = 5 }: SelectFieldProps) {
+export function OnboardingSelectField({ label, accessibilityLabel = label, placeholder, options, value, onChange, open, onOpenChange, error, height = 60, maxVisibleRows = 5 }: SelectFieldProps) {
   const ms = useMs();
   const [focused, setFocused] = useState(false);
   const [mounted, setMounted] = useState(open);
@@ -185,7 +186,7 @@ export function OnboardingSelectField({ label, placeholder, options, value, onCh
       <FieldLabel>{label}</FieldLabel>
       <Pressable
         role="combobox"
-        accessibilityLabel={`${label}, ${value ?? 'not selected'}`}
+        accessibilityLabel={`${accessibilityLabel}, ${value ?? 'not selected'}`}
         aria-expanded={open}
         aria-invalid={!!error}
         onPress={() => onOpenChange(!open)}
@@ -207,7 +208,7 @@ export function OnboardingSelectField({ label, placeholder, options, value, onCh
       {mounted && (
         <Animated.View style={[styles.menuClip, menu]}>
           <View style={styles.menu}>
-            <ScrollView role={LISTBOX} aria-label={label} nestedScrollEnabled scrollEnabled showsVerticalScrollIndicator style={{ maxHeight: rows * ROW_HEIGHT }} contentContainerStyle={styles.menuList}>
+            <ScrollView role={LISTBOX} aria-label={accessibilityLabel} nestedScrollEnabled scrollEnabled showsVerticalScrollIndicator style={{ maxHeight: rows * ROW_HEIGHT }} contentContainerStyle={styles.menuList}>
               {options.map((option) => (
                 <MenuOption key={option} label={option} selected={option === value} onPress={() => { onChange(option); onOpenChange(false); }} />
               ))}

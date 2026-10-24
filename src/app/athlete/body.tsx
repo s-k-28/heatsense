@@ -208,7 +208,6 @@ function Content() {
         <EntryHeading accent="body." compact={compact} delay={300} lead="Know your" style={{ marginTop: compact ? 26 : 36 }} />
         <Animated.View entering={fade(550)}>
           <Text style={entryStyles.description}>Every question here is optional.</Text>
-          <Text style={[styles.privacy]}>You can update your answers anytime.</Text>
         </Animated.View>
 
         <Animated.View entering={rise(700)} style={styles.section}>
@@ -329,7 +328,6 @@ function Content() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 26 },
-  privacy: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, marginTop: 8, maxWidth: 340 },
   section: { marginTop: 34, gap: 16 },
   label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 14, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
   pair: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
