@@ -312,7 +312,7 @@ function RegenerateControl({ invite, onRegenerated }: { invite: TeamInvite | nul
     );
   }
   return (
-    <Animated.View entering={reducedMotion ? undefined : FadeIn.duration(200)} accessibilityLiveRegion="polite" style={styles.confirm}>
+    <Animated.View entering={reducedMotion || Platform.OS === 'web' ? undefined : FadeIn.duration(200)} accessibilityLiveRegion="polite" style={styles.confirm}>
       <Text style={[styles.confirmText]}>Your current code will stop working. Athletes who haven&apos;t joined yet will need the new one.</Text>
       {error && <Text style={[styles.errorText, { textAlign: 'center' }]}>{error}</Text>}
       <View style={styles.confirmRow}>
@@ -357,7 +357,7 @@ function JoinRequests({ teamId }: { teamId: string }) {
         <Text style={[styles.requestsEmpty]}>No requests yet. Athletes appear here after they enter your code.</Text>
       ) : (
         athletes.map((athlete) => (
-          <Animated.View key={athlete.userId} entering={reducedMotion ? undefined : FadeIn.duration(220)} exiting={reducedMotion ? undefined : FadeOut.duration(160)} style={styles.request}>
+          <Animated.View key={athlete.userId} entering={reducedMotion || Platform.OS === 'web' ? undefined : FadeIn.duration(220)} exiting={reducedMotion || Platform.OS === 'web' ? undefined : FadeOut.duration(160)} style={styles.request}>
             <View style={styles.requestRow}>
               <View style={styles.requestCopy}>
                 <Text style={[styles.requestName]}>{athlete.displayName ?? athlete.email ?? 'Athlete'}</Text>

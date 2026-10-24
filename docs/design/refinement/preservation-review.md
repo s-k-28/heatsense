@@ -30,3 +30,8 @@ No formula, status, range, threshold, handler, layout or metric timing changed i
 Executed `/tmp/heatsense-preservation-check.cjs` against actual source and baseline Git blobs: all listed assertions passed. Focused ESLint and full TypeScript were also run for the three color-correction files. Root owns browser/native QA and its screenshot ledger; this review did not open screens or test OS permissions, authentication, hardware, notifications, database writes or accessibility APIs.
 
 A universal “all behavior unchanged” claim would be inaccurate: refinement work elsewhere includes profile dialogs and onboarding/sign-in/pairing retry, busy and callback-lifetime fixes. Those UI changes are visible in the baseline diff; they do not modify the unchanged service/state/Firebase contracts above. Their owner ledgers and root's runtime QA are the appropriate evidence. The local `ios/Podfile.lock` environment diff is outside this review and must stay out of product commits.
+
+
+### Subsequent browser-flow correction
+
+Root reproduced Reanimated web layout builders retaining absolute roster-row styles after resize, collapsing list height and obstructing row taps with floating navigation. `lib/motion.ts` now returns undefined for enter/swap/leave/settle on web. Native builder types/durations, reduced-motion behavior, page/press/segmented motion and chart-engine calculations remain intact. Actual-module platform fixtures plus lint/TypeScript passed; root owns fresh-load geometry/navigation retest. This browser-only layout exception is intentional and does not change auth, services, state or chart behavior.

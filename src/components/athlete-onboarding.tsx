@@ -9,7 +9,7 @@ import { SelectionIndicator } from '@/components/onboarding-controls';
 import { Entry, ONBOARDING_STEPS } from '@/constants/entry-theme';
 
 // Shared pieces of athlete onboarding, in the entry design language (welcome /
-// sign-in / role): field charcoal, Inter headings and body, peach for the primary
+// sign-in / role): field charcoal, Archivo headings and Manrope body, peach for the primary
 // action, selected answers, and focus; light blue only for small accents.
 export const ATHLETE_SCREEN = Entry.canvas;
 export const ATHLETE_ERROR = Entry.error;

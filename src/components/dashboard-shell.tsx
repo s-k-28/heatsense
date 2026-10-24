@@ -224,7 +224,7 @@ function TabItem({ active, index, onPress, tab, tabWidth, x, variant }: { active
 
 const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.55 },
-  headerWrap: { left: 0, position: 'absolute', right: 0, top: 0, zIndex: 10 },
+  headerWrap: { backgroundColor: Palette.canvas, left: 0, position: 'absolute', right: 0, top: 0, zIndex: 10 },
   headerBackdrop: { backgroundColor: Palette.canvas, borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
   coachHeaderBackdrop: { backgroundColor: Palette.canvas, borderBottomColor: CoachPalette.hairline },
   headerTitleWrap: { alignItems: 'center', height: HEADER_ROW, justifyContent: 'center', left: 0, position: 'absolute', right: 0 },

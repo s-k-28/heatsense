@@ -408,7 +408,7 @@ export function ProfileTab({ role }: { role: Role }) {
       <Header role={role} />
       <Segmented onChange={setView} options={[{ key: 'overview', label: 'Overview' }, { key: 'settings', label: 'Settings' }]} value={view} />
 
-      <Animated.View entering={reduced ? undefined : FadeIn.duration(180).easing(EASE_OUT)} key={view}>
+      <Animated.View entering={reduced || Platform.OS === 'web' ? undefined : FadeIn.duration(180).easing(EASE_OUT)} key={view}>
       {view === 'overview' ? <>
       <Season team={team} waiting={Boolean(waiting)} />
       {role === 'Athlete' ? <View style={styles.gap}><BandDevice /></View> : null}
