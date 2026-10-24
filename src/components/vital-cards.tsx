@@ -1,9 +1,10 @@
 import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
+import { Surface } from '@/components/ui/surface';
 import { Fill } from '@/components/motion/fill';
 import { BarChart, LineChart } from '@/components/ui/charts';
 import { Face, Palette } from '@/constants/theme';
@@ -29,11 +30,12 @@ const whole = (v: number) => String(Math.round(v));
 
 /** A few figures side by side, smaller than a page's headline stats. */
 function Figures({ items }: { items: { label: string; value: string; unit?: string }[] }) {
+  const { fontScale } = useWindowDimensions();
   const styles = useAthleteStyles(baseStyles);
   return (
     <View style={styles.figures}>
       {items.map((item) => (
-        <View accessible accessibilityLabel={`${item.label} ${item.value}${item.unit ? ` ${item.unit}` : ''}`} key={item.label} style={styles.figure}>
+        <View accessible accessibilityLabel={`${item.label} ${item.value}${item.unit ? ` ${item.unit}` : ''}`} key={item.label} style={[styles.figure, fontScale > 1.3 && styles.figureStacked]}>
           <Text style={styles.figureValue}>{item.value}{item.unit ? <Text style={styles.figureUnit}>{item.unit}</Text> : null}</Text>
           <Text style={styles.figureLabel}>{item.label}</Text>
         </View>
@@ -46,13 +48,13 @@ function VitalCard({ title, now, unit, children }: { title: string; now: string;
   const styles = useAthleteStyles(baseStyles);
   const reduced = useReducedMotion();
   return (
-    <Animated.View entering={swap(reduced)} style={styles.card}>
+    <Animated.View entering={swap(reduced)}><Surface style={styles.card}>
       <View accessible accessibilityLabel={`${title}, now ${now} ${unit}`} style={styles.head}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.now}>{now}<Text style={styles.nowUnit}>{unit}</Text></Text>
       </View>
       {children}
-    </Animated.View>
+    </Surface></Animated.View>
   );
 }
 
@@ -66,6 +68,8 @@ const ZONES = [
 ];
 
 function HeartRate({ history, startLabel }: { history: Vitals[]; startLabel: string }) {
+  const { fontScale } = useWindowDimensions();
+  const stacked = fontScale > 1.25;
   const Palette = useAthletePalette();
   const styles = useAthleteStyles(baseStyles);
   const hr = history.map((v) => v.heartRate);
@@ -79,11 +83,14 @@ function HeartRate({ history, startLabel }: { history: Vitals[]; startLabel: str
       <LineChart labels={[startLabel, 'Now']} max={190} min={60} summary={`Heart rate from ${startLabel}, average ${whole(avg(hr))}`} tone={Palette.coral} values={hr} />
       <Text style={styles.sub}>Time in estimated zones</Text>
       {ZONES.map((zone, i) => (
-        <View accessible accessibilityLabel={`${zone.label} zone, ${Math.round(share[i] * 100)} percent`} key={zone.name} style={styles.zoneRow}>
-          <Text style={styles.zoneName}>{zone.name}</Text>
-          <Text style={styles.zoneLabel}>{zone.label}</Text>
+        <View accessible accessibilityLabel={`${zone.label} zone, ${Math.round(share[i] * 100)} percent`} key={zone.name} style={[styles.zoneRow, stacked && styles.zoneRowStacked]}>
+          <View style={[styles.zoneLabels, stacked && styles.zoneLabelsWide]}>
+          <Text style={[styles.zoneName, stacked && styles.zoneTextLarge]}>{zone.name}</Text>
+          <Text style={[styles.zoneLabel, stacked && styles.zoneLabelLarge]}>{zone.label}</Text>
+          {stacked ? <Text style={[styles.zonePct, styles.zoneTextLarge]}>{Math.round(share[i] * 100)}%</Text> : null}
+          </View>
           <Fill color={zone.color} delay={i * 50} height={10} progress={Math.max(share[i] > 0 ? 0.03 : 0, share[i])} radius={4} style={styles.zoneBar} />
-          <Text style={styles.zonePct}>{Math.round(share[i] * 100)}%</Text>
+          {!stacked ? <Text style={styles.zonePct}>{Math.round(share[i] * 100)}%</Text> : null}
         </View>
       ))}
     </VitalCard>
@@ -207,25 +214,31 @@ const baseStyles = StyleSheet.create({
   signalLabel: { color: Palette.inkMuted, fontSize: 16, fontWeight: '500' },
   signalLabelOn: { color: Palette.ink, fontWeight: '600' },
   cards: { gap: 0 },
-  card: { paddingTop: 20 },
+  card: { marginTop: 20, padding: 20 },
   head: { alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
   title: { color: Palette.ink, fontSize: 18, fontWeight: '600' },
   now: { color: Palette.ink, fontFamily: Face.figure, fontSize: 52, lineHeight: 58 },
   nowUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 18 },
-  figures: { flexDirection: 'row', gap: 12, marginTop: 10 },
-  figure: { flex: 1 },
+  figures: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 10 },
+  figure: { flexGrow: 1, flexBasis: 84 },
+  figureStacked: { flexBasis: '100%' },
   figureValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 22, lineHeight: 26 },
   figureUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 15 },
   figureLabel: { color: Palette.inkMuted, fontSize: 14, fontWeight: '500' },
   sub: { color: Palette.ink, fontSize: 15, fontWeight: '600', marginBottom: 8, marginTop: 18 },
-  zoneRow: { alignItems: 'center', flexDirection: 'row', gap: 10, height: 28 },
+  zoneRow: { alignItems: 'center', flexDirection: 'row', gap: 10, minHeight: 36, paddingVertical: 4 },
+  zoneRowStacked: { alignItems: 'stretch', flexDirection: 'column', gap: 8, paddingVertical: 8 },
+  zoneLabels: { alignItems: 'center', flexDirection: 'row', gap: 10 },
+  zoneLabelsWide: { alignSelf: 'stretch' },
+  zoneTextLarge: { width: 'auto', flexShrink: 1 },
+  zoneLabelLarge: { width: 'auto', flex: 1 },
   zoneName: { color: Palette.ink, fontFamily: Face.figure, fontSize: 16, width: 24 },
   zoneLabel: { color: Palette.inkMuted, fontSize: 14, width: 66 },
   zoneBar: { flex: 1 },
   zonePct: { color: Palette.ink, fontFamily: Face.figure, fontSize: 16, textAlign: 'right', width: 40 },
-  legend: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 8 },
+  legend: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   legendSwatch: { backgroundColor: 'rgba(48,209,88,0.35)', borderRadius: 3, height: 10, width: 16 },
-  legendText: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },
+  legendText: { color: Palette.inkMuted, flexShrink: 1, fontSize: 13, fontWeight: '500' },
   strip: { borderRadius: 6, flexDirection: 'row', gap: 2, height: 34, marginTop: 16, overflow: 'hidden' },
   stripCell: { borderRadius: 2, flex: 1 },
   stripAxis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },

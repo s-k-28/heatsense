@@ -8,6 +8,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { PressScale } from '@/components/motion/press-scale';
+import { Surface } from '@/components/ui/surface';
 import { ActionButton } from '@/components/ui/action-button';
 import { WRISTBAND_HERO } from '@/components/wristband-asset';
 import { Palette } from '@/constants/theme';
@@ -132,7 +133,7 @@ export function BandViewer({ onExploreHeartRate, onPreviewPhase }: {
   const busy = run !== null;
 
   return (
-    <View style={styles.container}>
+    <Surface style={styles.container}>
       <View style={styles.header}>
         <View accessibilityLiveRegion="polite" style={styles.titleRow}>
           <Text style={styles.title}>{current.label}</Text>
@@ -158,7 +159,7 @@ export function BandViewer({ onExploreHeartRate, onPreviewPhase }: {
       <Animated.View style={buttonMotion}>
         <ActionButton accessibilityHint="Runs a two-second preview, then opens heart rate" disabled={busy} label="Explore heart rate" onPress={startPreview} variant="secondary" />
       </Animated.View>
-    </View>
+    </Surface>
   );
 }
 
@@ -195,7 +196,7 @@ function CameraLayer({ selected, moving, direction, source, onFallback, onUnavai
 }
 
 const baseStyles = StyleSheet.create({
-  container: { backgroundColor: Palette.surface, borderRadius: 16, gap: 8, padding: 12 },
+  container: { gap: 12, padding: 16 },
   header: { alignItems: 'center', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
   titleRow: { alignItems: 'baseline', flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   title: { color: Palette.ink, flexShrink: 1, fontSize: 17, fontWeight: '600' },

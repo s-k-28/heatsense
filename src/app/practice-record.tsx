@@ -144,7 +144,7 @@ function PracticeRecordContent() {
         <Pressable accessibilityLabel="Back" accessibilityRole="button" onPress={close} style={styles.back}>
           <Svg fill="none" height={24} stroke={Palette.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={24}><Path d="m15 5-7 7 7 7" /></Svg>
         </Pressable>
-        <Text style={styles.barTitle}>Practice record</Text>
+        <Text accessibilityRole="header" style={styles.barTitle}>Practice record</Text>
         <ActionButton accessibilityLabel={sample ? 'Share sample summary' : 'Share practice record'} busy={sharing} disabled={!canShare} label="Share" onPress={share} style={styles.shareAction} />
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
@@ -162,13 +162,13 @@ const baseStyles = StyleSheet.create({
   shareAction: { flexShrink: 1, maxWidth: 140, minWidth: 76, paddingHorizontal: 12, paddingVertical: 8 },
   content: { alignItems: 'center', paddingTop: 24 },
   column: { maxWidth: MaxContentWidth, paddingHorizontal: 16, width: '100%' },
-  date: { color: Palette.inkMuted, fontSize: 16, lineHeight: 23 },
+  date: { color: Palette.inkMuted, fontSize: 16, lineHeight: 24 },
   title: { color: Palette.ink, fontSize: 28, fontWeight: '700', lineHeight: 34, marginVertical: 6 },
   summary: { marginTop: 24 },
   message: { color: Palette.inkMuted, fontSize: 17, lineHeight: 24 },
   state: { gap: 12, marginVertical: 12 },
   retry: { alignSelf: 'flex-start' },
-  reading: { gap: 5, paddingHorizontal: 18, paddingVertical: 16 },
+  reading: { gap: 8, paddingHorizontal: 20, paddingVertical: 20 },
   readingHead: { alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
   readingTime: { color: Palette.ink, fontSize: 17, fontWeight: '500' },
   readingValue: { fontFamily: Face.figure, fontSize: 28, lineHeight: 32 },

@@ -1,9 +1,10 @@
 import { Text } from '@/components/ui/text';
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { useAthleteStyles } from '@/components/athlete-appearance';
+import { Surface } from '@/components/ui/surface';
 import { Segmented } from '@/components/motion/segmented';
 import { StatRow } from '@/components/whoop-ui';
 import { Face, Palette } from '@/constants/theme';
@@ -33,6 +34,9 @@ function Chevron({ left }: { left?: boolean }) {
 
 export function HeatHistory({ past, today, temp, onOpenSession }: { past: SessionSummary[]; today: { wbgtF: number; zone: Zone } | null; temp: Temp; onOpenSession?: (summary: SessionSummary) => void }) {
   const styles = useAthleteStyles(baseStyles);
+  const { fontScale } = useWindowDimensions();
+  const dateSize = Math.max(42, Math.ceil(28 * fontScale));
+  const monthWidth = 7 * Math.max(44, Math.ceil(28 * fontScale));
   const weekScroll = useRef<ScrollView>(null);
   const [view, setView] = useState<'week' | 'month'>('week');
   const [offset, setOffset] = useState(0); // months back from this one
@@ -63,7 +67,7 @@ export function HeatHistory({ past, today, temp, onOpenSession }: { past: Sessio
   };
 
   return (
-    <View style={styles.card}>
+    <Surface style={styles.card}>
       <Segmented onChange={selectView} options={[{ key: 'week', label: 'Week' }, { key: 'month', label: 'Month' }]} tone="card" value={view} />
 
       {view === 'week' ? (
@@ -73,7 +77,7 @@ export function HeatHistory({ past, today, temp, onOpenSession }: { past: Sessio
             return (
               <Pressable accessibilityLabel={`${d.date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}${d.peak ? `, peak ${temp.value(d.peak.wbgtF)}${temp.unit}, ${ZONES[d.peak.zone].label}` : ', no saved reading'}`} accessibilityRole="button" accessibilityState={{ selected: on }} key={d.date.toDateString()} onPress={() => setPicked(d.date)} style={({ pressed }) => [styles.weekDay, pressed && styles.pressed]}>
                 <Text style={[styles.weekLetter, sameDay(d.date, now) && { color: Palette.ink }]}>{d.date.toLocaleDateString([], { weekday: 'narrow' })}</Text>
-                <View style={[styles.ring, { borderColor: d.peak ? tone(d.peak.zone) : 'rgba(235,235,245,0.14)', borderStyle: d.peak ? 'solid' : 'dashed' }, on && styles.ringOn]}>
+                <View style={[styles.ring, { borderColor: d.peak ? tone(d.peak.zone) : 'rgba(235,235,245,0.14)', borderStyle: d.peak ? 'solid' : 'dashed' }, on && styles.ringOn, { width: dateSize, height: dateSize, borderRadius: dateSize / 2 }]}>
                   <Text style={styles.ringDate}>{d.date.getDate()}</Text>
                 </View>
               </Pressable>
@@ -87,6 +91,8 @@ export function HeatHistory({ past, today, temp, onOpenSession }: { past: Sessio
             <Text style={styles.monthName}>{first.toLocaleDateString([], { month: 'long', year: 'numeric' })}</Text>
             <Pressable accessibilityLabel="Next month" accessibilityRole="button" accessibilityState={{ disabled: offset === 0 }} disabled={offset === 0} onPress={() => changeMonth(offset - 1)} style={({ pressed }) => [styles.monthControl, offset === 0 && styles.dim, pressed && styles.pressed]}><Chevron /></Pressable>
           </View>
+          <ScrollView horizontal contentContainerStyle={styles.monthScroll} showsHorizontalScrollIndicator={false}>
+          <View style={{ flex: 1, minWidth: monthWidth }}>
           <View style={styles.gridRow}>
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((l, i) => <Text key={i} style={styles.gridLetter}>{l}</Text>)}
           </View>
@@ -107,6 +113,8 @@ export function HeatHistory({ past, today, temp, onOpenSession }: { past: Sessio
               })}
             </View>
           ))}
+          </View>
+          </ScrollView>
         </>
       )}
 
@@ -130,12 +138,12 @@ export function HeatHistory({ past, today, temp, onOpenSession }: { past: Sessio
           <Text style={styles.recordLinkText}>›</Text>
         </Pressable>
       )) : null}
-    </View>
+    </Surface>
   );
 }
 
 const baseStyles = StyleSheet.create({
-  card: { backgroundColor: Palette.surface, borderRadius: 16, padding: 16 },
+  card: { padding: 20 },
   weekViewport: { marginTop: 16 },
   week: { flexDirection: 'row', flexGrow: 1, gap: 6, justifyContent: 'space-between', paddingBottom: 6 },
   weekDay: { alignItems: 'center', gap: 6, minHeight: 64, minWidth: 44 },
@@ -148,9 +156,10 @@ const baseStyles = StyleSheet.create({
   monthControl: { alignItems: 'center', justifyContent: 'center', minHeight: 48, minWidth: 48 },
   pressed: { opacity: 0.7 },
   dim: { opacity: 0.3 },
+  monthScroll: { flexGrow: 1 },
   gridRow: { flexDirection: 'row', marginTop: 4 },
   gridLetter: { color: Palette.inkMuted, flex: 1, fontSize: 12, fontWeight: '600', marginTop: 8, textAlign: 'center' },
-  cell: { aspectRatio: 1, flex: 1, padding: 3 },
+  cell: { aspectRatio: 1, flex: 1, minHeight: 44, minWidth: 44, padding: 3 },
   tile: { alignItems: 'center', borderRadius: 9, flex: 1, justifyContent: 'center' },
   tileEmpty: { backgroundColor: 'rgba(235,235,245,0.06)' },
   tileOn: { borderColor: Palette.ink, borderWidth: 2 },
