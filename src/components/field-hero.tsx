@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CoachPalette, CoachRadius } from '@/constants/coach-theme';
 import { Palette, Spacing } from '@/constants/theme';

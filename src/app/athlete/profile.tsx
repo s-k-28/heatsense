@@ -1,7 +1,8 @@
+import { AnimatedText, Text } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -198,7 +199,7 @@ function Content() {
         </Animated.View>
 
         <EntryHeading accent="yours." compact={compact} delay={300} lead="Make it" style={{ marginTop: compact ? 26 : 36 }} />
-        <Animated.Text entering={fade(550)} style={entryStyles.description}>Let’s start with the basics.</Animated.Text>
+        <AnimatedText entering={fade(550)} style={entryStyles.description}>Let’s start with the basics.</AnimatedText>
 
         <View style={[styles.form, { marginTop: compact ? 22 : 28 }]}>
           <Animated.View entering={rise(fieldDelay(0))}>

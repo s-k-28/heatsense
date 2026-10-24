@@ -1,9 +1,10 @@
+import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
 import { ActionButton } from '@/components/ui/action-button';
 import { useAuthSession } from '@/state/auth-session';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { Facts, ListRow, Rows, SampleTag } from '@/components/whoop-ui';

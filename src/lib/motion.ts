@@ -7,13 +7,11 @@ import { Easing, FadeIn, FadeInDown, FadeOut, LinearTransition } from 'react-nat
 // Cubic ease-out as a Bézier factory also resolves correctly in web layout transitions.
 export const EASE_OUT = Easing.bezier(0.215, 0.61, 0.355, 1);
 
-const MAX_STAGGER = 8; // past this many items, the rest arrive together rather than trickling in
 
 /** A block entering a screen: fade + 10 px rise, staggered by its position. */
 export function enter(index: number, reduced: boolean) {
-  if (reduced) return undefined;
-  return FadeInDown.duration(280)
-    .delay(Math.min(index, MAX_STAGGER) * 40)
+  if (reduced || index < 0) return undefined;
+  return FadeInDown.duration(300)
     .easing(EASE_OUT)
     .withInitialValues({ opacity: 0, transform: [{ translateY: 10 }] });
 }

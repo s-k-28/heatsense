@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/text';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { HeatIcon } from '@/components/heat-icon';
 import { TeamMap } from '@/components/team-map';

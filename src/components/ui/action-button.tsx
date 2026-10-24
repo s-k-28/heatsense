@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { PressScale } from '@/components/motion/press-scale';
 import { Palette } from '@/constants/theme';
@@ -42,7 +43,7 @@ export function ActionButton({ label, onPress, variant = 'primary', disabled = f
       onFocus={(event) => setFocused(Platform.OS !== 'web' || Boolean((event.target as unknown as Element | null)?.matches?.(':focus-visible')))}
       onBlur={() => setFocused(false)}
       style={[
-        styles.button, styles[variant], style, styles.target,
+        styles.button, styles[variant], style, variant === 'text' ? styles.textTarget : styles.target,
         focused && styles.focused,
         disabled && !busy && styles.disabled,
         pressed && !blocked && styles.pressed,
@@ -57,10 +58,11 @@ export function ActionButton({ label, onPress, variant = 'primary', disabled = f
 }
 
 const baseStyles = StyleSheet.create({
-  button: { alignItems: 'center', borderColor: 'transparent', borderRadius: 14, borderWidth: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  target: { minHeight: 48, minWidth: 48 },
+  button: { alignItems: 'center', borderColor: 'transparent', borderRadius: 999, borderWidth: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  target: { minHeight: 56, minWidth: 48 },
+  textTarget: { minHeight: 44, minWidth: 44, paddingHorizontal: 8, paddingVertical: 8 },
   primary: { backgroundColor: Palette.coral },
-  secondary: { backgroundColor: Palette.surface, borderColor: Palette.border },
+  secondary: { backgroundColor: Palette.interactive, borderColor: 'transparent' },
   text: { backgroundColor: 'transparent' },
   danger: { backgroundColor: 'transparent', borderColor: Palette.emergency },
   focused: { borderColor: Palette.ink },
@@ -68,5 +70,5 @@ const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.75 },
   content: { alignItems: 'center', flexDirection: 'row', gap: 8, maxWidth: '100%' },
   spinnerSlot: { alignItems: 'center', justifyContent: 'center', width: 20 },
-  label: { flexShrink: 1, fontSize: 17, fontWeight: '600', lineHeight: 23, textAlign: 'center' },
+  label: { flexShrink: 1, fontSize: 17, fontWeight: '700', lineHeight: 23, textAlign: 'center' },
 });

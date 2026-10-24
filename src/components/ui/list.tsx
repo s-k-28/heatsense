@@ -1,6 +1,9 @@
+import { ActionButton } from '@/components/ui/action-button';
+import { Surface } from '@/components/ui/surface';
+import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { HeatIcon } from '@/components/heat-icon';
 import { Palette, Radius, Spacing, Type } from '@/constants/theme';
@@ -12,7 +15,7 @@ export const chevron = { ios: 'chevron.right', android: 'chevron_right', web: 'c
 /** A rounded surface, the building block of every screen. Flat: no outline, no shadow. */
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const styles = useAthleteStyles(baseStyles);
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <Surface style={[styles.card, style]}>{children}</Surface>;
 }
 
 /** Uppercase card label with its symbol. White unless the card reports a state. Tappable when it leads somewhere. */
@@ -47,7 +50,7 @@ export function CardHeader({
   );
   if (!onPress) return content;
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.linkTarget, pressed && styles.pressed]}>
       {content}
     </Pressable>
   );
@@ -145,22 +148,14 @@ export function Initials({ name, size = 40 }: { name: string; size?: number }) {
 
 /** Standard filled button. */
 export function Button({ label, onPress, tone = 'tint' }: { label: string; onPress: () => void; tone?: 'tint' | 'gray' }) {
-  const styles = useAthleteStyles(baseStyles);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.button, tone === 'gray' ? styles.buttonGray : styles.buttonTint, pressed && styles.pressed]}>
-      <Text style={[styles.buttonLabel, tone === 'gray' ? styles.buttonLabelGray : styles.buttonLabelTint]}>{label}</Text>
-    </Pressable>
-  );
+  return <ActionButton label={label} onPress={onPress} variant={tone === 'gray' ? 'secondary' : 'primary'} />;
 }
 
 /** Plain text link in the tint color. */
 export function TextLink({ label, onPress }: { label: string; onPress?: () => void }) {
   const styles = useAthleteStyles(baseStyles);
   return (
-    <Pressable accessibilityRole="button" hitSlop={10} onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable accessibilityRole="button" hitSlop={10} onPress={onPress} style={({ pressed }) => [styles.linkTarget, pressed && styles.pressed]}>
       <Text style={styles.link}>{label}</Text>
     </Pressable>
   );
@@ -178,12 +173,12 @@ export const textStyles = StyleSheet.create({
 
 const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.55 },
-  card: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, padding: Spacing.four },
+  card: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: 0, padding: Spacing.five },
   cardHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 24 },
   categoryRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   categoryLabel: { ...Type.label },
   cardMeta: { color: Palette.inkMuted, ...Type.footnote },
-  group: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  group: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: 0, overflow: 'hidden' },
   separator: { backgroundColor: Palette.border, height: StyleSheet.hairlineWidth },
   row: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 52, paddingHorizontal: Spacing.four, paddingVertical: 10 },
   rowPressed: { backgroundColor: 'rgba(255,255,255,0.08)' },
@@ -195,7 +190,7 @@ const baseStyles = StyleSheet.create({
   rowTitleMetric: { ...Type.label },
   rowValueMetric: { ...Type.figure, fontSize: 24, lineHeight: 28 },
   rowDetail: { color: Palette.inkMuted, ...Type.subhead },
-  rowValue: { color: Palette.inkMuted, ...Type.body, flexShrink: 0 },
+  rowValue: { color: Palette.inkMuted, ...Type.body, flexShrink: 1, maxWidth: '48%', textAlign: 'right' },
   iconTile: { alignItems: 'center', borderCurve: 'continuous', borderRadius: 7, height: 29, justifyContent: 'center', width: 29 },
   initials: { alignItems: 'center', backgroundColor: Palette.fill, justifyContent: 'center' },
   initialsText: { color: Palette.inkMuted, fontWeight: '600' },
@@ -205,5 +200,6 @@ const baseStyles = StyleSheet.create({
   buttonLabel: { ...Type.label, fontSize: 16, lineHeight: 20 },
   buttonLabelTint: { color: '#1A0E07' },
   buttonLabelGray: { color: Palette.ink },
+  linkTarget: { minHeight: 44, minWidth: 44, justifyContent: 'center' },
   link: { color: Palette.coral, ...Type.body },
 });

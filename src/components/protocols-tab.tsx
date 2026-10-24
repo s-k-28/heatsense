@@ -1,6 +1,7 @@
+import { Text, TextInput } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Keyboard, Linking, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Keyboard, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
 import Animated, { ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 

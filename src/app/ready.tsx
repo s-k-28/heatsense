@@ -1,5 +1,6 @@
+import { AnimatedText, Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
 import { BandSpot } from '@/components/band-journey';
@@ -62,7 +63,7 @@ export default function ReadyScreen() {
       {/* The branded finish: the H assembles above the headline, then the three next steps follow. */}
       <BrandAssemble delay={200} size={compact ? 44 : 52} style={{ marginTop: compact ? 26 : 40 }} />
       <EntryHeading accent={HEADING[key].accent} compact={compact} delay={650} lead={HEADING[key].lead} size="hero" style={styles.heading} />
-      <Animated.Text entering={fade(1000)} style={entryStyles.description}>Three things to do first.</Animated.Text>
+      <AnimatedText entering={fade(1000)} style={entryStyles.description}>Three things to do first.</AnimatedText>
       <View style={[styles.list, { marginTop: compact ? 22 : 30 }]}>
         {setup.steps.map((step, i) => (
           <Animated.View accessible entering={rise(1100 + i * 110)} key={step.title} style={styles.item}>

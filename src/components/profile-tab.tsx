@@ -1,10 +1,11 @@
+import { Text } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { signOut, updateProfile } from 'firebase/auth';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 

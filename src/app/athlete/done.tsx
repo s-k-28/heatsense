@@ -1,3 +1,4 @@
+import { AnimatedText } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -67,7 +68,7 @@ export default function AthleteDoneScreen() {
       {/* The branded finish: the H assembles, then the headline rises beneath it. */}
       <BrandAssemble delay={150} size={compact ? 64 : 80} style={styles.mark} />
       <EntryHeading accent={copy.accent} align="center" key={state.kind} compact={compact} delay={700} lead={copy.lead} size="hero" />
-      <Animated.Text accessibilityLiveRegion="polite" entering={fade(1100)} style={[entryStyles.description, styles.centered]}>{copy.detail(teamName)}</Animated.Text>
+      <AnimatedText accessibilityLiveRegion="polite" entering={fade(1100)} style={[entryStyles.description, styles.centered]}>{copy.detail(teamName)}</AnimatedText>
       <View style={styles.open} />
       <Animated.View entering={rise(1250)} style={styles.actions}>
         {state.kind === 'loading' ? <EntryButton disabled label="Checking…" onPress={() => {}} /> : <EntryButton label={state.kind === 'member' ? 'Go to dashboard' : 'Continue'} onPress={() => router.replace(DASHBOARD as never)} />}

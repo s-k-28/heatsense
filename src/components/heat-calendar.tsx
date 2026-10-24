@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/text';
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { useAthleteStyles } from '@/components/athlete-appearance';

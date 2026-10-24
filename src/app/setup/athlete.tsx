@@ -1,19 +1,8 @@
+import { AnimatedText, Text, TextInput } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type LayoutChangeEvent,
-} from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -82,7 +71,7 @@ function CodeBox({ digit, active, error, found, width, height }: { digit: string
   }));
   return (
     <Animated.View style={[styles.box, { width, height }, frame]}>
-      {digit ? <Animated.Text key={digit} entering={ms(1) ? FadeIn.duration(160) : undefined} style={styles.digit}>{digit}</Animated.Text> : null}
+      {digit ? <AnimatedText key={digit} entering={ms(1) ? FadeIn.duration(160) : undefined} style={styles.digit}>{digit}</AnimatedText> : null}
     </Animated.View>
   );
 }
@@ -221,7 +210,7 @@ function Content({ role }: { role: MemberRole }) {
 
         <View style={[styles.above, styles.bandRoom]}><BandSpot height={compact ? 100 : 130} id={`join-${role}`} /></View>
         <EntryHeading accent="awaits." align="center" compact={compact} delay={300} lead="Your team" />
-        <Animated.Text entering={fade(600)} style={[entryStyles.description, styles.centered]}>Enter the six-digit code from your coach.</Animated.Text>
+        <AnimatedText entering={fade(600)} style={[entryStyles.description, styles.centered]}>Enter the six-digit code from your coach.</AnimatedText>
 
         {/* One real input drives every box: typing, pasting, deleting and the numeric keyboard all come from it. */}
         <View style={[styles.codeWrap, { marginTop: compact ? 24 : 30 }]}>

@@ -1,5 +1,6 @@
+import { AnimatedText, Text } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
 import { BandSpot } from '@/components/band-journey';
@@ -28,7 +29,7 @@ export default function NotificationsScreen() {
         <EntryHeader bandDock={false} onBack={() => (router.canGoBack() ? router.back() : done())} />
       </Animated.View>
       <EntryHeading accent="right on time." compact={compact} delay={150} lead="Heat alerts," style={{ marginTop: compact ? 30 : 44 }} />
-      <Animated.Text entering={fade(500)} style={entryStyles.description}>HeatSense tells you when the field changes.</Animated.Text>
+      <AnimatedText entering={fade(500)} style={entryStyles.description}>HeatSense tells you when the field changes.</AnimatedText>
       {/* What an alert looks like, quieter the further down the list. */}
       <View style={[styles.list, { marginTop: compact ? 24 : 34 }]}>
         {EXAMPLES.map((text, i) => (

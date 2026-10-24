@@ -1,8 +1,9 @@
+import { AnimatedText, Text } from '@/components/ui/text';
 import * as Clipboard from 'expo-clipboard';
 import { Redirect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Share, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -108,7 +109,7 @@ function Content({ draft }: { draft: TeamDraft | null }) {
         </Animated.View>
 
         <EntryHeading accent="together." compact={compact} delay={200} lead="Bring your team" style={{ marginTop: compact ? 26 : 36 }} />
-        <Animated.Text entering={rise(350)} style={[entryStyles.description, styles.noShrink]}>Share this code so your athletes can join.</Animated.Text>
+        <AnimatedText entering={rise(350)} style={[entryStyles.description, styles.noShrink]}>Share this code so your athletes can join.</AnimatedText>
 
         <View style={[styles.codePanel, { marginTop: compact ? 20 : 28 }]}>
         <View style={styles.codeStage}>
@@ -128,9 +129,9 @@ function Content({ draft }: { draft: TeamDraft | null }) {
               </Pressable>
             </Animated.View>
           ) : invite ? (
-            <Animated.Text key={invite.code} entering={fade(invite ? 150 : 0)} style={[styles.expiry]}>
+            <AnimatedText key={invite.code} entering={fade(invite ? 150 : 0)} style={[styles.expiry]}>
               Expires {new Date(invite.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-            </Animated.Text>
+            </AnimatedText>
           ) : (
             <ActivityIndicator size="small" color={MUTED} accessibilityLabel="Creating your invitation code" />
           )}
@@ -200,7 +201,7 @@ function CodeTile({ digit, code, delay, width, height }: { digit: string | null;
   return (
     <Animated.View style={[{ width, height }, frame]}>
       <View style={[styles.tile, { width, height }]}>
-        <Animated.Text style={[styles.digit, { fontSize: Math.round(width * 0.58), lineHeight: Math.round(width * 0.72) }, text]}>{digit ?? ''}</Animated.Text>
+        <AnimatedText style={[styles.digit, { fontSize: Math.round(width * 0.58), lineHeight: Math.round(width * 0.72) }, text]}>{digit ?? ''}</AnimatedText>
       </View>
     </Animated.View>
   );

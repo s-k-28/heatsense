@@ -1,19 +1,20 @@
 import '@/global.css';
 
-import { Platform } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
+import { Typeface } from '@/constants/typography';
 
 export const Palette = {
   // The dashboard shares the onboarding's palette (constants/entry-theme.ts): a deep blue-black
   // canvas, slightly raised surfaces, warm off-white ink, and peach as the one accent, used only on
   // things you can tap. Status colors (below) are reserved for status.
-  canvas: '#101416',
-  grouped: '#101416',
-  surface: '#1A2024',
-  surfaceMuted: '#242D32',
-  ink: '#F6F3EC',
-  inkMuted: '#B0BAC0',
-  inkFaint: '#7D898F',
-  border: '#354147',
+  canvas: '#090B0C',
+  grouped: '#090B0C',
+  surface: '#131718',
+  surfaceMuted: '#1D2425',
+  ink: '#F4F0E8',
+  inkMuted: '#D6DAD6',
+  inkFaint: '#BAC5C1',
+  border: 'rgba(214,218,214,0.10)',
   outline: 'rgba(246,243,236,0.85)',
   fill: 'rgba(176,186,192,0.16)',
   coral: '#FFB183',
@@ -27,38 +28,37 @@ export const Palette = {
   emergency: '#FF453A',
   info: '#0A84FF',
   white: '#FFFFFF',
-  card: '#1A2024',
-  cardEdge: '#242D32',
+  interactive: '#252B2C',
+  ice: '#A9DCE8',
+  card: '#131718',
+  cardEdge: 'rgba(214,218,214,0.06)',
   zoneOrangeDeep: '#7A3A16',
   zoneYellowDeep: '#7A5C0E',
   zoneRedDeep: '#6E1C14',
   zoneBlackDeep: '#000000',
 } as const;
 
-// Two families, each with one job. Barlow Condensed (bundled) sets figures and the short uppercase
-// labels above them, like an instrument panel. SF Pro sets anything read as a sentence, so titles,
-// rows and explanations keep the system font and Dynamic Type.
+// Archivo sets headings and metrics; Manrope sets reading and action text.
 export const Face = {
-  figure: 'BarlowCondensed_700Bold',
-  label: 'BarlowCondensed_600SemiBold',
+  figure: Typeface.display,
+  label: Typeface.label,
 } as const;
 
 export const Type = {
-  // Group labels read as words, not as spaced-out capitals.
-  label: { fontWeight: '600', fontSize: 15, lineHeight: 20 },
-  labelSmall: { fontWeight: '500', fontSize: 14, lineHeight: 18 },
-  figure: { fontWeight: '700', fontSize: 30, lineHeight: 33, letterSpacing: 0.2 },
-  largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: '700', letterSpacing: 0.37 },
-  title2: { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: 0.35 },
-  title3: { fontSize: 20, lineHeight: 25, fontWeight: '600', letterSpacing: 0.38 },
-  headline: { fontSize: 17, lineHeight: 22, fontWeight: '600', letterSpacing: -0.43 },
-  body: { fontSize: 17, lineHeight: 22, fontWeight: '400', letterSpacing: -0.43 },
-  callout: { fontSize: 16, lineHeight: 21, fontWeight: '400', letterSpacing: -0.31 },
-  subhead: { fontSize: 15, lineHeight: 20, fontWeight: '400', letterSpacing: -0.23 },
-  footnote: { fontSize: 13, lineHeight: 18, fontWeight: '400', letterSpacing: -0.08 },
-  caption: { fontSize: 12, lineHeight: 16, fontWeight: '400', letterSpacing: 0 },
-  display: { fontSize: 48, lineHeight: 54, fontWeight: '600', letterSpacing: 0.3 },
-  tab: { fontSize: 11, lineHeight: 13, fontWeight: '500', letterSpacing: 0.55 },
+  label: { fontFamily: Typeface.label, fontWeight: '600', fontSize: 15, lineHeight: 21 },
+  labelSmall: { fontFamily: Typeface.label, fontWeight: '600', fontSize: 14, lineHeight: 20 },
+  figure: { fontFamily: Typeface.display, fontWeight: '800', fontVariant: ['tabular-nums'] as TextStyle['fontVariant'], fontSize: 30, lineHeight: 35, letterSpacing: -0.6 },
+  largeTitle: { fontFamily: Typeface.display, fontSize: 40, lineHeight: 46, fontWeight: '800', letterSpacing: -1.2 },
+  title2: { fontFamily: Typeface.heading, fontSize: 26, lineHeight: 33, fontWeight: '700', letterSpacing: -0.6 },
+  title3: { fontFamily: Typeface.button, fontSize: 20, lineHeight: 27, fontWeight: '700', letterSpacing: -0.3 },
+  headline: { fontFamily: Typeface.button, fontSize: 18, lineHeight: 25, fontWeight: '700', letterSpacing: -0.2 },
+  body: { fontFamily: Typeface.body, fontSize: 16, lineHeight: 24, fontWeight: '600', letterSpacing: -0.15 },
+  callout: { fontFamily: Typeface.body, fontSize: 16, lineHeight: 23, fontWeight: '600', letterSpacing: -0.15 },
+  subhead: { fontFamily: Typeface.body, fontSize: 15, lineHeight: 22, fontWeight: '600', letterSpacing: -0.1 },
+  footnote: { fontFamily: Typeface.label, fontSize: 14, lineHeight: 20, fontWeight: '600', letterSpacing: -0.1 },
+  caption: { fontFamily: Typeface.label, fontSize: 13, lineHeight: 19, fontWeight: '600', letterSpacing: 0 },
+  display: { fontFamily: Typeface.display, fontSize: 48, lineHeight: 56, fontWeight: '800', letterSpacing: -1 },
+  tab: { fontFamily: Typeface.button, fontSize: 12, lineHeight: 18, fontWeight: '700', letterSpacing: 0 },
 } as const;
 
 // HeatSense intentionally uses one warm visual system across light and dark
@@ -82,38 +82,13 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
-// Helvetica Neue, like the onboarding screens. Weights are separate PostScript
-// faces on iOS; the onboarding headline weight (500) is the heaviest we use.
-const face = Platform.select({
-  // SF Pro everywhere on iOS: the system font. Weights come from fontWeight on each style.
-  ios: { light: 'System', regular: 'System', medium: 'System', bold: 'System' },
-  android: { light: 'sans-serif-light', regular: 'sans-serif', medium: 'sans-serif-medium', bold: 'sans-serif-medium' },
-  default: {
-    light: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-    regular: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-    medium: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-    bold: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-  },
-})!;
-
+/** Compatibility names all resolve to the same two-family system. */
 export const Fonts = {
-  light: face.light,
-  regular: face.regular,
-  medium: face.medium,
-  semibold: face.medium,
-  bold: face.bold,
-  extrabold: face.bold,
-  mono: Platform.select({ ios: 'ui-monospace', default: 'monospace' }),
-  fallback: Platform.select({ ios: 'System', default: 'sans-serif' }),
-
-  // Legacy "meet HeatSense" story set, still used by the optional intro screens.
-  uiRegular: face.regular,
-  uiMedium: face.medium,
-  uiSemibold: face.medium,
-  uiBold: face.medium,
-  uiExtrabold: face.medium,
-  ctaItalic: 'Fraunces_500Medium_Italic',
-  ctaItalicSemibold: 'Fraunces_600SemiBold_Italic',
+  light: Typeface.body, regular: Typeface.body, medium: Typeface.body,
+  semibold: Typeface.body, bold: Typeface.button, extrabold: Typeface.display,
+  mono: Typeface.display, fallback: Platform.select({ ios: 'System', default: 'sans-serif' }),
+  uiRegular: Typeface.body, uiMedium: Typeface.body, uiSemibold: Typeface.body,
+  uiBold: Typeface.button, uiExtrabold: Typeface.display, ctaItalic: Typeface.display,
 } as const;
 
 export const Spacing = {
@@ -131,9 +106,9 @@ export const Spacing = {
 } as const;
 
 export const Radius = {
-  small: 10,
-  medium: 14,
-  large: 20,
+  small: 22,
+  medium: 28,
+  large: 32,
   pill: 999,
 } as const;
 

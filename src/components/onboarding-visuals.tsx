@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/text';
 import { type ComponentProps, useEffect, useMemo, useState } from 'react';
 import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,

@@ -1,9 +1,10 @@
+import { AnimatedText, Text } from '@/components/ui/text';
 import { useAthleteAppearance, useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { Image } from 'expo-image';
 import Svg, { Circle, Path } from 'react-native-svg';
 import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { Easing, interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -97,7 +98,7 @@ export function DashboardHeader({
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.headerBackdrop, variant === 'coach' && styles.coachHeaderBackdrop, backdrop]} />
     <View style={styles.header}>
       <HeatSenseLogo height={28} />
-      <Animated.Text accessibilityElementsHidden importantForAccessibility="no" numberOfLines={1} style={[styles.headerTitle, variant === 'coach' && styles.coachHeaderTitle, backdrop]}>{title}</Animated.Text>
+      <AnimatedText accessibilityElementsHidden importantForAccessibility="no" numberOfLines={1} style={[styles.headerTitle, variant === 'coach' && styles.coachHeaderTitle, backdrop]}>{title}</AnimatedText>
       <View style={styles.headerActions}>
         {band ? <BandChip band={band} /> : null}
         {onAlerts ? (
@@ -118,8 +119,7 @@ export function DashboardHeader({
 
 export function LargeTitle({ title }: { title: string }) {
   const styles = useAthleteStyles(baseStyles);
-  const athlete = useAthleteAppearance();
-  return <Text accessibilityRole="header" style={[styles.largeTitle, athlete && title === 'Band' && { fontFamily: 'Inter_700Bold', fontWeight: 'normal' }]}>{title}</Text>;
+  return <Text accessibilityRole="header" style={styles.largeTitle}>{title}</Text>;
 }
 
 export function CoachLargeTitle({ title }: { title: string }) {
@@ -225,7 +225,7 @@ function TabItem({ active, index, onPress, tab, tabWidth, x, variant }: { active
 const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.55 },
   headerWrap: { left: 0, position: 'absolute', right: 0, top: 0, zIndex: 10 },
-  headerBackdrop: { backgroundColor: '#1E2329', borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
+  headerBackdrop: { backgroundColor: Palette.canvas, borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
   coachHeaderBackdrop: { backgroundColor: 'rgba(11,13,14,0.96)', borderBottomColor: CoachPalette.hairline },
   headerTitleWrap: { alignItems: 'center', height: HEADER_ROW, justifyContent: 'center', left: 0, position: 'absolute', right: 0 },
   headerTitle: { color: Palette.ink, ...Type.headline, flex: 1, minWidth: 0, marginHorizontal: 12 },
@@ -243,13 +243,13 @@ const baseStyles = StyleSheet.create({
   sectionHeader: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.two, marginTop: Spacing.seven },
   sectionHeaderTight: { marginTop: Spacing.five },
   sectionTitle: { color: Palette.ink, ...Type.title3, fontWeight: '700' },
-  pillWrap: { elevation: 10, left: Spacing.four, position: 'absolute', right: Spacing.four, shadowColor: '#000', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.45, shadowRadius: 18 },
-  coachPillWrap: { left: 14, right: 14, shadowOffset: { height: 10, width: 0 }, shadowOpacity: 0.56, shadowRadius: 22 },
+  pillWrap: { elevation: 10, left: Spacing.four, position: 'absolute', right: Spacing.four, shadowColor: '#000', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.1, shadowRadius: 18 },
+  coachPillWrap: { left: 14, right: 14, shadowOffset: { height: 10, width: 0 }, shadowOpacity: 0.1, shadowRadius: 22 },
   // The translucent fill keeps labels readable over scrolled content wherever glass blur isn't available.
-  pill: { backgroundColor: 'rgba(32,32,32,0.86)', borderColor: 'rgba(191,192,203,0.08)', borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, height: PILL_HEIGHT },
-  coachPill: { backgroundColor: 'rgba(21,24,25,0.97)', borderColor: 'transparent', borderRadius: CoachRadius.pill },
+  pill: { backgroundColor: Palette.surface, borderColor: 'rgba(191,192,203,0.08)', borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, height: PILL_HEIGHT },
+  coachPill: { backgroundColor: Palette.surface, borderColor: 'transparent', borderRadius: CoachRadius.pill },
   pillInner: { flex: 1, flexDirection: 'row', padding: PILL_PADDING },
-  indicator: { backgroundColor: 'rgba(69,69,69,0.92)', borderCurve: 'continuous', borderRadius: (PILL_HEIGHT - PILL_PADDING * 2) / 2, bottom: PILL_PADDING, left: PILL_PADDING, position: 'absolute', top: PILL_PADDING },
+  indicator: { backgroundColor: Palette.interactive, borderCurve: 'continuous', borderRadius: (PILL_HEIGHT - PILL_PADDING * 2) / 2, bottom: PILL_PADDING, left: PILL_PADDING, position: 'absolute', top: PILL_PADDING },
   coachIndicator: { backgroundColor: CoachPalette.interactive },
   tab: { flex: 1 },
   tabPressed: { opacity: 0.7 },

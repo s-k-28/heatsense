@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text } from '@/components/ui/text';
+import { StyleSheet, View } from 'react-native';
 
 import { Fill } from '@/components/motion/fill';
 import { Face, Palette } from '@/constants/theme';

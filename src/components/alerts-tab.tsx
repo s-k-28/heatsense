@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/text';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { ActionButton } from '@/components/ui/action-button';

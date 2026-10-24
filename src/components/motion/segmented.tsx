@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Palette } from '@/constants/theme';
@@ -12,7 +13,7 @@ import { EASE_IN_OUT } from '@/lib/motion-engine';
 type Option<T extends string> = { key: T; label: string; badge?: ReactNode; disabled?: boolean };
 type Tone = 'canvas' | 'card' | 'accent';
 
-const THUMB: Record<Tone, string> = { canvas: Palette.surface, card: 'rgba(235,235,245,0.16)', accent: Palette.coral };
+const THUMB: Record<Tone, string> = { canvas: Palette.interactive, card: Palette.interactive, accent: Palette.coral };
 
 export function Segmented<T extends string>({ options, value, onChange, size = 'md', tone = 'canvas', itemWidth = 52 }: {
   options: Option<T>[];
@@ -40,7 +41,7 @@ export function Segmented<T extends string>({ options, value, onChange, size = '
     if (!segment) return;
     const target = index * segment;
     // The first placement lands where it belongs; later changes travel.
-    x.value = !placed.current || reduced ? target : withTiming(target, { duration: 220, easing: EASE_IN_OUT });
+    x.value = !placed.current || reduced ? target : withTiming(target, { duration: 250, easing: EASE_IN_OUT });
     placed.current = true;
   }, [index, reduced, segment, x]);
 
@@ -74,15 +75,15 @@ export function Segmented<T extends string>({ options, value, onChange, size = '
 }
 
 const baseStyles = StyleSheet.create({
-  track: { backgroundColor: 'rgba(235,235,245,0.08)', flexDirection: 'row' },
-  trackMd: { borderRadius: 12, padding: 4 },
-  trackSm: { borderRadius: 9, padding: 3 },
+  track: { backgroundColor: Palette.surface, flexDirection: 'row' },
+  trackMd: { borderRadius: 99999, padding: 4 },
+  trackSm: { borderRadius: 999, padding: 3 },
   thumb: { position: 'absolute' },
-  thumbMd: { borderRadius: 9 },
-  thumbSm: { borderRadius: 7 },
+  thumbMd: { borderRadius: 999 },
+  thumbSm: { borderRadius: 999 },
   item: { alignItems: 'center', borderColor: 'transparent', borderWidth: 1, flex: 1, flexDirection: 'row', gap: 8, justifyContent: 'center', minWidth: 44, paddingHorizontal: 4 },
-  itemMd: { borderRadius: 9, minHeight: 48, paddingVertical: 8 },
-  itemSm: { borderRadius: 7, minHeight: 44, paddingVertical: 6 },
+  itemMd: { borderRadius: 999, minHeight: 48, paddingVertical: 8 },
+  itemSm: { borderRadius: 999, minHeight: 44, paddingVertical: 6 },
   focused: { borderColor: Palette.ink },
   disabled: { opacity: 0.4 },
   pressed: { opacity: 0.7 },

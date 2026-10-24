@@ -1,3 +1,4 @@
+import { AnimatedText } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
@@ -34,7 +35,7 @@ export default function CoachTeamSetup() {
         <EntryHeader bandDock={false} onBack={back} progress={{ step: 1, total: ONBOARDING_STEPS.coach }} />
       </Animated.View>
       <EntryHeading accent="ready." compact={compact} delay={150} lead="Get your team" style={{ marginTop: compact ? 30 : 44 }} />
-      <Animated.Text entering={fade(500)} style={entryStyles.description}>Start a new team or join an existing one.</Animated.Text>
+      <AnimatedText entering={fade(500)} style={entryStyles.description}>Start a new team or join an existing one.</AnimatedText>
 
       <View accessibilityRole="radiogroup" accessibilityLabel="Team setup" style={[styles.options, { marginTop: compact ? 26 : 36 }]}>
         {options.map((option, index) => (

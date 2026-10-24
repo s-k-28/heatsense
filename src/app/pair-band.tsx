@@ -1,6 +1,7 @@
+import { AnimatedText, Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInUp, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
@@ -130,7 +131,7 @@ export default function PairBandScreen() {
         <EntryHeader brand={false} onBack={step === 'connected' ? undefined : back} progress={{ step: index + 1, total: STEPS.length }} />
       </Animated.View>
       <EntryHeading accent={HEADING[step].accent} compact={compact} delay={120} lead={HEADING[step].lead} size="hero" style={{ marginTop: compact ? 22 : 34 }} />
-      <Animated.Text entering={fade(450)} style={entryStyles.description}>{COPY[step]}</Animated.Text>
+      <AnimatedText entering={fade(450)} style={entryStyles.description}>{COPY[step]}</AnimatedText>
 
       <Animated.View entering={rise(500)} style={styles.stage}>
         {linking ? <Link connected={step === 'connected'} /> : <BandShot id={`pair-${step}`} light={step === 'light'} size={compact ? 200 : 240} />}

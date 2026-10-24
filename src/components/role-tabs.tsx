@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ZoneRules } from '@/components/coach-tabs';
 import { HomeOverview } from '@/components/coach-home';

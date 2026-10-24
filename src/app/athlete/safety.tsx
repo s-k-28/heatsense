@@ -1,7 +1,8 @@
+import { AnimatedText, Text, TextInput } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { FadeIn, FadeOut, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -232,7 +233,7 @@ function Content() {
 
         <EntryHeading accent="first." compact={compact} delay={300} lead="Safety comes" style={{ marginTop: compact ? 26 : 36 }} />
         {/* HeatSense doesn't send emergency notifications, so the page never says it will reach anyone. */}
-        <Animated.Text entering={fade(550)} style={entryStyles.description}>Emergency contacts, kept for authorized safety staff.</Animated.Text>
+        <AnimatedText entering={fade(550)} style={entryStyles.description}>Emergency contacts, kept for authorized safety staff.</AnimatedText>
 
         <Animated.View entering={rise(700)} style={styles.section}>
           <AthleteSectionLabel>Primary emergency contact</AthleteSectionLabel>
