@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { PressScale } from '@/components/motion/press-scale';
+import { useViewportSize } from '@/components/mobile-viewport';
 import { Surface, surfaceStyles } from '@/components/ui/surface';
 import { ActionButton } from '@/components/ui/action-button';
 import { SafetyStatus, ZonePicker } from '@/components/protocols-tab';
@@ -49,7 +50,8 @@ const hydration = (i: number) =>
 
 function SelfCheck() {
   const styles = useAthleteStyles(baseStyles);
-  const { width, fontScale } = useWindowDimensions();
+  const { width } = useViewportSize();
+  const { fontScale } = useWindowDimensions();
   const singleColumn = width < 360 || fontScale > 1.2;
   const reduced = useReducedMotion();
   const [picked, setPicked] = useState<string[]>([]);
@@ -88,7 +90,8 @@ function SelfCheck() {
 function HydrationCheck() {
   const Palette = useAthletePalette();
   const styles = useAthleteStyles(baseStyles);
-  const { width, fontScale } = useWindowDimensions();
+  const { width } = useViewportSize();
+  const { fontScale } = useWindowDimensions();
   const compact = width < 480 || fontScale > 1.2;
   const [shade, setShade] = useState<number | null>(null);
   const result = shade === null ? null : hydration(shade);
