@@ -1,6 +1,6 @@
 import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { Face, Palette } from '@/constants/theme';
 import type { DemoMember } from '@/state/demo-team';
@@ -23,13 +23,14 @@ function items(m: DemoMember, temp: ReturnType<typeof useTemperature>): Item[] {
 
 export function BodyStrip({ member }: { member: DemoMember }) {
   const styles = useAthleteStyles(baseStyles);
+  const { fontScale } = useWindowDimensions();
   const temp = useTemperature();
   const list = items(member, temp);
   return (
     <View accessible accessibilityLabel={`Simulated band readings. ${list.map((i) => `${i.label} ${i.value} ${i.unit}, ${i.note}`).join('. ')}`}>
       <View style={styles.metrics}>
       {list.map((i) => (
-        <View key={i.label} style={styles.tile}>
+        <View key={i.label} style={[styles.tile, fontScale > 1.25 && styles.tileStacked]}>
           <View style={styles.copy}>
             <Text style={styles.label}>{i.label}</Text>
             {!i.ok || i.note === 'Heavy' ? <Text style={styles.note}>{i.note}</Text> : null}
@@ -48,6 +49,7 @@ const baseStyles = StyleSheet.create({
   simulated: { color: Palette.inkMuted, fontSize: 14, marginBottom: 12 },
   metrics: { gap: 0 },
   tile: { alignItems: 'center', borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12, minHeight: 52, paddingVertical: 8 },
+  tileStacked: { alignItems: 'flex-start', flexDirection: 'column', gap: 8 },
   copy: { flex: 1, gap: 2 },
   label: { color: Palette.ink, fontSize: 16, fontWeight: '500' },
   value: { color: Palette.ink, fontFamily: Face.figure, fontSize: 24, lineHeight: 28 },

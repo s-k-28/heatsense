@@ -3,6 +3,7 @@ import { useAthleteStyles } from '@/components/athlete-appearance';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Surface } from '@/components/ui/surface';
 import { VitalCards, type BandSignal } from '@/components/vital-cards';
 import { ListRow, Rows } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
@@ -42,10 +43,10 @@ export function VitalsDetail({ member, bandVisual, selectedSignal, onSignalChang
         </View>
       </View>
       {member.status === 'watch' ? (
-        <View style={styles.note}>
+        <Surface style={styles.note}>
           <Text style={styles.noteTitle}>Heart rate is staying high through this break</Text>
           <Text style={styles.noteBody}>Check in with {member.athlete.name.split(' ')[0]}: shade, water, and how they feel. A trend to look at, not a diagnosis.</Text>
-        </View>
+        </Surface>
       ) : null}
       <VitalCards history={member.history} simulated selectedSignal={selectedSignal} onSignalChange={onSignalChange} previewHeartRate={previewHeartRate} />
       <View style={styles.tiles}>
@@ -74,7 +75,7 @@ const baseStyles = StyleSheet.create({
   hrUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
   pill: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 10 },
   pillText: { color: Palette.ink, fontSize: 16, fontWeight: '600' },
-  note: { backgroundColor: Palette.surface, borderRadius: 16, gap: 4, marginTop: 16, padding: 16 },
+  note: { gap: 8, marginTop: 16, padding: 20 },
   noteTitle: { color: Palette.warning, fontSize: 17, fontWeight: '600' },
   noteBody: { color: Palette.inkMuted, fontSize: 15, lineHeight: 21 },
   tiles: { marginBottom: 20, marginTop: 20 },

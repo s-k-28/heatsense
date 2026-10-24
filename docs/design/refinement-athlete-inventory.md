@@ -151,3 +151,36 @@ Every item below is source-inspected; runtime is **not yet verified** by this ag
 8. Across each applicable surface: 320-point width, largest accessibility text, VoiceOver control names/selection/order, safe area, modal dismissal, scroll reachability, keyboard dismissal/focus and first-tap action. Health/profile/safety forms additionally need numeric input, validation/error, save failure/draft retention, optional skip and account privacy verification.
 
 No screens, features, diagnoses, users, measurements, calendar events or successful accessibility/runtime passes were fabricated. This document is ready for phase-4 implementation assignment after root's shared design system is settled.
+
+
+## Phase 4 implementation record
+
+After root approved the shared principles, typography/tokens and Coach implementation order, this agent changed only the assigned nine source files and this inventory. Shared Text already supplies Archivo/Manrope and live input focus styling; no shared component/font/motion, onboarding field, graph implementation, backend or access-rule file was edited here.
+
+### Applied refinement
+
+- `role-tabs.tsx`: Home band section uses the shared Surface with deliberate padding/gaps; guidance sheet keeps normal-flow content, a wrapping heading/action and comfortable scrolling clearance. All actual athlete tab/destination behavior remains intact.
+- `learn-tab.tsx`: hydration card and band exploration use the shared surface treatment; inline advice corners follow the common radius while retaining its semantic color. Emergency-help loading/errors now follow `useCoachDataState('athlete')` before consulting the saved plan, avoiding the misleading Join a team state during initial team loading. Advice strings, selected symptom precedence, hydration shade order/quantities and UIL rules are unchanged.
+- `band-viewer.tsx`: shared Surface replaces the bespoke card shell. Its four sources, 48-point controls, fixed 220-point stage, local zoom/camera transitions and two-second user-triggered preview contract are unchanged. It has no navigation band flight or fabricated physical-button animation.
+- `body-strip.tsx`: supporting label/value rows stack at larger font scales instead of crowding. Values, unit conversion, simulated provenance and threshold-based notes remain unchanged.
+- `vitals.tsx`: slow-recovery note uses the same Surface spacing; source disclosure, safety limitation and signal selection remain unchanged.
+- `vital-cards.tsx`: each selected analysis sits in a consistent Surface; figures wrap and stack for accessibility sizes. Estimated-zone text/percentage groups stack above the same fill at large text; normal-size layout retains its reading order. Fixed clipping-prone zone row height becomes a minimum, and legend copy can wrap. Existing line/bar/strip/gauge types, all Fill percentages, colors, data, thresholds and calculations are preserved. `ui/charts.tsx` was not touched.
+- `heat-calendar.tsx`: shared Surface and consistent padding. Month date grid has a horizontally reachable minimum width so each date slot remains at least 44 points; the minimum grows for accessibility text. Week date circles grow with larger type. Date grouping, today overlay, peak calculation, selection, month offset, future-disabled state and color semantics are unchanged. Week/month chart structure remains present.
+- `practice-record.tsx`: clearer header semantics and reading-row spacing, retaining existing shared Rows surfaces without adding a card inside a card. Source units, measurement/ack times, policy, auth/team/record scoping, share payload and summary-only sample distinction remain unchanged.
+- `pair-band.tsx`: uses separate step-owned search/connection delays with cleanup on step/focus/app changes; old callbacks cannot advance the UI after Back, unmount or account change. Account-keyed flow uses existing auth/service APIs. Simulated connection waits for `savePairing` success before showing connected and has visible failure/retry; no Bluetooth layer or data access was added. Both repeating illustrations cancel and pause via the existing motion-activity hook. Rapid page reveals use restrained opacity entrances; protected headings/instructions/demo disclaimer remain. Device selection adopts the shared surface and the demo caption stays readable.
+
+### Checks actually performed
+
+- Targeted ESLint passed on the nine owned source files. Full `npx tsc --noEmit` passed after each source group; latest rerun is reported to root.
+- `git diff --check` passed after the source groups.
+- Twenty-five assertions executed the actual extracted pairing callbacks with stubbed timers/auth/save API: cancelled step has no callback, hidden state schedules nothing, pending save cannot update UI after cleanup, rejected save does not claim connection, successful save connects once, changed UID is excluded, and search timeout is cleaned up. This is callback behavior evidence, not a physical pairing or native UI test.
+- Fifteen named clinical/provenance/metric constants/helpers matched current HEAD: symptom choices/advice/shades/hydration mapping; estimated heart zones, skin reference, oxygen gauge and numerical helpers; pairing headings/instructions/step list. No graph implementation file was changed.
+- No permanent tests mirror reversible styles. Root owns all screenshots and native/web interaction evidence.
+
+### Findings resolved versus still pending
+
+Source changes address pairing timer/lifecycle and visible persistence failure, Learn's team-loading ambiguity, calendar target sizing, metric container/large-text crowding and shared surface consistency. Original phase-1 findings remain above as historical evidence; they are not all still-open bugs.
+
+Not changed: health/safety setup privacy-copy inconsistency, absence of a Profile health-edit destination, Profile native-picker/name/link behavior (other agent owns these), BodyStrip simulator threshold semantics, Home's repeated guidance affordances (shared HomeOverview owner), and real backend/connectivity functionality. No new permission, staff visibility, medical recommendation or measured band signal was introduced.
+
+Runtime verification remains pending for the full matrix above, especially 375×667 / 390×844 / 430×932 / desktop, large text/calendar horizontal reachability, guidance modal return/scroll, all five analyses and source disclosures, pairing Back/background/account-change/failure/retry, saved-record Share and navigation. Source/type/callback checks are not counted as opened screens or an accessibility pass.

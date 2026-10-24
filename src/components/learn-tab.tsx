@@ -6,13 +6,14 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { PressScale } from '@/components/motion/press-scale';
+import { Surface, surfaceStyles } from '@/components/ui/surface';
 import { ActionButton } from '@/components/ui/action-button';
 import { SafetyStatus, ZonePicker } from '@/components/protocols-tab';
 import { ListRow, Rows, SectionTitle } from '@/components/whoop-ui';
 import { Palette } from '@/constants/theme';
 import { enter } from '@/lib/motion';
 import { useEmergencyPlan } from '@/state/emergency-plan';
-import { useCoachData } from '@/state/team-session';
+import { useCoachDataState } from '@/state/team-session';
 
 // Learn, for athletes, as things to do rather than read: check how you feel and get told what to do,
 // see where help is (the team's emergency plan), check your hydration against the urine color chart
@@ -92,7 +93,7 @@ function HydrationCheck() {
   const [shade, setShade] = useState<number | null>(null);
   const result = shade === null ? null : hydration(shade);
   return (
-    <View style={styles.card}>
+    <Surface style={styles.card}>
       <View style={styles.shades}>
         {SHADES.map((color, i) => (
           <PressScale accessibilityLabel={`Shade ${i + 1} of 8`} accessibilityRole="button" accessibilityState={{ selected: shade === i }} key={color} onPress={() => setShade(i)} style={[styles.shade, compact && styles.shadeCompact, { backgroundColor: color }, shade === i && styles.shadeOn]}><Text accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.shadeNumber, { color: i < 5 ? Palette.canvas : Palette.ink }]}>{i + 1}</Text></PressScale>
@@ -110,15 +111,17 @@ function HydrationCheck() {
       ) : (
         <Text style={styles.cardHint}>Tap the shade closest to your urine color.</Text>
       )}
-    </View>
+    </Surface>
   );
 }
 
 /** Where help is: the team's emergency action plan, as the coach and trainers keep it. */
 function WhereHelpIs() {
-  const data = useCoachData('athlete');
+  const team = useCoachDataState('athlete');
+  const data = team.data;
   const [plan, , planState] = useEmergencyPlan(data?.sample ? null : data?.teamId ?? null);
   const rows = ([['aed', 'AED'], ['tub', 'Cooling tub'], ['hospital', 'Hospital'], ['caller', 'Calls 911']] as const).filter(([k]) => plan[k]?.trim());
+  if (team.status === 'loading' || team.status === 'error') return <><SectionTitle title="If something goes wrong" /><SafetyStatus label="your team" retry={team.retry} status={team.status} /></>;
   if (planState.status !== 'ready') return <><SectionTitle title="If something goes wrong" /><SafetyStatus label="emergency plan" retry={planState.retry} status={planState.status} /></>;
   if (!rows.length) return null;
   return (
@@ -151,7 +154,7 @@ export function LearnTab({ onOpenBand }: { onOpenBand: () => void }) {
 }
 
 const baseStyles = StyleSheet.create({
-  bandLink: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 16, flexDirection: 'row', gap: 20, minHeight: 112, overflow: 'hidden', paddingRight: 20 },
+  bandLink: { ...surfaceStyles.card, alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 28, flexDirection: 'row', gap: 20, minHeight: 112, overflow: 'hidden', paddingRight: 20 },
   bandDetailImage: { width: 88, height: 112 },
   bandLinkCopy: { flex: 1, gap: 8 },
   bandLinkAction: { color: Palette.coral, fontSize: 15, lineHeight: 21 },
@@ -165,13 +168,13 @@ const baseStyles = StyleSheet.create({
   checkOn: { backgroundColor: Palette.ink, borderColor: Palette.ink },
   checkMark: { color: Palette.canvas, fontSize: 16, fontWeight: '700' },
   hint: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22, marginTop: 12 },
-  result: { backgroundColor: Palette.surface, borderRadius: 16, borderWidth: 1, flexDirection: 'row', marginTop: 14, overflow: 'hidden' },
+  result: { backgroundColor: Palette.surface, borderRadius: 28, borderWidth: 1, flexDirection: 'row', marginTop: 14, overflow: 'hidden' },
   resultBar: { width: 5 },
   resultCopy: { flex: 1, gap: 4, padding: 16 },
   resultTitle: { fontSize: 20, fontWeight: '700' },
   resultBody: { color: Palette.ink, fontSize: 16, lineHeight: 22 },
   clear: { alignSelf: 'flex-start', marginTop: 4 },
-  card: { backgroundColor: Palette.surface, borderRadius: 16, padding: 16 },
+  card: { padding: 20 },
   shades: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   shade: { alignItems: 'center', borderColor: 'transparent', borderRadius: 10, borderWidth: 3, flexBasis: '10%', flexGrow: 1, justifyContent: 'center', minHeight: 56, minWidth: 44, paddingVertical: 8 },
   shadeCompact: { flexBasis: '20%' },

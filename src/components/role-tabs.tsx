@@ -9,6 +9,7 @@ import { HomeOverview } from '@/components/coach-home';
 import { CoachToday } from '@/components/coach-today';
 import { TrainerHomeOverview } from '@/components/trainer-home-overview';
 import { Card, ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
+import { Surface } from '@/components/ui/surface';
 import { ActionButton } from '@/components/ui/action-button';
 import { Palette } from '@/constants/theme';
 import { ZONES, type Zone } from '@/lib/practice';
@@ -82,7 +83,7 @@ export function AthleteHome({ onOpenBand }: { onOpenBand: () => void }) {
           </ScrollView>
         </View>
       </Modal>
-      <View style={styles.homeBandPanel}>
+      <Surface style={styles.homeBandPanel}>
         <View style={styles.homeModuleHead}>
           <PressScale accessibilityLabel="View your band" accessibilityHint="Opens your individual band signals and charts" accessibilityRole="button" onPress={onOpenBand} style={styles.homeBandLink}>
             <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><BandSpot height={84} id="athlete-home" quiet travel={false} /></View>
@@ -96,7 +97,7 @@ export function AthleteHome({ onOpenBand }: { onOpenBand: () => void }) {
           <Text style={styles.homeGuidanceRule}>Pair a HeatSense Band to view your personal signals. Field readings still guide practice.</Text>
           <ActionButton label="Pair your band" onPress={() => router.push('/pair-band')} style={styles.gapTop} variant="secondary" />
         </>}
-      </View>
+      </Surface>
       <YourTrainer teamId={data?.teamId ?? null} />
       <SpeakUp />
     </>
@@ -225,9 +226,9 @@ export function TrainerHome({ onOpenMonitor }: { onOpenMonitor: () => void }) {
 }
 
 const baseStyles = StyleSheet.create({
-  guidanceSheet: { backgroundColor: Palette.canvas, flex: 1, padding: 20 },
+  guidanceSheet: { backgroundColor: Palette.canvas, flex: 1, paddingHorizontal: 20, paddingTop: 24, paddingBottom: 16 },
   guidanceSheetHeader: { flexWrap: 'wrap', gap: 12 },
-  guidanceSheetContent: { gap: 16, paddingBottom: 32, paddingTop: 20 },
+  guidanceSheetContent: { gap: 24, paddingBottom: 40, paddingTop: 24 },
   homeBandLink: { alignItems: 'center', flexDirection: 'row', gap: 16, minHeight: 84, flexShrink: 1 },
   homeBandCopy: { gap: 8, flexShrink: 1 },
   homePressed: { opacity: 0.7 },
@@ -238,7 +239,7 @@ const baseStyles = StyleSheet.create({
   homeDisclosureText: { color: Palette.coral, fontSize: 16, fontWeight: '600' },
   homeGuidanceSummary: { color: Palette.ink, fontSize: 18, fontWeight: '500', lineHeight: 25 },
   homeGuidanceRule: { color: Palette.inkMuted, fontSize: 16, lineHeight: 23 },
-  homeBandPanel: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, gap: 4, marginTop: 28, paddingTop: 16 },
+  homeBandPanel: { gap: 12, marginTop: 28, padding: 20 },
   homeBandAction: { paddingHorizontal: 0, paddingVertical: 8 },
   speak: { borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, gap: 8, marginTop: 28, paddingTop: 20 },
   speakTitle: { color: Palette.ink, fontSize: 17, fontWeight: '600' },

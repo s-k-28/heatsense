@@ -1,10 +1,14 @@
 import { AnimatedText, Text } from '@/components/ui/text';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeInUp, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { AppState, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { cancelAnimation, Easing, FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
+import { ActionButton } from '@/components/ui/action-button';
+import { surfaceStyles } from '@/components/ui/surface';
+import { useMotionActive } from '@/lib/motion-activity';
+import { useAuthSession } from '@/state/auth-session';
 import { BandSpot } from '@/components/band-journey';
 import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
@@ -41,11 +45,13 @@ const COPY: Record<Step, string> = {
 };
 
 function BandShot({ id, size, light = false }: { id: string; size: number; light?: boolean }) {
-  const reduced = useReducedMotion();
+  const moving = useMotionActive();
   const pulse = useSharedValue(0.3);
   useEffect(() => {
-    if (light && !reduced) pulse.set(withRepeat(withSequence(withTiming(1, { duration: 500 }), withTiming(0.3, { duration: 700 })), -1));
-  }, [light, pulse, reduced]);
+    cancelAnimation(pulse); pulse.set(0.3);
+    if (light && moving) pulse.set(withRepeat(withSequence(withTiming(1, { duration: 500 }), withTiming(0.3, { duration: 700 })), -1));
+    return () => cancelAnimation(pulse);
+  }, [light, moving, pulse]);
   const glow = useAnimatedStyle(() => ({ opacity: pulse.value }));
   return (
     <BandSpot height={size} id={id} style={styles.shot}>
@@ -58,10 +64,13 @@ function BandShot({ id, size, light = false }: { id: string; size: number; light
 /** Phone ⋯ band, with a dot travelling between them, then a check once connected. */
 function Link({ connected }: { connected: boolean }) {
   const reduced = useReducedMotion();
+  const moving = useMotionActive();
   const travel = useSharedValue(0);
   useEffect(() => {
-    if (!connected && !reduced) travel.set(withRepeat(withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) }), -1));
-  }, [connected, reduced, travel]);
+    cancelAnimation(travel); travel.set(0);
+    if (!connected && moving) travel.set(withRepeat(withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) }), -1));
+    return () => cancelAnimation(travel);
+  }, [connected, moving, travel]);
   const dot = useAnimatedStyle(() => ({ transform: [{ translateX: travel.value * 110 }] }));
   return (
     <View accessibilityLabel={connected ? 'Connected' : 'Connecting'} accessible style={styles.link}>
@@ -80,6 +89,11 @@ function Link({ connected }: { connected: boolean }) {
 }
 
 export default function PairBandScreen() {
+  const { user } = useAuthSession();
+  return <PairBandFlow key={user?.uid ?? 'sample'} />;
+}
+
+function PairBandFlow() {
   const router = useRouter();
   const reduced = useReducedMotion();
   const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
@@ -87,34 +101,57 @@ export default function PairBandScreen() {
   const [step, setStep] = useState<Step>('ready');
   const [help, setHelp] = useState(false);
   const [found, setFound] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const [pairError, setPairError] = useState<string | null>(null);
+  const [savingPair, setSavingPair] = useState(false);
+  const [connectAttempt, setConnectAttempt] = useState(0);
+  const operation = useRef(0);
+  const focused = useIsFocused();
+  const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  const present = focused && foreground;
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => setForeground(state === 'active'));
+    return () => subscription.remove();
+  }, []);
 
   const index = STEPS.indexOf(step);
-  const go = (next: Step) => { setHelp(false); if (next === 'select') setFound(false); setStep(next); };
+  const go = (next: Step) => { operation.current++; setPairError(null); setSavingPair(false); setHelp(false); if (next === 'select') setFound(false); setStep(next); };
   const finish = () => (inSetup ? router.replace('/notifications') : router.canGoBack() ? router.back() : router.replace('/dashboard?role=athlete&tab=band'));
   const back = () => (index > 0 && step !== 'connected' ? go(STEPS[index - 1]) : router.canGoBack() ? router.back() : finish());
 
-  // Searching for nearby bands.
+  // Each step owns its own delay. Leaving the step/route cancels it immediately.
   useEffect(() => {
-    if (step !== 'select') return;
-    timer.current = setTimeout(() => setFound(true), 1200);
-  }, [step]);
+    if (step !== 'select' || !present) return;
+    const timer = setTimeout(() => setFound(true), 1200);
+    return () => clearTimeout(timer);
+  }, [present, step]);
 
-  // Connecting, then connected.
   useEffect(() => {
-    if (step !== 'connecting') return;
-    timer.current = setTimeout(() => {
-      setPreference('bandConnected', true);
-      // Signed-in athletes keep the pairing on their account; offline sample builds just remember it.
-      if (firestore && firebaseAuth?.currentUser) savePairing(SERIAL).catch(() => {});
-      setStep('connected');
+    if (step !== 'connecting' || !present) return;
+    let live = true;
+    const token = ++operation.current;
+    const owner = firebaseAuth?.currentUser?.uid ?? null;
+    const current = () => live && operation.current === token && AppState.currentState === 'active' && (firebaseAuth?.currentUser?.uid ?? null) === owner;
+    const timer = setTimeout(async () => {
+      if (!current()) return;
+      setSavingPair(true);
+      try {
+        // Same simulated pairing/API. A rejected account save must not claim success.
+        if (firestore && owner) await savePairing(SERIAL);
+        if (!current()) return;
+        setPreference('bandConnected', true);
+        setStep('connected');
+      } catch {
+        if (current()) setPairError('Couldn’t save the demo pairing. Check your connection and try again.');
+      } finally {
+        if (current()) setSavingPair(false);
+      }
     }, 1800);
-  }, [step]);
+    return () => { live = false; clearTimeout(timer); };
+  }, [connectAttempt, present, step]);
 
-  const rise = (delay: number) => (reduced ? undefined : FadeInUp.delay(delay).duration(520));
-  const fade = (delay: number) => (reduced ? undefined : FadeIn.delay(delay).duration(420));
-  const linking = step === 'connecting' || step === 'connected';
+  const rise = (delay: number) => (reduced ? undefined : FadeIn.delay(Math.min(delay, 80)).duration(220));
+  const fade = (delay: number) => (reduced ? undefined : FadeIn.delay(Math.min(delay, 80)).duration(220));
+  const linking = step === 'connected' || (step === 'connecting' && !pairError);
 
   const action: { label: string; onPress: () => void } | null = {
     ready: { label: 'Get started', onPress: () => go('wear') },
@@ -150,6 +187,9 @@ export default function PairBandScreen() {
         </Animated.View>
       ) : null}
 
+      {savingPair && step === 'connecting' ? <Text accessibilityLiveRegion="polite" style={styles.help}>Saving demo pairing…</Text> : null}
+      {pairError ? <View style={styles.pairFailure}><Text accessibilityRole="alert" style={styles.error}>{pairError}</Text><ActionButton label="Try again" onPress={() => { setPairError(null); setSavingPair(false); setConnectAttempt(value => value + 1); }} variant="secondary" /></View> : null}
+
       {help ? (
         <Text style={styles.help}>
           {step === 'wear'
@@ -170,12 +210,14 @@ export default function PairBandScreen() {
 }
 
 const styles = StyleSheet.create({
+  pairFailure: { gap: 16, marginTop: 16 },
+  error: { color: Entry.peach, fontSize: 16, lineHeight: 24 },
   pressed: { opacity: 0.8 },
   stage: { alignItems: 'center', marginTop: 24 },
   shot: { alignSelf: 'center' },
   led: { backgroundColor: Entry.peach, borderRadius: 6, height: 12, position: 'absolute', shadowColor: Entry.peach, shadowOpacity: 1, shadowRadius: 10, width: 12 },
-  device: { alignItems: 'center', backgroundColor: Entry.surface, borderColor: Entry.line, borderRadius: 18, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, minHeight: 60, paddingHorizontal: 18 },
-  deviceText: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16 },
+  device: { ...surfaceStyles.card, alignItems: 'center', backgroundColor: Entry.surface, borderColor: Entry.line, borderRadius: 28, borderWidth: 1, flexDirection: 'row', gap: 12, justifyContent: 'space-between', marginTop: 20, minHeight: 60, paddingHorizontal: 18 },
+  deviceText: { flexShrink: 1, color: Entry.ink, fontFamily: Entry.strong, fontSize: 16 },
   searching: { color: Entry.muted, fontFamily: Entry.medium, fontSize: 15, marginTop: 24, textAlign: 'center' },
   help: { color: Entry.muted, fontFamily: Entry.body, fontSize: 15, lineHeight: 22, marginTop: 16 },
   link: { alignItems: 'center', alignSelf: 'stretch', flexDirection: 'row', justifyContent: 'space-between', marginVertical: 16 },
@@ -186,6 +228,6 @@ const styles = StyleSheet.create({
   travel: { backgroundColor: Entry.peach, borderRadius: 5, height: 10, left: 0, position: 'absolute', width: 10 },
   check: { alignItems: 'center', backgroundColor: Entry.peach, borderRadius: 26, height: 52, justifyContent: 'center', position: 'absolute', width: 52 },
   open: { flexGrow: 1, minHeight: 24 },
-  demo: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12, lineHeight: 17, marginBottom: 12, textAlign: 'center' },
+  demo: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, marginBottom: 12, textAlign: 'center' },
   actions: { gap: 14 },
 });
