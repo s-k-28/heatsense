@@ -2,7 +2,7 @@ import { AnimatedText, Text } from '@/components/ui/text';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming, type SharedValue } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, cancelAnimation, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -45,7 +45,7 @@ export function EntryScreen({ children, background, backgroundDelay, backgroundD
 const headingEase = Easing.out(Easing.cubic);
 
 function HeadingLine({ text, progress, style }: { text: string; progress: SharedValue<number>; style: StyleProp<object> }) {
-  const rise = useAnimatedStyle(() => ({ opacity: Math.min(1, progress.value * 2.2), transform: [{ translateY: 20 * (1 - progress.value) }] }));
+  const rise = useAnimatedStyle(() => ({ opacity: Math.min(1, progress.value * 2.2), transform: [{ translateY: 10 * (1 - progress.value) }] }));
   return (
     <View style={entryStyles.headingMask}>
       <AnimatedText style={[style, rise]}>{text}</AnimatedText>
@@ -58,7 +58,7 @@ function HeadingLine({ text, progress, style }: { text: string; progress: Shared
  * 20 px through its own mask (the second 180 ms after the first). `hero` is the large size
  * for open screens, `form` the smaller one above fields.
  */
-export function EntryHeading({ lead, accent, size = 'form', compact = false, delay = 0, align = 'left', style }: {
+export function EntryHeading({ lead, accent, size = 'form', compact = false, align = 'left', style }: {
   lead: string;
   accent: string;
   size?: 'hero' | 'form';
@@ -71,10 +71,11 @@ export function EntryHeading({ lead, accent, size = 'form', compact = false, del
   const one = useSharedValue(reducedMotion ? 1 : 0);
   const two = useSharedValue(reducedMotion ? 1 : 0);
   useEffect(() => {
-    if (reducedMotion) return;
-    one.set(withDelay(delay, withTiming(1, { duration: 650, easing: headingEase })));
-    two.set(withDelay(delay + 180, withTiming(1, { duration: 700, easing: headingEase })));
-  }, [delay, one, reducedMotion, two]);
+    if (reducedMotion) { cancelAnimation(one); cancelAnimation(two); one.set(1); two.set(1); return; }
+    one.set(withTiming(1, { duration: 300, easing: headingEase }));
+    two.set(withTiming(1, { duration: 300, easing: headingEase }));
+    return () => { cancelAnimation(one); cancelAnimation(two); };
+  }, [one, reducedMotion, two]);
   const type = size === 'hero'
     ? [entryStyles.headline, compact && entryStyles.headlineCompact]
     : [entryStyles.formHeadline, compact && entryStyles.formHeadlineCompact];
@@ -120,7 +121,7 @@ export function OnboardingProgress({ step, total }: { step: number; total: numbe
   const reducedMotion = useReducedMotion();
   const fill = useSharedValue(reducedMotion ? step / total : (step - 1) / total);
   useEffect(() => {
-    fill.set(withTiming(step / total, { duration: reducedMotion ? 0 : 700, easing: Easing.out(Easing.cubic) }));
+    fill.set(withTiming(step / total, { duration: reducedMotion ? 0 : 300, easing: Easing.out(Easing.cubic) }));
   }, [fill, reducedMotion, step, total]);
   const bar = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
   return (

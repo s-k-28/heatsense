@@ -151,3 +151,9 @@
 - Shared action buttons retain 120/160 ms press feedback; unused spinner slots no longer squeeze labels. Alerts and Plan Editor use these controls.
 - Captured Metro-backed iPhone 17 Pro Max recordings in `~/HeatSense-motion-review-2026-10-23/`. Orb recording spans over one 8-second shape cycle. Profile recording covers Overview → Settings → Overview; its frame review prompted removal of nested row arrival staggering afterward.
 - Limitations: no measured 60-fps performance claim; simulator recordings use variable frame rate. Large-text/physical-device matrix and scroll-viewport loop culling remain unverified. App background/route focus gating is implemented, not a claim that every scrolled-off illustration is culled.
+
+### Full Coach + Athlete refinement
+- Route transitions are300ms (none with Reduce Motion); press/release170/180ms; segmented selection250ms. No arbitrary stagger in generic section entrances. Existing metric draw-on, ring behavior and chart timelines are preserved.
+- Entry headings arrive together in300ms and immediately settle if Reduce Motion changes. Athlete entry helpers keep web content in normal flow to avoid retained absolute positions.
+- Resting band images are static across dashboard/entry surfaces. BandViewer exploration remains user-triggered; no continuous decorative bob/tilt. Onboarding route travel remains separate; dashboard tabs never share a flying band.
+- Preview frame and framed modals keep one component hierarchy across resize, preserving open dialogs and input state.
