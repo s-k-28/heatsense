@@ -82,7 +82,7 @@ function ProfileDialog({ title, onClose, busy = false, children }: { title: stri
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={baseStyles.dialogViewport}>
         <Pressable accessible={false} onPress={close} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={[surfaceStyles.card, baseStyles.dialogSheet]}>
-          <ScrollView contentContainerStyle={baseStyles.dialogContent} keyboardShouldPersistTaps="handled">
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={baseStyles.dialogContent} keyboardShouldPersistTaps="handled">
             <Text accessibilityRole="header" style={baseStyles.sectionTitle}>{title}</Text>
             {children}
           </ScrollView>

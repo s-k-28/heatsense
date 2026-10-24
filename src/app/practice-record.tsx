@@ -152,7 +152,7 @@ function PracticeRecordContent() {
         <Text accessibilityRole="header" style={styles.barTitle}>Practice record</Text>
         <ActionButton accessibilityLabel={copied ? sample ? 'Copied sample summary' : 'Copied practice record' : sample ? 'Share sample summary' : 'Share practice record'} busy={sharing} busyLabel="Sharing…" disabled={!canShare} label={copied ? 'Copied' : 'Share'} onPress={share} style={styles.shareAction} />
       </View>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.column}>{body}</View>
       </ScrollView>
     </View>

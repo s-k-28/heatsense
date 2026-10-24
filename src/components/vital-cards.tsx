@@ -1,7 +1,7 @@
 import { Segmented } from '@/components/motion/segmented';
 import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
@@ -191,15 +191,38 @@ export function VitalCards({ history, simulated = false, selectedSignal, onSigna
   const active = signals.some((s) => s.id === selected) ? selected : 'heart';
   return (
     <View style={styles.cards}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Band signals">
-        <Segmented size="sm" itemWidth={112} value={active} highlightedKey={previewHeartRate ? 'heart' : undefined} onChange={setSelected} options={signals.map(signal => ({ key: signal.id as BandSignal, label: signal.label === 'Sweat (GSR)' ? 'Sweat' : signal.label, accessibilityLabel: `${signal.label}, ${signal.value}` }))} />
-      </ScrollView>
+      <SignalTabs active={active} onChange={setSelected} previewHeartRate={previewHeartRate} signals={signals} />
       {active === 'heart' ? <HeartRate history={history} startLabel={startLabel} /> : null}
       {active === 'skin' && complete(skin) ? <SkinTemp simulated={simulated} startLabel={startLabel} t={skin} /> : null}
       {active === 'sweat' && complete(sweat) ? <Sweat s={sweat} startLabel={startLabel} /> : null}
       {active === 'movement' ? <Movement history={history} simulated={simulated} startLabel={startLabel} /> : null}
       {active === 'oxygen' && complete(spo2) ? <BloodOxygen o={spo2} /> : null}
     </View>
+  );
+}
+
+/** Keep the selected signal visible when a preview changes it or the viewport resizes. */
+function SignalTabs({ active, onChange, previewHeartRate, signals }: { active: BandSignal; onChange: (signal: BandSignal) => void; previewHeartRate: boolean; signals: { id: string; label: string; value: string }[] }) {
+  const scroll = useRef<ScrollView>(null);
+  const offset = useRef(0);
+  const [viewport, setViewport] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const reduced = useReducedMotion();
+  const index = signals.findIndex(signal => signal.id === active);
+  useEffect(() => {
+    if (index < 0 || viewport <= 0 || contentWidth <= 0) return;
+    const left = 3 + index * 112; // same 3-point padding and item width as the small Segmented
+    const right = left + 112;
+    const next = left < offset.current ? left - 3 : right > offset.current + viewport ? right - viewport + 3 : offset.current;
+    const target = Math.max(0, Math.min(contentWidth - viewport, next));
+    if (Math.abs(target - offset.current) < 1) return;
+    scroll.current?.scrollTo({ x: target, y: 0, animated: !reduced });
+    offset.current = target;
+  }, [contentWidth, index, previewHeartRate, reduced, viewport]);
+  return (
+    <ScrollView accessibilityLabel="Band signals" horizontal onContentSizeChange={width => setContentWidth(width)} onLayout={event => setViewport(event.nativeEvent.layout.width)} onScroll={event => { offset.current = event.nativeEvent.contentOffset.x; }} ref={scroll} scrollEventThrottle={16} showsHorizontalScrollIndicator={false}>
+      <Segmented size="sm" itemWidth={112} value={active} highlightedKey={previewHeartRate ? 'heart' : undefined} onChange={onChange} options={signals.map(signal => ({ key: signal.id as BandSignal, label: signal.label === 'Sweat (GSR)' ? 'Sweat' : signal.label, accessibilityLabel: `${signal.label}, ${signal.value}` }))} />
+    </ScrollView>
   );
 }
 
