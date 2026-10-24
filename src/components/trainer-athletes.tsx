@@ -75,7 +75,7 @@ export function TrainerAthletes({ role = 'trainer', embedded = false, onShare }:
 
       {athletes.length > 0 && filters.length > 1 ? role === 'coach' ? (
         <ScrollView contentContainerStyle={styles.coachChips} horizontal showsHorizontalScrollIndicator={false}>
-          {filters.map((key) => <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === key }} key={key} onPress={() => setFilter(key)} style={({ pressed }) => [styles.coachChip, filter === key && styles.coachChipOn, pressed && styles.pressed]}>
+          {filters.map((key) => <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === key }} key={key} onPress={() => setFilter(key)} style={({ pressed }) => [styles.coachChip, filter === key && styles.coachChipOn, pressed && styles.pressed]} aria-selected={filter === key}>
             <Text style={[styles.coachChipText, filter === key && styles.coachChipTextOn]}>{FILTERS[key].label} {athletes.filter((athlete) => FILTERS[key].match(athlete)).length}</Text>
           </Pressable>)}
         </ScrollView>

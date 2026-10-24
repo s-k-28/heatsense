@@ -62,7 +62,7 @@ function SelfCheck() {
         {SYMPTOMS.map((s) => {
           const on = picked.includes(s.label);
           return (
-            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} key={s.label} onPress={() => toggle(s.label)} style={({ pressed }) => [styles.symptom, singleColumn && styles.symptomWide, on && styles.symptomOn, pressed && styles.pressed]}>
+            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: on }} key={s.label} onPress={() => toggle(s.label)} style={({ pressed }) => [styles.symptom, singleColumn && styles.symptomWide, on && styles.symptomOn, pressed && styles.pressed]} aria-checked={on}>
               <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.check, on && styles.checkOn]}><Text style={styles.checkMark}>{on ? '✓' : ''}</Text></View>
               <Text style={styles.symptomText}>{s.label}</Text>
             </Pressable>
@@ -96,7 +96,7 @@ function HydrationCheck() {
     <Surface style={styles.card}>
       <View style={styles.shades}>
         {SHADES.map((color, i) => (
-          <PressScale accessibilityLabel={`Shade ${i + 1} of 8`} accessibilityRole="button" accessibilityState={{ selected: shade === i }} key={color} onPress={() => setShade(i)} style={[styles.shade, compact && styles.shadeCompact, { backgroundColor: color }, shade === i && styles.shadeOn]}><Text accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.shadeNumber, { color: i < 5 ? Palette.canvas : Palette.ink }]}>{i + 1}</Text></PressScale>
+          <PressScale accessibilityLabel={`Shade ${i + 1} of 8`} accessibilityRole="button" accessibilityState={{ selected: shade === i }} key={color} onPress={() => setShade(i)} style={[styles.shade, compact && styles.shadeCompact, { backgroundColor: color }, shade === i && styles.shadeOn]} aria-selected={shade === i}><Text accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.shadeNumber, { color: i < 5 ? Palette.canvas : Palette.ink }]}>{i + 1}</Text></PressScale>
         ))}
       </View>
       <View style={styles.shadeAxis}><Text style={styles.axisText}>Lighter</Text><Text style={styles.axisText}>Darker</Text></View>

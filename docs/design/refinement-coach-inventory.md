@@ -178,3 +178,11 @@ Applied after reading [published principles](refinement/design-principles.md) an
 ### Runtime still pending for this styling batch
 
 Root owns browser/native verification. Check actual bundled font faces/weights, brand-button contrast, photo contrast, focused fields, keyboard Save/Done reachability, long names/code, narrow wrapped requests/actions, large text, role-specific Home modal return and Plan/Alerts entering behavior. Re-run the relevant H/F/P/T/A checklist rows above; source typechecking and mocked fixtures do not mark those runtime rows passed. Earlier root observations predate this visual checkpoint unless a new artifact is explicitly attached.
+
+## Root QA follow-up — Plan editor
+
+Root found web steppers exposing an adjustable parent while hiding both +/- buttons. The editor now preserves the native adjustable action/value and hidden-child model, while web exposes a group with named Decrease/Increase buttons. Existing increments, clamps, bounds,44pt targets and form/store logic remain unchanged. ZoneCheck now distinguishes team loading, error with retry, and an actual no-reading state using existing metadata; its checkPlan computation and Fix action are unchanged.
+
+Root also identified that native Alert confirmation is unsuitable as the sole web delete path. Web now uses an inline shared Surface with Cancel/Delete plan actions. Native retains its Alert. Both confirmed paths invoke the same deletePlan(id) then close handler; cancel retains the plan. No persistence API was changed.
+
+Focused ESLint, full TypeScript and diff checks passed. Actual-source function/callback fixtures in `/tmp/heatsense-plan-accessibility-check.cjs` passed web/native control semantics, clamp behavior, zone status/retry/check branching and web/native delete/cancel routing. These are mocked source fixtures; root owns actual keyboard operation, local test-plan Save/Delete persistence and screenshots. FieldCheckSheet End practice invokes its existing handler directly and has no corresponding Alert-only web path.

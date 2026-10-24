@@ -285,7 +285,7 @@ function RoleSelector({ onChange, value }: { onChange: (role: Role) => void; val
                 styles.roleChip,
                 selected && styles.roleChipSelected,
                 pressed && styles.buttonPressed,
-              ]}>
+              ]} aria-selected={selected}>
               <Text style={[styles.roleText, selected && styles.roleTextSelected]}>{role}</Text>
             </Pressable>
           );

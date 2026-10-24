@@ -98,7 +98,7 @@ function PracticeRecordContent() {
       <ActionButton label="Try again" onPress={() => setAttempt((value) => value + 1)} style={styles.retry} variant="secondary" />
     </View>
   );
-  else if (!sample && !selected) body = <ActivityIndicator accessible accessibilityRole="progressbar" accessibilityState={{ busy: true }} accessibilityLabel="Loading practice" color={Palette.inkMuted} style={styles.state} />;
+  else if (!sample && !selected) body = <ActivityIndicator accessible accessibilityRole="progressbar" accessibilityState={{ busy: true }} accessibilityLabel="Loading practice" color={Palette.inkMuted} style={styles.state} aria-busy={true} />;
   else if (!session) body = <Text style={styles.message}>This practice could not be found.</Text>;
   else body = (
     <>
@@ -122,7 +122,7 @@ function PracticeRecordContent() {
           <Text style={styles.message}>Couldn’t load the saved readings. No readings have been changed.</Text>
           <ActionButton label="Try again" onPress={() => setAttempt((value) => value + 1)} style={styles.retry} variant="secondary" />
         </View>
-          : !readingResult ? <ActivityIndicator accessible accessibilityRole="progressbar" accessibilityState={{ busy: true }} accessibilityLabel="Loading readings" color={Palette.inkMuted} />
+          : !readingResult ? <ActivityIndicator accessible accessibilityRole="progressbar" accessibilityState={{ busy: true }} accessibilityLabel="Loading readings" color={Palette.inkMuted} aria-busy={true} />
             : !readings.length ? <Text style={styles.message}>No field readings were recorded in this practice.</Text>
               : <Rows>{readings.map((reading) => (
                 <View accessible accessibilityLabel={`${recordTime(reading.measuredAt, session.startedAt)}, ${reading.enteredValue} degrees ${reading.enteredUnit === 'C' ? 'Celsius' : 'Fahrenheit'} WBGT, ${ZONES[reading.zone].label}. ${SOURCE_LABEL[reading.source]}. ${reading.acknowledgedAt ? `Guidance applied at ${recordTime(reading.acknowledgedAt, session.startedAt)}` : 'Guidance not confirmed'}`} key={reading.id} style={styles.reading}>

@@ -74,7 +74,7 @@ function LiveRow({ a, role }: { a: AthleteView; role: 'trainer' | 'coach' }) {
         </Text>
       </View>
       <View style={styles.liveSignal}>
-        {live.stale ? <View style={styles.spark} /> : <Spark color={live.status === 'watch' ? Palette.warning : Palette.inkMuted} values={live.history} />}
+        {live.stale ? <View style={styles.spark} /> : <Spark color={live.status === 'watch' ? Palette.warning : '#B0BAC0'} values={live.history} />}
         <Text style={[styles.heartRate, { color: tone }]}>{live.stale ? '—' : live.heartRate}<Text style={styles.unit}> bpm</Text></Text>
       </View>
     </Pressable>
@@ -152,7 +152,7 @@ export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach
       ) : null}
       {currentChecks.length ? (
         <View style={styles.checked}>
-          <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCheckIns }} onPress={() => setShowCheckIns(!showCheckIns)} style={({ pressed }) => [styles.checkedToggle, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCheckIns }} onPress={() => setShowCheckIns(!showCheckIns)} style={({ pressed }) => [styles.checkedToggle, pressed && styles.pressed]} aria-expanded={showCheckIns}>
             <Text style={styles.checkedLabel}>{currentChecks.length} checked in</Text>
             <Text style={styles.checkedLabel}>{showCheckIns ? 'Hide' : 'View'}</Text>
           </Pressable>

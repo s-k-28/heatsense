@@ -308,7 +308,7 @@ function VitalCard({ alternateData, color, data, icon, label, unit, value, varia
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       onPress={toggleSignal}
-      style={styles.vitalCardPressable}>
+      style={styles.vitalCardPressable} aria-selected={active}>
       <Animated.View
         style={[
           styles.vitalCard,

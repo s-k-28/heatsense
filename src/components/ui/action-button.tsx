@@ -47,7 +47,7 @@ export function ActionButton({ label, onPress, variant = 'primary', disabled = f
         focused && styles.focused,
         disabled && !busy && styles.disabled,
         pressed && !blocked && styles.pressed,
-      ]}>
+      ]} aria-busy={busy}>
       <View style={styles.content}>
         {busy ? <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.spinnerSlot}><ActivityIndicator color={ink} size="small" /></View> : null}
         <Text style={[styles.label, { color: ink }]}>{shownLabel}</Text>

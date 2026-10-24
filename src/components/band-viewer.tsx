@@ -139,7 +139,7 @@ export function BandViewer({ onExploreHeartRate, onPreviewPhase }: {
           <Text style={styles.title}>{current.label}</Text>
           <Text style={styles.counter}>{view + 1} / {VIEWS.length}</Text>
         </View>
-        <PressScale accessibilityLabel={zoomed ? 'Zoom out of band view' : 'Zoom in on band view'} accessibilityRole="button" accessibilityState={{ disabled: busy, expanded: zoomed }} disabled={busy} onPress={() => setZoomed(value => !value)} style={[styles.control, busy && styles.disabled]}>
+        <PressScale accessibilityLabel={zoomed ? 'Zoom out of band view' : 'Zoom in on band view'} accessibilityRole="button" accessibilityState={{ disabled: busy, expanded: zoomed }} disabled={busy} onPress={() => setZoomed(value => !value)} style={[styles.control, busy && styles.disabled]} aria-expanded={zoomed}>
           <Svg aria-hidden={true} height={22} viewBox="0 0 24 24" width={22}>
             <Circle cx={10} cy={10} fill="none" r={6} stroke={palette.ink} strokeWidth={1.7} />
             <Path d={`M14.5 14.5 21 21 M7 10h6${zoomed ? '' : ' M10 7v6'}`} fill="none" stroke={palette.ink} strokeLinecap="round" strokeWidth={1.7} />
