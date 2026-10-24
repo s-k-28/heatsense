@@ -50,7 +50,7 @@ export function useViewportSize() {
 export function FramedModalContent({ backdrop, children }: { backdrop?: boolean; children: ReactNode }) {
   const frame = useViewportSize();
   return (
-    <View pointerEvents="box-none" style={frame.framed ? [styles.modalCenter, backdrop && styles.modalBackdrop] : styles.fill}>
+    <View pointerEvents="box-none" style={[frame.framed ? styles.modalCenter : styles.fill, backdrop && styles.modalBackdrop]}>
       <View style={frame.framed ? [styles.modalFrame, { width: frame.width, height: frame.height }] : styles.fill}>{children}</View>
     </View>
   );
