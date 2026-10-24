@@ -5,9 +5,10 @@ import { createContext, useContext } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { CoachLargeTitle, LargeTitle, type DashboardRole } from '@/components/dashboard-shell';
+import { TeamTabClassic } from '@/components/team-tab-classic';
 import { HeatIcon } from '@/components/heat-icon';
 import { AlertsTab } from '@/components/alerts-tab';
-import { PlanTab, TeamTab } from '@/components/coach-tabs';
+import { PlanTab } from '@/components/coach-tabs';
 import { ProfileTab } from '@/components/profile-tab';
 import { shareMessage, type InviteShareResult } from '@/components/ui/share-message';
 import { CoachHome as CoachHomeScreen } from '@/components/coach-home';
@@ -76,7 +77,7 @@ export function DashboardContent({ onNavigate, role, tab }: { onNavigate?: (tab:
 function CoachContent({ tab }: { tab: string }) {
   const go = useContext(NavContext);
   if (tab === 'plan') return <><CoachLargeTitle title="Plan" /><PlanTab /></>;
-  if (tab === 'team') return <><CoachLargeTitle title="Team" /><TeamTab /></>;
+  if (tab === 'team') return <><CoachLargeTitle title="Team" /><TeamTabClassic /></>;
   if (tab === 'alerts') return <><CoachLargeTitle title="Alerts" /><AlertsTab onNavigate={go} /></>;
   if (tab === 'profile') return <><CoachLargeTitle title="Profile" /><ProfileTab role="Coach" /></>;
   return <CoachHome />;

@@ -28,7 +28,7 @@ import {
 } from '@/services/practice-sessions';
 import { askForHeatAlerts } from '@/services/heat-alerts';
 import { useTeamDraft } from '@/state/onboarding';
-import { endPractice, startPractice, useTemperature } from '@/state/preferences';
+import { endPractice, startPractice, usePreferences, useTemperature } from '@/state/preferences';
 
 const RECHECK_CHOICES = [15, 30, 45, 60] as const;
 const MEASURED_CHOICES = [0, 5, 10, 15] as const;
@@ -92,7 +92,7 @@ function FieldCheckContent({ onClose, visible, trainerTeamId, uid, authReady }: 
 
   let body;
   if (!authReady) body = <ActivityIndicator accessibilityLabel="Loading account" color={Palette.inkMuted} style={styles.loading} />;
-  else if (!firestore) body = <Notice text="Practice records are unavailable in sample mode." />;
+  else if (!firestore) body = <SamplePractice onClose={onClose} />;
   else if (!uid) body = <><Notice text="Sign in to view and save your team’s practice records." /><ActionButton label="Sign in" onPress={() => { onClose(); router.push('/sign-in'); }} /></>;
   else if (!trainer && lookup?.failed) body = <><Notice text="Couldn’t find your team. Check your connection and try again." /><ActionButton label="Try again" onPress={retryLookup} variant="secondary" /></>;
   else if (teamId === undefined || (teamId && session === undefined && !failed)) body = <ActivityIndicator accessibilityLabel="Loading practice records" color={Palette.inkMuted} style={styles.loading} />;
@@ -116,6 +116,25 @@ function FieldCheckContent({ onClose, visible, trainerTeamId, uid, authReady }: 
         <ScrollView contentContainerStyle={styles.content} keyboardDismissMode="interactive" keyboardShouldPersistTaps="always">{body}</ScrollView>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+/** Sample mode has no team record to save to, so a practice here only runs the clock on this device. */
+function SamplePractice({ onClose }: { onClose: () => void }) {
+  const { practiceStartedAt } = usePreferences();
+  if (practiceStartedAt === null) {
+    return (
+      <>
+        <Notice text="Sample mode: nothing is saved to a team. Starting a sample practice runs the practice clock and the Dynamic Island on this device." />
+        <ActionButton label="Start sample practice" onPress={() => { startPractice(Date.now()); onClose(); }} />
+      </>
+    );
+  }
+  return (
+    <>
+      <Notice text={`Sample practice running since ${time(new Date(practiceStartedAt))}.`} />
+      <ActionButton label="End sample practice" onPress={() => { endPractice(); onClose(); }} variant="secondary" />
+    </>
   );
 }
 
