@@ -68,7 +68,8 @@
     "check:unused": "knip",
     "typecheck": "tsc --noEmit",
     "test:logic": "node scripts/check-uil-wbgt.ts && node scripts/check-recheck.ts && node scripts/check-plan-check.ts && node scripts/check-band-simulator.ts",
-    "check:docs": "node scripts/check-doc-links.mjs"
+    "check:docs": "node scripts/check-doc-links.mjs",
+    "check:email-auth": "node scripts/check-email-auth.mjs"
   },
   "private": true
 }

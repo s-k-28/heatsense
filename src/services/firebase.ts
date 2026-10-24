@@ -5,13 +5,21 @@ import { connectAuthEmulator, getAuth, initializeAuth, type Auth, type Persisten
 import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore';
 import { Platform } from 'react-native';
 
-const config = {
+import heatSenseClient from '@/constants/firebase-client.json';
+
+const environmentConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
 };
+
+// These are public client identifiers, already published in .env.example, not
+// service-account credentials. A fresh device build must support real sign-in
+// without a developer's ignored .env file. A custom project must supply its full
+// config; never fill an incomplete custom project with HeatSense identifiers.
+const config = Object.values(environmentConfig).some(Boolean) ? environmentConfig : heatSenseClient;
 
 const configured = Boolean(config.apiKey && config.authDomain && config.projectId && config.appId);
 export const firebaseApp = configured ? (getApps().length ? getApp() : initializeApp(config)) : null;
@@ -45,6 +53,6 @@ if (process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATORS === '1' && firebaseAuth && fi
 }
 
 export function requireFirebaseAuth(): Auth {
-  if (!firebaseAuth) throw new Error('Sign-in is unavailable in this sample build.');
+  if (!firebaseAuth) throw new Error('Firebase configuration is incomplete. Set all Firebase client values in .env, then restart Metro and reload the app.');
   return firebaseAuth;
 }

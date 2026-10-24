@@ -2,6 +2,16 @@
 
 HeatSense uses Firebase Authentication. Google sign in uses the native Google SDK on iOS and Android and a Firebase popup on web. The app only opens account screens after Firebase confirms a user. Apple sign in is deferred until Apple Developer access is available.
 
+## Email/password on a development iPhone
+
+A fresh build includes the public HeatSense Firebase configuration from `src/constants/firebase-client.json`, matching `.env.example`. Email/password sign-in no longer needs an ignored local `.env` file. This does not bypass Firebase Authentication, security rules, or role checks. Google native OAuth still uses the client IDs configured through the template below.
+
+If an older build says **“Sign-in is unavailable in this sample build”**, pull current `main`, restart Metro with `npm start -- --dev-client --clear`, and reload the app. An installed bundle needs a new build if it is not loading from Metro. No native module was added for this fix.
+
+For a custom project, set all required Firebase client values together. For hosted accounts, leave both emulator flags unset. Accounts created in the local Auth emulator do not exist in the hosted project; the default loopback emulator cannot be reached through a phone's own `127.0.0.1`.
+
+Regression: `npm run check:email-auth` tests the actual app service with no Expo environment injected. With local emulators running, `npm run check:email-auth -- --emulator` additionally exercises the real SDK account/sign-in flow without sending test credentials to production. This is not a physical-device or hosted-account sign-in test.
+
 ## Firebase project
 
 1. The dedicated **HeatSense** Firebase project is `heatsense-aa3c8`. Google Authentication is enabled with `siddarthakodithyala28@gmail.com` as its support email. Add each deployed web domain to Authorized domains before using web sign-in there.

@@ -12,6 +12,7 @@ const parseEnv = (source) => Object.fromEntries(
     }),
 );
 const example = parseEnv(read('.env.example'));
+const bundledClient = JSON.parse(read('src/constants/firebase-client.json'));
 const localEnv = existsSync(new URL('.env', root)) ? parseEnv(read('.env')) : null;
 const problems = [];
 const required = [
@@ -28,6 +29,13 @@ for (const key of required) {
   if (!example[key]) problems.push(`${key} is missing from .env.example`);
   if (localEnv && localEnv[key] !== example[key]) {
     problems.push(`${key} in .env differs from the configured HeatSense client`);
+  }
+}
+
+// Fresh physical-device installs use this public config when no .env is present.
+for (const [field, envKey] of Object.entries({ apiKey: 'API_KEY', authDomain: 'AUTH_DOMAIN', projectId: 'PROJECT_ID', appId: 'APP_ID', messagingSenderId: 'MESSAGING_SENDER_ID' })) {
+  if (bundledClient[field] !== example[`EXPO_PUBLIC_FIREBASE_${envKey}`]) {
+    problems.push(`Bundled Firebase ${field} differs from .env.example`);
   }
 }
 

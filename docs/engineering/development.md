@@ -2,7 +2,7 @@
 
 ## Requirements
 
-CI uses Node22 and npm. Local cleanup checks ran on Node24.14.1. Native iOS development also needs Xcode and an installed iOS Simulator; Android development needs the Android toolchain. Firebase emulators require Java.
+CI uses Node 22 and npm. Local cleanup checks ran on Node 24.14.1. Native iOS development also needs Xcode and an installed iOS Simulator; Android development needs the Android toolchain. Firebase emulators require Java.
 
 ```sh
 npm ci
@@ -16,8 +16,10 @@ npm's install step generates the Skia web runtime in `public/`. Keep the generat
 | Mode | Configuration |
 | --- | --- |
 | Local emulator workflow | Set `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=1` and `EXPO_PUBLIC_USE_AUTH_EMULATOR=1` alongside the Firebase values in `.env.local`. |
-| Configured Firebase | Supply the app's Firebase configuration and omit emulator flags. Do not use real records for automated test fixtures. |
-| Unconfigured development preview | With no Firebase configuration, existing development preview routes show explicitly labelled sample data. |
+| Hosted HeatSense (default) | No `.env` is needed for email/password sign-in: the app bundles the public HeatSense Firebase client identifiers. Omit emulator flags for hosted accounts. Do not use real records for automated fixtures. |
+| Custom Firebase | Supply all required Firebase client values together. Incomplete overrides do not inherit values from another project. |
+
+The default emulator listeners accept local connections only. On a physical phone, `127.0.0.1` is that phone, not your development computer. Use hosted sign-in with emulator flags unset unless you have explicitly configured a reachable test server. Emulator and hosted accounts are separate.
 
 Environment changes require a Metro restart. The repository ignores `.env*` except `.env.example`. Never place a secret in an `EXPO_PUBLIC_` variable: Expo embeds those values in client code.
 
@@ -60,7 +62,9 @@ Use `npm run android` or `npm run web` for the corresponding platform. Rebuild t
 | `npm run check:unused` | Unreachable files, unused dependencies and unresolved imports through Knip's Expo/Router plugins |
 | `npm run check:docs` | Relative links in maintained Markdown documentation |
 | `npm run test:logic` | Existing UIL classifier, recheck, plan-check and band simulator assertions |
-| `npm run check:auth` | Sign-in configuration sanity |
+| `npm run check:auth` | Sign-in configuration sanity and bundled/template parity |
+| `npm run check:email-auth` | Fresh-install Firebase initialization, full overrides and incomplete-project isolation |
+| `npm run check:email-auth -- --emulator` | The same checks plus actual email account creation, sign-out, sign-in and wrong-password handling against a running local Auth emulator |
 | `npm run test:invites` | Authentication/Firestore emulator rules and flows |
 | `npx expo export --platform all --output-dir /tmp/heatsense-export` | iOS, Android and web JavaScript bundles plus static routes |
 
