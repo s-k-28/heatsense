@@ -11,7 +11,7 @@ import { ActionButton } from '@/components/ui/action-button';
 import { VitalCards } from '@/components/vital-cards';
 import { SimulatedTag, VitalsDetail } from '@/components/vitals';
 import { ListRow, Rows } from '@/components/whoop-ui';
-import { MaxContentWidth, Palette } from '@/constants/theme';
+import { MaxContentWidth, Palette, Type } from '@/constants/theme';
 import { useAthletes } from '@/state/athletes';
 import { useDemoTeam } from '@/state/demo-team';
 import { useTemperature } from '@/state/preferences';
@@ -101,12 +101,12 @@ export default function AthleteVitalsScreen() {
 
 const styles = StyleSheet.create({
   liveHero: { alignItems: 'flex-start', gap: 4, marginBottom: 20 },
-  liveUnit: { color: Palette.inkMuted, fontSize: 17, fontWeight: '500' },
-  liveWhen: { color: Palette.inkFaint, fontSize: 14 },
+  liveUnit: { color: Palette.ink, ...Type.headline },
+  liveWhen: { color: Palette.inkMuted, ...Type.labelSmall },
   screen: { backgroundColor: Palette.canvas, flex: 1 },
   bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12 },
   back: { alignItems: 'center', height: 48, justifyContent: 'center', width: 48 },
-  barTitle: { color: Palette.ink, flex: 1, fontSize: 17, fontWeight: '600', textAlign: 'center' },
+  barTitle: { color: Palette.ink, ...Type.title3, flex: 1, textAlign: 'center' },
   content: { alignItems: 'center', paddingTop: 8 },
   column: { maxWidth: MaxContentWidth, paddingHorizontal: 16, width: '100%' },
   position: { color: Palette.inkMuted, fontSize: 15, marginBottom: 12, textAlign: 'center' },

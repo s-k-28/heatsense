@@ -1,3 +1,4 @@
+import { surfaceStyles } from '@/components/ui/surface';
 import { Text, TextInput } from '@/components/ui/text';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -143,7 +144,7 @@ export function TrainerAthletes({ role = 'trainer', embedded = false, onShare }:
 }
 
 const styles = StyleSheet.create({
-  search: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 12, flexDirection: 'row', gap: 10, marginTop: 14, paddingHorizontal: 14 },
+  search: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderRadius: 22, flexDirection: 'row', gap: 10, marginTop: 14, paddingHorizontal: 14 },
   searchInput: { color: Palette.ink, flex: 1, fontSize: 17, minHeight: 46 },
   rosterCount: { color: Palette.inkMuted, fontSize: 16, marginTop: 8 },
   filters: { marginTop: 14 },
@@ -152,21 +153,21 @@ const styles = StyleSheet.create({
   emptyState: { gap: 16 },
   recordNote: { color: Palette.inkMuted, fontSize: 14, lineHeight: 20, marginTop: 14 },
   list: { marginTop: 18 },
-  coachSearch: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.pill, minHeight: 52, paddingHorizontal: 18 },
+  coachSearch: { backgroundColor: CoachPalette.surfaceAlt, borderRadius: 22, minHeight: 56, paddingHorizontal: 16 },
   coachSearchInput: { color: CoachPalette.text, fontWeight: '600' },
   coachChips: { flexDirection: 'row', gap: 8, marginTop: 14, paddingRight: 16 },
   coachChip: { alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: CoachRadius.pill, backgroundColor: CoachPalette.surface, borderColor: 'transparent', paddingHorizontal: 16, paddingVertical: 10 },
   coachChipOn: { backgroundColor: CoachPalette.text },
   coachChipText: { color: CoachPalette.textSecondary, fontSize: 15, fontWeight: '600' },
   coachChipTextOn: { color: CoachPalette.canvas },
-  coachEmpty: { alignItems: 'flex-start', backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, marginTop: 14, padding: 22 },
+  coachEmpty: { ...surfaceStyles.card, alignItems: 'flex-start', marginTop: 14, padding: 22 },
   coachEmptyText: { color: CoachPalette.muted, marginTop: 0 },
   coachShare: { backgroundColor: CoachPalette.peach, borderRadius: CoachRadius.pill, marginTop: 16, paddingHorizontal: 18, paddingVertical: 12 },
   coachShareText: { color: CoachPalette.peachInk, fontSize: 15, fontWeight: '800' },
-  coachList: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card },
+  coachList: { ...surfaceStyles.card, borderRadius: CoachRadius.card },
   coachRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 12, minHeight: 72, paddingHorizontal: 18, paddingVertical: 14 },
   coachAvatar: { alignItems: 'center', justifyContent: 'center', backgroundColor: CoachPalette.interactive, borderRadius: 22, height: 44, width: 44 },
-  coachName: { color: CoachPalette.text, fontSize: 18, fontWeight: '700' },
+  coachName: { color: CoachPalette.text, fontSize: 20, lineHeight: 26, fontWeight: '700' },
   pressed: { opacity: 0.7 },
   coachDivider: { backgroundColor: CoachPalette.hairline, height: StyleSheet.hairlineWidth, marginLeft: 18 },
   coachNameCopy: { flex: 1, gap: 4, minWidth: 96 },

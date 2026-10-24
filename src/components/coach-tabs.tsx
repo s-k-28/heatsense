@@ -1,3 +1,4 @@
+import { surfaceStyles } from '@/components/ui/surface';
 import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
 import { ActionButton } from '@/components/ui/action-button';
@@ -21,6 +22,8 @@ import { TrainerAthletes } from '@/components/trainer-athletes';
 import { TrainerMonitor } from '@/components/trainer-monitor';
 import { SlidingTabs } from '@/components/sliding-tabs';
 import { useCoachData, useRoster } from '@/state/team-session';
+
+const METRIC_PEACH = '#FFAD83';
 
 // Team, Plan and Profile, decluttered after WHOOP: one heading per section, small caps groups,
 // full-width rows and metric tiles. Every number comes from the team's real data or the UIL chart.
@@ -89,7 +92,7 @@ export function TeamTab() {
             <View style={styles.teamCard}>
               <Text style={styles.teamName}>Build your roster</Text>
               <Text style={styles.teamMeta}>Create a team to get the code athletes use to join.</Text>
-              <Pressable accessibilityRole="button" onPress={() => router.push('/team/create')} style={({ pressed }) => [styles.newPlan, styles.createTeam, pressed && styles.pressed]}><Text style={styles.newPlanText}>Create team</Text></Pressable>
+              <ActionButton label="Create team" onPress={() => router.push('/team/create')} style={styles.createTeam} />
             </View>
           ) : (
             <View style={styles.teamCard}>
@@ -100,7 +103,7 @@ export function TeamTab() {
                   <Text style={styles.codeLabel}>Team code</Text>
                   <Text accessibilityLabel={code ? `Team code ${code.split('').join(' ')}` : 'Team code loading'} style={styles.code}>{code ? code.replace(/(\d{3})(\d{3})/, '$1 $2') : '··· ···'}</Text>
                 </View>
-                <ActionButton accessibilityLabel="Share team code" busy={shareBusy} busyLabel="Opening…" disabled={!code} label="Share" onPress={shareCode} style={styles.shareCode} variant="secondary" />
+                <ActionButton accessibilityLabel="Share team code" busy={shareBusy} busyLabel="Opening…" disabled={!code} label="Share" onPress={shareCode} style={styles.shareCode} variant="primary" />
               </View>
             </View>
           )}
@@ -172,7 +175,7 @@ export function PlanTab() {
 
       <View style={styles.planHead}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>Practice plans</Text>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/plan-editor')} style={({ pressed }) => [styles.newPlan, pressed && styles.pressed]}><Text style={styles.newPlanText}>New plan</Text></Pressable>
+        <ActionButton label="New plan" onPress={() => router.push('/plan-editor')} />
       </View>
       <View style={styles.planList}>
         {plans.length === 0 ? <View style={styles.planEmpty}><Text style={styles.planName}>Build your first practice</Text><Text style={styles.rulesBody}>Set work, recovery, water, and check-in timing.</Text></View> : [...plans].sort((a, b) => Number(b.id === active.id) - Number(a.id === active.id)).map((plan, index) => {
@@ -229,13 +232,13 @@ const coachStyles = StyleSheet.create({
   segmentOn: { backgroundColor: CoachPalette.interactive },
   segmentText: { color: CoachPalette.muted, fontSize: 16, fontWeight: '700' },
   segmentTextOn: { color: CoachPalette.text },
-  teamCard: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, padding: 22 },
+  teamCard: { ...surfaceStyles.card, padding: 22 },
   teamName: { color: CoachPalette.text, ...CoachType.card, fontSize: 24 },
   teamMeta: { color: CoachPalette.muted, ...CoachType.body, marginTop: 4 },
-  codeRow: { alignItems: 'flex-end', borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, paddingTop: 14 },
+  codeRow: { flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, paddingTop: 14 },
   codeLabel: { color: CoachPalette.muted, ...CoachType.label },
   code: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 42, letterSpacing: 3.2, lineHeight: 46 },
-  shareCode: { backgroundColor: CoachPalette.peach, borderRadius: CoachRadius.pill, justifyContent: 'center', minHeight: 46, paddingHorizontal: 21 },
+  shareCode: { flexShrink: 1, maxWidth: '100%' },
   shareCodeText: { color: '#1A0E07', fontSize: 16, fontWeight: '700' },
   createTeam: { alignSelf: 'flex-start', marginTop: 18 },
   decide: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, flexShrink: 1 },
@@ -243,38 +246,38 @@ const coachStyles = StyleSheet.create({
   approveText: { color: '#1A0E07', fontSize: 15, fontWeight: '600' },
   decline: { borderColor: Palette.border, borderRadius: 999, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   declineText: { color: Palette.inkMuted, fontSize: 15, fontWeight: '600' },
-  peopleCard: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, overflow: 'hidden', paddingHorizontal: 18 },
+  peopleCard: { ...surfaceStyles.card, overflow: 'hidden', paddingHorizontal: 18 },
   personRow: { flexWrap: 'wrap', gap: 12, paddingVertical: 12, alignItems: 'center', borderBottomColor: CoachPalette.hairline, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 66 },
-  personName: { color: CoachPalette.text, fontSize: 17, fontWeight: '700' },
+  personName: { color: CoachPalette.text, ...CoachType.card, flexShrink: 1 },
   personMeta: { color: CoachPalette.muted, fontSize: 14, fontWeight: '600' },
   empty: { color: Palette.inkMuted, fontSize: 16, lineHeight: 22 },
   summary: { color: CoachPalette.textSecondary, ...CoachType.body, marginBottom: 14, marginTop: 16 },
   sourceRow: { alignItems: 'center', backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.panel, flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, minHeight: 62, paddingHorizontal: 20 },
-  sourceLabel: { color: CoachPalette.text, fontSize: 16, fontWeight: '700' },
-  sourceValue: { color: CoachPalette.muted, fontSize: 15, fontWeight: '600' },
-  rulesHero: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, padding: 24 },
+  sourceLabel: { color: CoachPalette.text, ...CoachType.body, flexShrink: 1 },
+  sourceValue: { color: CoachPalette.muted, ...CoachType.label },
+  rulesHero: { ...surfaceStyles.card, padding: 24 },
   eyebrow: { color: CoachPalette.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   zoneHeading: { alignItems: 'center', flexDirection: 'row', gap: 10, marginTop: 12 },
   zoneMark: { borderRadius: 6, height: 12, width: 12 },
-  rulesTitle: { color: CoachPalette.text, fontSize: 28, fontWeight: '800', letterSpacing: -0.7, marginTop: 10 },
+  rulesTitle: { color: CoachPalette.text, ...CoachType.section, marginTop: 10, flexShrink: 1 },
   rulesBody: { color: CoachPalette.textSecondary, ...CoachType.body, marginTop: 8 },
   rulesMeta: { color: CoachPalette.muted, ...CoachType.label, marginTop: 14 },
   rulesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
   ruleMetric: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.panel, minHeight: 94, padding: 17, width: '48%' },
   ruleLabel: { color: CoachPalette.muted, ...CoachType.label },
   ruleValue: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 24, lineHeight: 28, marginTop: 10 },
-  planHead: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, marginTop: 32 },
+  planHead: { flexWrap: 'wrap', gap: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, marginTop: 32 },
   sectionTitle: { color: CoachPalette.text, ...CoachType.section, marginTop: 28 },
   newPlan: { backgroundColor: CoachPalette.peach, borderRadius: CoachRadius.pill, justifyContent: 'center', minHeight: 44, paddingHorizontal: 18 },
   newPlanText: { color: CoachPalette.peachInk, fontSize: 15, fontWeight: '800' },
   planList: { gap: 10 },
-  planCard: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, padding: 20 },
-  planEmpty: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, padding: 22 },
-  planCardTop: { alignItems: 'baseline', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
+  planCard: { ...surfaceStyles.card, padding: 20 },
+  planEmpty: { ...surfaceStyles.card, padding: 22 },
+  planCardTop: { flexWrap: 'wrap', alignItems: 'baseline', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
   planName: { color: CoachPalette.text, flex: 1, ...CoachType.card },
   planWhen: { color: CoachPalette.muted, fontSize: 14, fontWeight: '700' },
   timeline: { flexDirection: 'row', gap: 3, height: 7, marginTop: 20, overflow: 'hidden' },
-  timelineWork: { backgroundColor: CoachPalette.peach, borderRadius: 4 },
+  timelineWork: { backgroundColor: METRIC_PEACH, borderRadius: 4 },
   timelineRest: { backgroundColor: CoachPalette.interactive, borderRadius: 4 },
   timelineLabel: { color: CoachPalette.muted, fontSize: 13, fontWeight: '600', marginTop: 10 },
   identity: { alignItems: 'center', flexDirection: 'row', gap: 16, marginTop: 8 },
@@ -317,7 +320,7 @@ export function ZoneRules({ latest, uilClass, hideSummary = false }: { latest: F
 const baseStyles = StyleSheet.create({
   flex: { flex: 1 },
   gap12: { height: 12 },
-  teamCard: { backgroundColor: Palette.surface, borderRadius: 16, padding: 18 },
+  teamCard: { ...surfaceStyles.card, borderRadius: 16, padding: 18 },
   teamName: { color: Palette.ink, fontSize: 22, fontWeight: '700' },
   teamMeta: { color: Palette.inkMuted, fontSize: 15, marginTop: 2 },
   codeRow: { alignItems: 'flex-end', borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', marginTop: 16, paddingTop: 14 },

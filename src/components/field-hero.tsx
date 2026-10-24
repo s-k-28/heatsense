@@ -1,10 +1,12 @@
+import { ActionButton } from '@/components/ui/action-button';
+import { surfaceStyles } from '@/components/ui/surface';
 import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { CoachPalette, CoachRadius } from '@/constants/coach-theme';
+import { CoachPalette } from '@/constants/coach-theme';
 import { Palette, Spacing } from '@/constants/theme';
 import { SAMPLE_HOURLY_WBGT, ZONES } from '@/lib/practice';
 import { zoneThresholds, type UilClass, type Zone } from '@/lib/uil-wbgt';
@@ -116,9 +118,7 @@ export function FieldHero({ data, onAction, readOnly = false }: { data: CoachDat
         )}
 
         <View style={styles.actionRow}>
-          <Pressable accessibilityRole="button" accessibilityState={{ disabled: !data }} disabled={!data} onPress={onAction} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-            <Text style={styles.buttonText}>{action}</Text>
-          </Pressable>
+          <ActionButton disabled={!data} label={action} onPress={onAction} style={styles.button} />
           {latest ? <Text style={styles.measured}>Measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text> : null}
         </View>
       </View>
@@ -127,7 +127,7 @@ export function FieldHero({ data, onAction, readOnly = false }: { data: CoachDat
 }
 
 const baseStyles = StyleSheet.create({
-  card: { backgroundColor: CoachPalette.surface, borderCurve: 'continuous', borderRadius: CoachRadius.card, marginTop: Spacing.three, minHeight: 400, overflow: 'hidden' },
+  card: { ...surfaceStyles.card, borderCurve: 'continuous', marginTop: Spacing.three, minHeight: 400, overflow: 'hidden' },
   top: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', padding: Spacing.three },
   tag: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, flexDirection: 'row', flexShrink: 1, gap: 6, paddingHorizontal: 9, paddingVertical: 5 },
   dot: { borderRadius: 4, height: 8, width: 8 },
@@ -139,9 +139,9 @@ const baseStyles = StyleSheet.create({
   value: { color: Palette.white, fontSize: 68, fontVariant: ['tabular-nums'], fontWeight: '800', letterSpacing: -1.8 },
   unit: { color: 'rgba(255,255,255,0.75)', fontSize: 22, fontWeight: '600', letterSpacing: 0 },
   rate: { color: Palette.white, fontSize: 17, fontVariant: ['tabular-nums'], fontWeight: '600' },
-  headroom: { color: 'rgba(255,255,255,0.85)', fontSize: 15 },
+  headroom: { color: 'rgba(255,255,255,0.85)', fontSize: 16, lineHeight: 24 },
   actionRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 14 },
-  button: { backgroundColor: CoachPalette.peach, borderRadius: 999, flexShrink: 1, justifyContent: 'center', maxWidth: '100%', minHeight: 52, paddingHorizontal: 23, paddingVertical: 12 },
+  button: { flexShrink: 1, maxWidth: '100%' },
   buttonText: { color: CoachPalette.peachInk, fontSize: 16, fontWeight: '800' },
   measured: { color: 'rgba(255,255,255,0.7)', flexShrink: 1, fontSize: 13 },
   pressed: { opacity: 0.7 },

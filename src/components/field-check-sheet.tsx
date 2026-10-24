@@ -5,7 +5,7 @@ import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Modal, Pres
 
 import { Group, Row, TextLink } from '@/components/ui/list';
 import { ActionButton } from '@/components/ui/action-button';
-import { Face, Palette, Radius, Spacing, Type } from '@/constants/theme';
+import { Face, Palette, Spacing, Type } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, type UilClass } from '@/lib/uil-wbgt';
 import { firestore } from '@/services/firebase';
@@ -375,19 +375,19 @@ const styles = StyleSheet.create({
   loading: { marginTop: Spacing.eight },
   sheet: { backgroundColor: Palette.canvas, flex: 1 },
   bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.three, paddingHorizontal: Spacing.five, paddingTop: Spacing.five },
-  title: { flex: 1, color: Palette.ink, ...Type.title2, fontWeight: '700' },
+  title: { flex: 1, color: Palette.ink, ...Type.title2 },
   content: { gap: Spacing.five, paddingBottom: Spacing.eight, paddingHorizontal: Spacing.five, paddingTop: Spacing.two },
   meta: { color: Palette.inkMuted, ...Type.footnote },
   field: { gap: Spacing.two },
-  fieldLabel: { color: Palette.ink, ...Type.headline },
-  help: { color: Palette.inkMuted, ...Type.footnote },
+  fieldLabel: { color: Palette.ink, ...Type.label },
+  help: { color: Palette.inkMuted, ...Type.subhead },
   error: { color: Palette.emergency, ...Type.footnote },
-  input: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: Radius.medium, borderWidth: StyleSheet.hairlineWidth, color: Palette.ink, ...Type.callout, minHeight: 48, paddingHorizontal: Spacing.four },
+  input: { backgroundColor: Palette.surfaceMuted, borderColor: 'transparent', borderRadius: 22, color: Palette.ink, ...Type.body, minHeight: 56, paddingHorizontal: 18 },
   inputRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
   inputGrow: { flexGrow: 1, flexBasis: 140, fontSize: 22 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  chip: { backgroundColor: Palette.fill, borderRadius: 10, minHeight: 48, minWidth: 48, justifyContent: 'center', paddingHorizontal: 12 },
-  chipOn: { backgroundColor: Palette.surface, borderColor: Palette.inkMuted, borderWidth: 1 },
+  chip: { backgroundColor: Palette.surfaceMuted, borderRadius: 22, minHeight: 48, minWidth: 48, justifyContent: 'center', paddingHorizontal: 12 },
+  chipOn: { backgroundColor: Palette.interactive, borderColor: Palette.inkMuted, borderWidth: 1 },
   chipText: { color: Palette.ink, ...Type.label, fontSize: 14 },
   chipTextOn: { color: Palette.ink },
   form: { gap: Spacing.three },

@@ -1,3 +1,4 @@
+import { surfaceStyles } from '@/components/ui/surface';
 import { Text } from '@/components/ui/text';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -201,10 +202,10 @@ function AlertCard({ item, now, onResolve, resolvedAt }: { item: Item; now: numb
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
-  status: { alignItems: 'center', backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, flexDirection: 'row', gap: 14, minHeight: 104, overflow: 'hidden', paddingRight: 20 },
+  status: { ...surfaceStyles.card, alignItems: 'center', flexDirection: 'row', gap: 14, minHeight: 104, overflow: 'hidden', paddingRight: 20 },
   statusEdge: { alignSelf: 'stretch', width: 6 },
   statusCopy: {  gap: 2, paddingVertical: 16, flex: 1, minWidth: 100 },
-  statusZone: { color: CoachPalette.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.4 },
+  statusZone: { color: CoachPalette.text, ...CoachType.card },
   statusMeta: { color: CoachPalette.muted, fontSize: 15, fontWeight: '600' },
   countdown: { alignItems: 'flex-end', flexShrink: 1 },
   countdownValue: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 36, lineHeight: 40 },
@@ -212,23 +213,23 @@ const styles = StyleSheet.create({
   segmentsGap: { marginTop: 20 },
   badge: { alignItems: 'center', backgroundColor: 'rgba(235,235,245,0.18)', borderRadius: 10, height: 20, justifyContent: 'center',  paddingHorizontal: 6, minWidth: 20 },
   badgeText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  clear: { alignItems: 'center', backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, gap: 7, marginTop: 14, paddingHorizontal: 28, paddingVertical: 44 },
+  clear: { ...surfaceStyles.card, alignItems: 'center', gap: 7, marginTop: 14, paddingHorizontal: 28, paddingVertical: 44 },
   clearTitle: { color: CoachPalette.text, ...CoachType.card },
   clearBody: { color: CoachPalette.muted, ...CoachType.body,   maxWidth: 300, textAlign: 'center' },
   list: { gap: 12, marginTop: 14 },
-  card: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, flexDirection: 'row', overflow: 'hidden' },
+  card: { ...surfaceStyles.card, flexDirection: 'row', overflow: 'hidden' },
   cardDone: { backgroundColor: CoachPalette.surfaceAlt },
   edge: { width: 4 },
   edgeDone: { opacity: 0.4 },
   cardCopy: {  gap: 6, padding: 20, flex: 1 },
   cardTop: { alignItems: 'flex-start', flexDirection: 'column', gap: 4 },
-  cardTitle: { color: CoachPalette.text, fontSize: 19, fontWeight: '700', letterSpacing: -0.25, flexShrink: 1 },
+  cardTitle: { color: CoachPalette.text, ...CoachType.card, flexShrink: 1 },
   cardTime: { color: CoachPalette.muted, fontSize: 13, fontVariant: ['tabular-nums'], fontWeight: '600' },
   cardBody: { color: CoachPalette.textSecondary, ...CoachType.body },
   actions: { flexDirection: 'row', gap: 10, marginTop: 10, flexWrap: 'wrap' },
-  primary: { borderRadius: CoachRadius.pill, justifyContent: 'center', minHeight: 44, paddingHorizontal: 18 },
+  primary: { alignSelf: 'flex-start' },
   primaryText: { color: '#101416', fontSize: 15, fontWeight: '700' },
-  secondary: { backgroundColor: CoachPalette.interactive, borderRadius: CoachRadius.pill, justifyContent: 'center', minHeight: 44, paddingHorizontal: 18 },
+  secondary: { alignSelf: 'flex-start' },
   secondaryText: { color: CoachPalette.text, fontSize: 15, fontWeight: '700' },
   segmentWrap: { marginTop: 18 },
   segments: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.pill, flexDirection: 'row', gap: 4, marginTop: 18, padding: 5 },

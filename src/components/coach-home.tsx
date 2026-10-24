@@ -1,3 +1,4 @@
+import { surfaceStyles } from '@/components/ui/surface';
 import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
 import { HeatIcon } from '@/components/heat-icon';
@@ -28,6 +29,8 @@ import { useCoachDataState, useNow, type CoachData } from '@/state/team-session'
 // practice loop as three dials, first-run cards, and today's readings. Everything comes from the
 // team's practice session; a build without Firebase shows the sample reading, tagged SAMPLE.
 
+// Metric peach preserves the existing chart palette independently of the UI brand.
+const METRIC_PEACH = '#FFAD83';
 const BAND = require('@/assets/images/heatsense-band-refined.png');
 
 /** Zone colors for drawing; Black's own color disappears on a dark screen. */
@@ -117,7 +120,7 @@ function PersonalPulse({ band }: { band: HomePersonalBand | null }) {
   const styles = useAthleteStyles(baseStyles);
   const fresh = band && !band.stale;
   const metrics = [{ label: 'Heart rate', value: fresh ? String(band.heartRate) : '—' }, { label: 'Recovery', value: fresh && band.recovery !== 'unknown' ? band.recovery === 'watch' ? 'Watch' : 'Usual' : '—' }, { label: 'Source', value: band ? band.simulated ? 'Demo' : 'Band' : '—' }];
-  return <View style={styles.teamSection}><View style={styles.visualHead}><Text accessibilityRole="header" style={styles.visualTitle}>Your pulse</Text></View><View style={styles.teamMetrics}>{metrics.map((metric) => <View key={metric.label} style={styles.teamMetric}><Text style={[styles.teamNumber, metric.label !== 'Heart rate' && { fontSize: 28 }]}>{metric.value}</Text><View style={[styles.teamRule, { backgroundColor: CoachPalette.peach }]} /><Text style={styles.teamLabel}>{metric.label}</Text></View>)}</View><Text style={styles.visualMeta}>{band?.stale ? 'Band signal stale; current values unavailable.' : band?.simulated ? 'Simulated band data · heart rate in bpm' : band ? 'Heart rate in bpm' : 'No personal band signals yet.'}</Text></View>;
+  return <View style={styles.teamSection}><View style={styles.visualHead}><Text accessibilityRole="header" style={styles.visualTitle}>Your pulse</Text></View><View style={styles.teamMetrics}>{metrics.map((metric) => <View key={metric.label} style={styles.teamMetric}><Text style={[styles.teamNumber, metric.label !== 'Heart rate' && { fontSize: 28 }]}>{metric.value}</Text><View style={[styles.teamRule, { backgroundColor: METRIC_PEACH }]} /><Text style={styles.teamLabel}>{metric.label}</Text></View>)}</View><Text style={styles.visualMeta}>{band?.stale ? 'Band signal stale; current values unavailable.' : band?.simulated ? 'Simulated band data · heart rate in bpm' : band ? 'Heart rate in bpm' : 'No personal band signals yet.'}</Text></View>;
 }
 
 const ZONE_ORDER: Zone[] = ['green', 'yellow', 'orange', 'red', 'black'];
@@ -150,7 +153,7 @@ function ConditionRings({ acknowledged, latest, loading, onPress, recheckFractio
         <View style={styles.largeRing}>
           <Svg height={210} width={210}>
             <GradientRing end={heatTone} id="coachHeat" progress={zoneIndex < 0 ? 0 : (zoneIndex + 1) / ZONE_ORDER.length} radius={91} reduced={reduced} start="#FFD36A" />
-            <GradientRing end={CoachPalette.peach} id="coachGuidance" progress={applied} radius={73} reduced={reduced} start="#30D158" />
+            <GradientRing end={METRIC_PEACH} id="coachGuidance" progress={applied} radius={73} reduced={reduced} start="#30D158" />
             <GradientRing end="#67E8F9" id="coachRecheck" progress={recheckFraction} radius={55} reduced={reduced} start="#4AA8FF" />
           </Svg>
           <View pointerEvents="none" style={styles.largeRingCenter}><Text key={temperature} style={styles.largeRingValue}>{temperature}</Text><Text style={[styles.largeRingZone, latest && { color: heatTone }]}>{latest ? ZONES[latest.zone].label.replace(' zone', '') : 'No data'}</Text></View>
@@ -175,7 +178,7 @@ function PracticeTimeline({ blocks, onOpenPlan, planName, waterEvery }: { blocks
   const [selected, setSelected] = useState(0);
   const active = blocks[selected] ?? null;
   const waterStops = waterEvery > 0 ? Math.max(0, Math.floor(blocks.filter((block) => block.kind !== 'arrive').reduce((sum, block) => sum + block.minutes, 0) / waterEvery)) : 0;
-  const blockTone = (kind: Block['kind']) => kind === 'work' ? CoachPalette.peach : kind === 'rest' ? '#30D158' : '#8B7CF6';
+  const blockTone = (kind: Block['kind']) => kind === 'work' ? METRIC_PEACH : kind === 'rest' ? '#30D158' : '#8B7CF6';
   return (
     <View style={styles.timelineSection}>
       <View style={styles.visualHead}><Pressable accessibilityRole="button" onPress={onOpenPlan} style={({ pressed }) => pressed && styles.pressed}><Text accessibilityRole="header" style={styles.visualTitle}>Practice rhythm</Text><Text style={styles.visualMeta}>{planName}  ›</Text></Pressable><Text style={styles.timelineClock}>{active ? clockTime(active.start, true) : '—'}</Text></View>
@@ -429,7 +432,7 @@ const baseStyles = StyleSheet.create({
   visualSection: { marginTop: 28 },
   visualHead: { flexWrap: 'wrap', gap: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
   visualTitle: { color: CoachPalette.text, ...CoachType.section },
-  visualMeta: { color: CoachPalette.muted, fontSize: 14, fontWeight: '600', marginTop: 2 },
+  visualMeta: { color: CoachPalette.muted, ...CoachType.label, marginTop: 2 },
   ringDashboard: { flexWrap: 'wrap', gap: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 226 },
   largeRing: { height: 210, width: 210 },
   largeRingCenter: { alignItems: 'center', bottom: 0, justifyContent: 'center', left: 0, position: 'absolute', right: 0, top: 0 },
@@ -439,27 +442,27 @@ const baseStyles = StyleSheet.create({
   ringKey: { borderRadius: 3, height: 5, marginBottom: 5, width: 28 },
   ringKeyValue: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 24, lineHeight: 26 },
   ringKeyLabel: { color: CoachPalette.muted, fontSize: 12, fontWeight: '600' },
-  timelineSection: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, marginTop: 28, padding: 22 },
+  timelineSection: { ...surfaceStyles.card, marginTop: 28, padding: 22 },
   timelineClock: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 21 },
   blockScrollContent: { flexGrow: 1, paddingTop: 3 },
   blockTrack: { flexGrow: 1, flexDirection: 'row', gap: 4, minHeight: 48, marginTop: 6 },
   block: { borderRadius: 10, minHeight: 44, opacity: 0.7 },
   blockSelected: { minHeight: 48, opacity: 1, transform: [{ translateY: -3 }] },
-  timelineDetail: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
-  timelineDetailTitle: { color: CoachPalette.textSecondary, fontSize: 16, fontWeight: '700' },
+  timelineDetail: { alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', marginTop: 14 },
+  timelineDetailTitle: { color: CoachPalette.textSecondary, ...CoachType.body, flexShrink: 1 },
   timelineDetailValue: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 22 },
   waterRail: { height: 18, marginTop: 12, position: 'relative' },
   waterLine: { backgroundColor: 'rgba(74,168,255,0.24)', height: 2, left: 0, position: 'absolute', right: 0, top: 8 },
   waterTick: { backgroundColor: '#4AA8FF', borderColor: CoachPalette.surface, borderRadius: 5, borderWidth: 2, height: 10, marginLeft: -5, position: 'absolute', top: 4, width: 10 },
   waterLabel: { color: '#67B8FF', fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginTop: 1 },
   teamSection: { marginTop: 32 },
-  inlineAction: { color: CoachPalette.peach, fontSize: 15, fontWeight: '800' },
+  inlineAction: { color: CoachPalette.peach, ...CoachType.label },
   teamMetrics: { flexDirection: 'row', gap: 12 },
   teamMetric: { flex: 1, paddingVertical: 8 },
   teamNumber: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 50, lineHeight: 53 },
   teamRule: { borderRadius: 3, height: 5, marginBottom: 7, marginTop: 4, width: '72%' },
-  teamLabel: { color: CoachPalette.muted, fontSize: 14, fontWeight: '700' },
-  historySection: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, marginTop: 28, paddingHorizontal: 20, paddingTop: 20 },
+  teamLabel: { color: CoachPalette.muted, ...CoachType.label },
+  historySection: { ...surfaceStyles.card, marginTop: 28, paddingHorizontal: 20, paddingTop: 20 },
   historyReading: { color: CoachPalette.text, fontFamily: Face.figure, fontSize: 24 },
   chart: { flexDirection: 'row', gap: 7, height: 154 },
   chartColumn: { alignItems: 'center', flex: 1 },
@@ -468,17 +471,17 @@ const baseStyles = StyleSheet.create({
   chartBarSelected: { borderColor: CoachPalette.text, borderWidth: 2 },
   chartDay: { color: CoachPalette.muted, fontSize: 12, fontWeight: '700', marginTop: 8 },
   chartDayOn: { color: CoachPalette.text },
-  emptyVisual: { color: CoachPalette.muted, fontSize: 14, fontWeight: '600', paddingBottom: 20, textAlign: 'center' },
+  emptyVisual: { color: CoachPalette.muted, ...CoachType.label, paddingBottom: 20, textAlign: 'center' },
   alertStrip: { alignItems: 'center', backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.pill, flexDirection: 'row', marginBottom: 4, marginTop: 20, minHeight: 76, paddingHorizontal: 16 },
   alertGlyph: { alignItems: 'center', borderRadius: 23, borderWidth: 4, height: 46, justifyContent: 'center', width: 46 },
   alertGlyphText: { fontFamily: Face.figure, fontSize: 21 },
   alertText: { flex: 1, marginLeft: 14 },
-  alertTitle: { color: CoachPalette.text, fontSize: 17, fontWeight: '800' },
-  alertMeta: { color: CoachPalette.muted, fontSize: 13, fontWeight: '600', marginTop: 2 },
+  alertTitle: { color: CoachPalette.text, ...CoachType.card, fontSize: 20 },
+  alertMeta: { color: CoachPalette.muted, ...CoachType.label, marginTop: 2 },
   alertArrow: { color: CoachPalette.muted, fontSize: 30 },
 
   pressed: { opacity: 0.7 },
-  practice: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderCurve: 'continuous', borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, marginTop: 16, paddingBottom: 8, paddingHorizontal: 8, paddingTop: 20 },
+  practice: { ...surfaceStyles.card, borderCurve: 'continuous', marginTop: 16, paddingBottom: 8, paddingHorizontal: 8, paddingTop: 20 },
   practiceRings: { marginTop: 0, paddingBottom: 16 },
   planLine: { alignItems: 'center', borderTopColor: Palette.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 6, justifyContent: 'space-between', marginHorizontal: 16, paddingBottom: 4, paddingTop: 16 },
   planText: { color: Palette.inkMuted, flexShrink: 1, fontSize: 13 },
@@ -494,7 +497,7 @@ const baseStyles = StyleSheet.create({
   dialStatus: { fontSize: 13, fontWeight: '600', marginTop: 3 },
   section: { color: Palette.ink, fontSize: 24, fontWeight: '700', letterSpacing: -0.4, marginBottom: 12, marginTop: 34 },
   cards: { gap: 12 },
-  card: { backgroundColor: Palette.card, borderColor: Palette.cardEdge, borderRadius: 20, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 18 },
+  card: { ...surfaceStyles.card, flexDirection: 'row', gap: 12, padding: 18 },
   cardAccent: { borderColor: Palette.coral },
   cardCopy: { flex: 1, gap: 6 },
   cardTitle: { color: Palette.ink, fontSize: 18, fontWeight: '700' },
@@ -508,7 +511,7 @@ const baseStyles = StyleSheet.create({
   sun: { borderRadius: 13, height: 26, width: 26 },
   people: { flexDirection: 'row', gap: 4 },
   head: { borderRadius: 9, height: 18, width: 18 },
-  list: { backgroundColor: Palette.card, borderRadius: 20, paddingHorizontal: 16 },
+  list: { ...surfaceStyles.card, paddingHorizontal: 16 },
   row: { alignItems: 'center', borderBottomColor: 'rgba(255,255,255,0.06)', borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12, minHeight: 64 },
   dot: { borderRadius: 6, height: 12, width: 12 },
   rowCopy: { flex: 1, gap: 2 },
