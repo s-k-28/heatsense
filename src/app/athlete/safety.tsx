@@ -180,6 +180,7 @@ function Content() {
       <View style={styles.fields}>
         <OnboardingTextField
           label="Full name"
+          accessibilityLabel={`${which} contact full name`}
           placeholder="Contact’s full name"
           value={contact.name}
           onChangeText={(name) => updateContact(which, { name })}
@@ -192,6 +193,7 @@ function Content() {
         <View style={styles.select}>
           <OnboardingSelectField
             label="Relationship"
+            accessibilityLabel={`${which} contact relationship`}
             placeholder="Select relationship"
             options={RELATIONSHIP_LABELS}
             value={contact.relationship}
@@ -204,6 +206,7 @@ function Content() {
         </View>
         <OnboardingTextField
           label="Phone number"
+          accessibilityLabel={`${which} contact phone number`}
           placeholder="(000) 000-0000"
           value={contact.phone}
           onChangeText={(text) => updateContact(which, { phone: formatPhoneInput(text) })}

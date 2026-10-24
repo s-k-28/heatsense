@@ -54,3 +54,12 @@ Fixture accounts `ui.coach.20261023@heatsense.test` and `ui.athlete.20261023@hea
 - Practice export: browser initially returned Couldn’t share, then common copy fallback added. Copied succeeded. Copied initially survived new readings; fixed exact-report snapshot matching and verified acknowledgement immediately restores Share practice record. Export content unchanged.
 - Official UIL link opened the exact `https://www.uiltexas.org/files/athletics/25-26WBGTChart.png` source, then the extra source tab was closed.
 - Native current screen captured from the booted simulator: new Archivo/Manrope sign-in/photo layout visually inspected. Device Hub window became unavailable to computer-use binding; native interaction/keyboard pass is pending reopening the iPhone window. Browser Metro pass continues. This snapshot is not a native dashboard interaction claim.
+
+## Athlete onboarding runtime expansion
+
+- Join: letters in `abc123` were removed; incomplete code disabled Join. `000000` returned Code not found. Current isolated-team code showed Checking code → Team found → Join request sent, then Continue opened basic profile. Membership remains pending staff approval.
+- Basic profile: invalid date `13/44/2020` produced validation feedback; grade menu scrolled and selected 12th. Valid fictional date, jersey and name saved; Football remained read-only from the team.
+- Body: height/weight inputs, history No/Yes and conditional type/Other fields opened. Two concern checkboxes selected together; None cleared them. Returning history to No cleared the conditional type. Somewhat accustomed selected and saved. Removed unsupported “update anytime” promise and redundant introductory copy.
+- Safety at375×667: partial contact produced name, relationship and phone errors; short phone produced country-code guidance. Relationship menu selected Family member. Added secondary contact and verified all six controls have distinct primary/secondary accessible names. Removed the unsaved secondary draft. Valid fictional primary contact and optional local-only note saved; Finish setup opened demo pairing. Scrolled bottom/focused notes screenshot inspected: complete action, privacy copy and skip action visible without overlap.
+- Forgot password malformed-email retest passed with “Enter a valid email address” before service call.
+- Pairing so far: Get started → fit tips → Hide tips → Continue → pairing-light help → Start pairing. Search state opened; Back returned to pairing-light step and cancelled discovery. Remaining connection/completion steps are pending.

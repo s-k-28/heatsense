@@ -1,4 +1,4 @@
-import { AnimatedText, Text } from '@/components/ui/text';
+import { Text } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
@@ -13,7 +13,7 @@ import {
   ATHLETE_SCREEN,
   useAthleteEntrance,
 } from '@/components/athlete-onboarding';
-import { EntryHeading, entryStyles } from '@/components/entry-ui';
+import { EntryHeading } from '@/components/entry-ui';
 import { OnboardingBackground } from '@/components/onboarding-background';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { Entry } from '@/constants/entry-theme';
@@ -199,7 +199,6 @@ function Content() {
         </Animated.View>
 
         <EntryHeading accent="yours." compact={compact} delay={300} lead="Make it" style={{ marginTop: compact ? 26 : 36 }} />
-        <AnimatedText entering={fade(550)} style={entryStyles.description}>Let’s start with the basics.</AnimatedText>
 
         <View style={[styles.form, { marginTop: compact ? 22 : 28 }]}>
           <Animated.View entering={rise(fieldDelay(0))}>
