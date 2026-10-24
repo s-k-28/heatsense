@@ -2,7 +2,7 @@
 
 ## Requirements
 
-CI uses Node 22 and npm. Local cleanup checks ran on Node 24.14.1. Native iOS development also needs Xcode and an installed iOS Simulator; Android development needs the Android toolchain. Firebase emulators require Java.
+CI uses Node 22 and npm. Local cleanup checks ran on Node 24.14.1. Native iOS development also needs Xcode and an installed iOS Simulator; Android development needs the Android toolchain. Firebase emulators require Java. The documentation-link checker uses Python 3.9 or newer from the standard library; it requires no pip packages.
 
 ```sh
 npm ci
@@ -60,7 +60,7 @@ Use `npm run android` or `npm run web` for the corresponding platform. Rebuild t
 | `npm run typecheck` | TypeScript source and import contracts |
 | `npm run lint` | Expo ESLint and React rules |
 | `npm run check:unused` | Unreachable files, unused dependencies and unresolved imports through Knip's Expo/Router plugins |
-| `npm run check:docs` | Relative links in maintained Markdown documentation |
+| `npm run check:docs` | Python checker for relative links in maintained Markdown documentation |
 | `npm run test:logic` | Existing UIL classifier, recheck, plan-check and band simulator assertions |
 | `npm run check:auth` | Sign-in configuration sanity and bundled/template parity |
 | `npm run check:email-auth` | Fresh-install Firebase initialization, full overrides and incomplete-project isolation |
@@ -74,6 +74,7 @@ Use `npm run android` or `npm run web` for the corresponding platform. Rebuild t
 
 - `scripts/check-*.ts`: calculation checks.
 - `scripts/check-auth-config.mjs`: auth preflight.
+- `scripts/check-doc-links.py`: Python documentation-link checker; `--root` can check an isolated checkout or fixture.
 - `scripts/test-team-invites.mjs`: emulator integration suite.
 - `scripts/seed-emulator.mjs`: optional local fixtures.
 - `scripts/capture-screen.sh`, `capture-manifest.mjs`: operator-run screenshot tools; the latter reads [screen-manifest.json](../design/manifests/screen-manifest.json). Configure its Expo URL for the running build.

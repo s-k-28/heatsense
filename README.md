@@ -874,6 +874,7 @@ These steps take a fresh Mac from nothing to HeatSense running in the iPhone Sim
 | Node.js | 22.13 or newer | `node --version` | [nodejs.org](https://nodejs.org) (LTS) |
 | npm | comes with Node | `npm --version` | — |
 | Git | any recent | `git --version` | Comes with Xcode's command line tools |
+| Python | 3.9 or newer (documentation-link checks only) | `python3 --version` | [python.org](https://www.python.org/downloads/) |
 | Java | 21 or newer (only for the backend tests) | `java -version` | [adoptium.net](https://adoptium.net) |
 
 Android Studio is only needed for Android; a browser is enough for the web build.
@@ -952,7 +953,7 @@ npm run lint                              # style and React rules → 0 errors
 npm run check:auth                        # public client and OAuth configuration
 npm run check:email-auth                  # fresh-install auth regression
 npm run check:unused                      # Expo/Router dependency and file checks
-npm run check:docs                        # maintained documentation links
+npm run check:docs                        # Python checker for maintained documentation links
 node scripts/check-uil-wbgt.ts            # heat engine → "all checks passed"
 node scripts/check-band-simulator.ts      # band model → "all checks passed"
 node scripts/check-plan-check.ts          # plan vs UIL → "all checks passed"
