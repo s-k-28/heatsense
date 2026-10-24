@@ -3,9 +3,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
-import { BandSpot } from '@/components/band-journey';
-import { BrandAssemble } from '@/components/brand-assemble';
-import { EntryButton, EntryHeader, EntryHeading, EntryScreen } from '@/components/entry-ui';
+import { BandSpot } from '@/components/band/band-journey';
+import { BrandAssemble } from '@/components/branding/brand-assemble';
+import { EntryButton, EntryHeader, EntryHeading, EntryScreen } from '@/components/onboarding/entry-ui';
 import { Entry } from '@/constants/entry-theme';
 
 // End of setup: what happens next, in three steps, instead of a preview full of sample numbers.

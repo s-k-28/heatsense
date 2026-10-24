@@ -9,8 +9,8 @@ import { createTamagui, TamaguiProvider } from 'tamagui';
 import { defaultConfig } from '@tamagui/config/v6';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
-import { BandJourneyLayer } from '@/components/band-journey';
-import { PhoneFrame } from '@/components/mobile-viewport';
+import { BandJourneyLayer } from '@/components/band/band-journey';
+import { PhoneFrame } from '@/components/layout/mobile-viewport';
 import { Palette } from '@/constants/theme';
 import { firebaseAuth } from '@/services/firebase';
 import { AuthSessionContext } from '@/state/auth-session';

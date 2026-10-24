@@ -6,10 +6,10 @@ import { Keyboard, Linking, ScrollView, StyleSheet, View, type LayoutChangeEvent
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EntryButton, EntryHeader, EntryHeading, EntryLink } from '@/components/entry-ui';
-import { MobileViewport } from '@/components/mobile-viewport';
-import { OnboardingBackground } from '@/components/onboarding-background';
-import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
+import { EntryButton, EntryHeader, EntryHeading, EntryLink } from '@/components/onboarding/entry-ui';
+import { MobileViewport } from '@/components/layout/mobile-viewport';
+import { OnboardingBackground } from '@/components/onboarding/onboarding-background';
+import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding/onboarding-fields';
 import { Entry, ONBOARDING_STEPS } from '@/constants/entry-theme';
 import { SPORTS } from '@/constants/sports';
 import { UIL_SOURCE_URL } from '@/lib/uil-wbgt';

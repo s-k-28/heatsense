@@ -14,8 +14,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { HeatIcon } from '@/components/heat-icon';
-import { useViewportSize } from '@/components/mobile-viewport';
+import { HeatIcon } from '@/components/ui/heat-icon';
+import { useViewportSize } from '@/components/layout/mobile-viewport';
 import {
   AlertLevelsVisual,
   ContextVisual,
@@ -24,7 +24,7 @@ import {
   TeamVisual,
   WbgtVisual,
   WristbandVisual,
-} from '@/components/onboarding-visuals';
+} from '@/components/onboarding/onboarding-visuals';
 import { Entry } from '@/constants/entry-theme';
 import { MaxContentWidth, Palette, Radius, Spacing } from '@/constants/theme';
 import { homeRoute } from '@/services/team-invites';

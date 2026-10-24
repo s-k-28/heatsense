@@ -5,9 +5,9 @@ import { StyleSheet, View } from 'react-native';
 
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
-import { BandSpot } from '@/components/band-journey';
-import { BrandAssemble } from '@/components/brand-assemble';
-import { EntryButton, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
+import { BandSpot } from '@/components/band/band-journey';
+import { BrandAssemble } from '@/components/branding/brand-assemble';
+import { EntryButton, EntryHeading, EntryScreen, entryStyles } from '@/components/onboarding/entry-ui';
 import { watchMyMembership, type Membership } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
 

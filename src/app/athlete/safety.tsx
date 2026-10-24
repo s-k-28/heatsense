@@ -14,12 +14,12 @@ import {
   ATHLETE_ERROR,
   ATHLETE_SCREEN,
   useAthleteEntrance,
-} from '@/components/athlete-onboarding';
-import { EntryHeading, entryStyles } from '@/components/entry-ui';
-import { OnboardingBackground } from '@/components/onboarding-background';
-import { MobileViewport } from '@/components/mobile-viewport';
+} from '@/components/onboarding/athlete-onboarding';
+import { EntryHeading, entryStyles } from '@/components/onboarding/entry-ui';
+import { OnboardingBackground } from '@/components/onboarding/onboarding-background';
+import { MobileViewport } from '@/components/layout/mobile-viewport';
 import { Entry } from '@/constants/entry-theme';
-import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
+import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding/onboarding-fields';
 import { getAthleteProfile } from '@/services/athlete-profile';
 import {
   canStoreSafety,

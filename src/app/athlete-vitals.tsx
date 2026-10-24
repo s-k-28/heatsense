@@ -6,11 +6,11 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { AcclimatizationCard } from '@/components/acclimatization-card';
+import { AcclimatizationCard } from '@/components/dashboard/athlete/acclimatization-card';
 import { ActionButton } from '@/components/ui/action-button';
-import { VitalCards } from '@/components/vital-cards';
-import { SimulatedTag, VitalsDetail } from '@/components/vitals';
-import { ListRow, Rows } from '@/components/whoop-ui';
+import { VitalCards } from '@/components/band/vital-cards';
+import { SimulatedTag, VitalsDetail } from '@/components/band/vitals';
+import { ListRow, Rows } from '@/components/ui/data-display';
 import { MaxContentWidth, Palette, Type } from '@/constants/theme';
 import { useAthletes } from '@/state/athletes';
 import { useDemoTeam } from '@/state/demo-team';

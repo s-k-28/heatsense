@@ -13,9 +13,9 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { EntryScreen, entryStyles, isKeyboardFocus } from '@/components/entry-ui';
-import { HeatSenseLogo } from '@/components/heatsense-logo';
-import { Wristband } from '@/components/wristband';
+import { EntryScreen, entryStyles, isKeyboardFocus } from '@/components/onboarding/entry-ui';
+import { HeatSenseLogo } from '@/components/branding/heatsense-logo';
+import { Wristband } from '@/components/band/wristband';
 import { Entry } from '@/constants/entry-theme';
 import { introPlayedThisSession, markIntroPlayed } from '@/state/intro-session';
 

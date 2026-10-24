@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/text';
-import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
+import { useAthletePalette, useAthleteStyles } from '@/components/ui/role-appearance';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';

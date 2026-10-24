@@ -17,11 +17,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EntryButton, EntryHeader, EntryHeading, entryStyles } from '@/components/entry-ui';
+import { EntryButton, EntryHeader, EntryHeading, entryStyles } from '@/components/onboarding/entry-ui';
 import { ActionButton } from '@/components/ui/action-button';
 import { surfaceStyles } from '@/components/ui/surface';
-import { MobileViewport } from '@/components/mobile-viewport';
-import { OnboardingBackground } from '@/components/onboarding-background';
+import { MobileViewport } from '@/components/layout/mobile-viewport';
+import { OnboardingBackground } from '@/components/onboarding/onboarding-background';
 import { Entry, ONBOARDING_STEPS } from '@/constants/entry-theme';
 import {
   ensureTeamInvite,

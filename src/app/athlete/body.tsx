@@ -16,12 +16,12 @@ import {
   MultiChoice,
   SingleChoice,
   useAthleteEntrance,
-} from '@/components/athlete-onboarding';
-import { EntryHeading, entryStyles } from '@/components/entry-ui';
-import { OnboardingBackground } from '@/components/onboarding-background';
-import { MobileViewport } from '@/components/mobile-viewport';
+} from '@/components/onboarding/athlete-onboarding';
+import { EntryHeading, entryStyles } from '@/components/onboarding/entry-ui';
+import { OnboardingBackground } from '@/components/onboarding/onboarding-background';
+import { MobileViewport } from '@/components/layout/mobile-viewport';
 import { Entry } from '@/constants/entry-theme';
-import { OnboardingTextField } from '@/components/onboarding-fields';
+import { OnboardingTextField } from '@/components/onboarding/onboarding-fields';
 import {
   ACCLIMATIZATION,
   canStoreHealth,

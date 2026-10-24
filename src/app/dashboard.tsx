@@ -5,10 +5,10 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedScrollHandler, useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DashboardContent } from '@/components/dashboard-content';
-import { AthleteAppearanceProvider } from '@/components/athlete-appearance';
-import { DashboardScrollContext } from '@/components/dashboard-scroll';
-import { DashboardState, type DashboardReviewState } from '@/components/dashboard-states';
+import { DashboardContent } from '@/components/dashboard/dashboard-content';
+import { AthleteAppearanceProvider } from '@/components/ui/role-appearance';
+import { DashboardScrollContext } from '@/components/dashboard/dashboard-scroll';
+import { DashboardState, type DashboardReviewState } from '@/components/dashboard/dashboard-states';
 import {
   DashboardHeader,
   HEADER_ROW,
@@ -16,7 +16,7 @@ import {
   TabBar,
   type DashboardRole,
   type DashboardTab,
-} from '@/components/dashboard-shell';
+} from '@/components/dashboard/dashboard-shell';
 import { MaxContentWidth, Palette, Spacing } from '@/constants/theme';
 import { CoachPalette } from '@/constants/coach-theme';
 import { endPracticeActivity, startPracticeActivity } from '@/lib/practice-activity';

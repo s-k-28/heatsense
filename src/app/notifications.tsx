@@ -4,8 +4,8 @@ import { useRouter } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
-import { BandSpot } from '@/components/band-journey';
-import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';
+import { BandSpot } from '@/components/band/band-journey';
+import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/onboarding/entry-ui';
 import { Entry } from '@/constants/entry-theme';
 import { askForHeatAlerts } from '@/services/heat-alerts';
 

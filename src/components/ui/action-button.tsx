@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/text';
-import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
+import { useAthletePalette, useAthleteStyles } from '@/components/ui/role-appearance';
 import { useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 

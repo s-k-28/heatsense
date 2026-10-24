@@ -16,12 +16,12 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionButton } from '@/components/ui/action-button';
-import { BandSpot } from '@/components/band-journey';
-import { AthleteHeader, AthletePillButton as JoinButton } from '@/components/athlete-onboarding';
-import { EntryButton, EntryHeading, entryStyles } from '@/components/entry-ui';
-import { OnboardingBackground } from '@/components/onboarding-background';
+import { BandSpot } from '@/components/band/band-journey';
+import { AthleteHeader, AthletePillButton as JoinButton } from '@/components/onboarding/athlete-onboarding';
+import { EntryButton, EntryHeading, entryStyles } from '@/components/onboarding/entry-ui';
+import { OnboardingBackground } from '@/components/onboarding/onboarding-background';
 import { Entry } from '@/constants/entry-theme';
-import { MobileViewport } from '@/components/mobile-viewport';
+import { MobileViewport } from '@/components/layout/mobile-viewport';
 import { INVITE_CODE_LENGTH, lookupInvite, NETWORK_ERROR, requestToJoinTeam, type MemberRole, watchMyMembership, type InviteLookup } from '@/services/team-invites';
 import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
 

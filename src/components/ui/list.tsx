@@ -1,11 +1,11 @@
 import { ActionButton } from '@/components/ui/action-button';
 import { Surface } from '@/components/ui/surface';
 import { Text } from '@/components/ui/text';
-import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
+import { useAthletePalette, useAthleteStyles } from '@/components/ui/role-appearance';
 import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { HeatIcon } from '@/components/heat-icon';
+import { HeatIcon } from '@/components/ui/heat-icon';
 import { Palette, Radius, Spacing, Type } from '@/constants/theme';
 
 type IconName = ComponentProps<typeof HeatIcon>['name'];

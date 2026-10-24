@@ -6,8 +6,8 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } fro
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { AthleteAppearanceProvider, useAthleteStyles } from '@/components/athlete-appearance';
-import { ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
+import { AthleteAppearanceProvider, useAthleteStyles } from '@/components/ui/role-appearance';
+import { ListRow, Rows, SampleTag, SectionTitle } from '@/components/ui/data-display';
 import { shareMessage } from '@/components/ui/share-message';
 import { ActionButton } from '@/components/ui/action-button';
 import { Face, MaxContentWidth, Palette } from '@/constants/theme';

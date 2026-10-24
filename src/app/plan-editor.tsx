@@ -10,7 +10,7 @@ import { pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SlidingTabs } from '@/components/sliding-tabs';
+import { SlidingTabs } from '@/components/ui/sliding-tabs';
 import { TextLink } from '@/components/ui/list';
 import { Palette, Spacing, Type } from '@/constants/theme';
 import {

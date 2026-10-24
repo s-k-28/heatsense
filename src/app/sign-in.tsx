@@ -5,9 +5,9 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View, type TextInput } from 'react-native';
 
-import { GoogleLogo } from '@/components/brand-logos';
-import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';
-import { OnboardingTextField } from '@/components/onboarding-fields';
+import { GoogleLogo } from '@/components/branding/brand-logos';
+import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/onboarding/entry-ui';
+import { OnboardingTextField } from '@/components/onboarding/onboarding-fields';
 import { Entry } from '@/constants/entry-theme';
 import { createEmailAccount, emailAuthMessage, sendPasswordReset, signInWithEmail } from '@/services/email-auth';
 import { signInWithGoogle } from '@/services/google-auth';

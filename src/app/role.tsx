@@ -2,9 +2,9 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
-import { BandSpot } from '@/components/band-journey';
-import { EntryButton, EntryHeader, EntryHeading, EntryScreen } from '@/components/entry-ui';
-import { OnboardingSelectionSurface } from '@/components/onboarding-controls';
+import { BandSpot } from '@/components/band/band-journey';
+import { EntryButton, EntryHeader, EntryHeading, EntryScreen } from '@/components/onboarding/entry-ui';
+import { OnboardingSelectionSurface } from '@/components/onboarding/onboarding-controls';
 import { setOnboardingRole, useOnboardingRole, type OnboardingRole } from '@/state/onboarding';
 
 // Role selection, as an editorial page: the headline up top, open space where the curves

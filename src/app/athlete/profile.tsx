@@ -12,12 +12,12 @@ import {
   ATHLETE_ERROR,
   ATHLETE_SCREEN,
   useAthleteEntrance,
-} from '@/components/athlete-onboarding';
-import { EntryHeading } from '@/components/entry-ui';
-import { OnboardingBackground } from '@/components/onboarding-background';
-import { MobileViewport } from '@/components/mobile-viewport';
+} from '@/components/onboarding/athlete-onboarding';
+import { EntryHeading } from '@/components/onboarding/entry-ui';
+import { OnboardingBackground } from '@/components/onboarding/onboarding-background';
+import { MobileViewport } from '@/components/layout/mobile-viewport';
 import { Entry } from '@/constants/entry-theme';
-import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
+import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding/onboarding-fields';
 import { SPORTS } from '@/constants/sports';
 import { ageBandFor, getAthleteProfile, GRADES, saveAthleteBasics, type AthleteProfile, type Grade } from '@/services/athlete-profile';
 import { firebaseAuth } from '@/services/firebase';
