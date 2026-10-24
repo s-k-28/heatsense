@@ -1,12 +1,12 @@
 import { Image } from 'expo-image';
 import { useFocusEffect, usePathname } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { Dimensions, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, makeMutable, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { WRISTBAND_ASPECT, WRISTBAND_HERO } from '@/components/wristband-asset';
-import { EASE_IN_OUT, EASE_OUT, useLoopClock, wave } from '@/lib/motion-engine';
+import { EASE_IN_OUT, EASE_OUT } from '@/lib/motion-engine';
 import { useMotionActive } from '@/lib/motion-activity';
 
 // The band's journey through onboarding: one band that travels from screen to screen
@@ -45,7 +45,6 @@ const LEAN_DEG = 2.5;
 // At rest the band floats: a 3% bob over 3.9 s and a ±2° tilt over 5.2 s, closing every 15.6 s
 // (onboarding is seen once, so the band can be more present here than in the app).
 // Frame 0 is the rest pose, so a band that has just landed starts exactly where the flight left it.
-const FLOAT_LOOP = 15_600;
 
 function setJourney(next: Partial<typeof journey>) {
   journey = { ...journey, ...next };
@@ -117,31 +116,13 @@ export function useBandSpot(id: string | undefined) {
 }
 
 /** A resting place for the band: `height` tall, the band's own width. `children` draw extras over it (a pairing light). */
-export function BandSpot({ id, height, quiet = false, travel = true, style, children }: { id: string; height: number; quiet?: boolean; travel?: boolean; style?: StyleProp<ViewStyle>; children?: ReactNode }) {
+export function BandSpot({ id, height, travel = true, style, children }: { id: string; height: number; quiet?: boolean; travel?: boolean; style?: StyleProp<ViewStyle>; children?: ReactNode }) {
   const { ref, onLayout, away } = useBandSpot(travel ? id : undefined);
-  const active = useMotionActive();
-  const [visible, setVisible] = useState(!quiet);
-  useEffect(() => {
-    if (!quiet || !active) return;
-    // Home scrolls the band below the fold. Check visibility at a low cadence, never on every frame.
-    const check = () => ref.current?.measureInWindow((_x, y, _width, measuredHeight) => {
-      setVisible(measuredHeight > 0 && y + measuredHeight > 0 && y < Dimensions.get('window').height);
-    });
-    check();
-    const timer = setInterval(check, 750);
-    return () => clearInterval(timer);
-  }, [active, quiet, ref]);
-  // The clock only runs while the band rests here; it restarts at the rest pose on every landing.
-  const t = useLoopClock(FLOAT_LOOP, !away && (!quiet || visible));
-  const float = useAnimatedStyle(() => {
-    const lift = (wave(t.value, 3900, 0.75) + 1) / 2;
-    return { transform: [{ translateY: -height * (quiet ? 0.015 : 0.03) * lift }, { rotate: `${(quiet ? 0.7 : 2) * wave(t.value, 5200)}deg` }] };
-  });
   return (
     <View accessibilityLabel="The HeatSense band" accessibilityRole="image" accessible onLayout={onLayout} ref={ref} style={[{ height, width: height * WRISTBAND_ASPECT, opacity: away ? 0 : 1 }, style]}>
-      <Animated.View style={[StyleSheet.absoluteFill, float]}>
+      <View style={StyleSheet.absoluteFill}>
         <Image contentFit="contain" source={WRISTBAND_HERO} style={StyleSheet.absoluteFill} />
-      </Animated.View>
+      </View>
       {children}
     </View>
   );

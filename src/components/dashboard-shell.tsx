@@ -8,7 +8,7 @@ import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-nativ
 import Animated, { Easing, interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GlassSurface } from '@/components/glass-surface';
+import { Surface } from '@/components/ui/surface';
 import { HeatIcon } from '@/components/heat-icon';
 import { HeatSenseLogo } from '@/components/heatsense-logo';
 import { TextLink } from '@/components/ui/list';
@@ -164,7 +164,7 @@ export function TabBar({ activeTab, onChange, tabs, variant = 'default' }: { act
 
   return (
     <View style={[styles.pillWrap, variant === 'coach' && styles.coachPillWrap, { bottom: Math.max(insets.bottom - 6, Spacing.three) }]}>
-      <GlassSurface radius={PILL_HEIGHT / 2} style={[styles.pill, variant === 'coach' && styles.coachPill]}>
+      <Surface style={[styles.pill, { borderRadius: PILL_HEIGHT / 2, shadowOpacity: 0 }, variant === 'coach' && styles.coachPill]}>
         <View onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)} style={styles.pillInner}>
           {tabWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.indicator, variant === 'coach' && styles.coachIndicator, indicator]} /> : null}
           {tabs.map((tab, position) => (
@@ -180,7 +180,7 @@ export function TabBar({ activeTab, onChange, tabs, variant = 'default' }: { act
             />
           ))}
         </View>
-      </GlassSurface>
+      </Surface>
     </View>
   );
 }
@@ -226,7 +226,7 @@ const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.55 },
   headerWrap: { left: 0, position: 'absolute', right: 0, top: 0, zIndex: 10 },
   headerBackdrop: { backgroundColor: Palette.canvas, borderBottomColor: 'rgba(255,255,255,0.08)', borderBottomWidth: StyleSheet.hairlineWidth },
-  coachHeaderBackdrop: { backgroundColor: 'rgba(11,13,14,0.96)', borderBottomColor: CoachPalette.hairline },
+  coachHeaderBackdrop: { backgroundColor: Palette.canvas, borderBottomColor: CoachPalette.hairline },
   headerTitleWrap: { alignItems: 'center', height: HEADER_ROW, justifyContent: 'center', left: 0, position: 'absolute', right: 0 },
   headerTitle: { color: Palette.ink, ...Type.headline, flex: 1, minWidth: 0, marginHorizontal: 12 },
   coachHeaderTitle: { color: CoachPalette.text, fontSize: 17, fontWeight: '700', letterSpacing: -0.3 },
@@ -243,9 +243,9 @@ const baseStyles = StyleSheet.create({
   sectionHeader: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.two, marginTop: Spacing.seven },
   sectionHeaderTight: { marginTop: Spacing.five },
   sectionTitle: { color: Palette.ink, ...Type.title3, fontWeight: '700' },
-  pillWrap: { elevation: 10, left: Spacing.four, position: 'absolute', right: Spacing.four, shadowColor: '#000', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.1, shadowRadius: 18 },
+  pillWrap: { elevation: 2, left: Spacing.four, position: 'absolute', right: Spacing.four, shadowColor: '#000', shadowOffset: { height: 8, width: 0 }, shadowOpacity: 0.1, shadowRadius: 18 },
   coachPillWrap: { left: 14, right: 14, shadowOffset: { height: 10, width: 0 }, shadowOpacity: 0.1, shadowRadius: 22 },
-  // The translucent fill keeps labels readable over scrolled content wherever glass blur isn't available.
+  // Opaque tonal navigation keeps content readable without blur or specular layers.
   pill: { backgroundColor: Palette.surface, borderColor: 'rgba(191,192,203,0.08)', borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, height: PILL_HEIGHT },
   coachPill: { backgroundColor: Palette.surface, borderColor: 'transparent', borderRadius: CoachRadius.pill },
   pillInner: { flex: 1, flexDirection: 'row', padding: PILL_PADDING },

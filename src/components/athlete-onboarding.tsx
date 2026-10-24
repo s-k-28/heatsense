@@ -31,13 +31,13 @@ export function useAthleteEntrance() {
     const fades = new Map<number, ReturnType<typeof FadeIn.delay>>();
     return {
       rise: (delay: number) => {
-        if (reducedMotion) return undefined;
-        if (!rises.has(delay)) rises.set(delay, FadeInUp.delay(delay).duration(520).easing(athleteEase));
+        if (reducedMotion || Platform.OS === 'web') return undefined;
+        if (!rises.has(delay)) rises.set(delay, FadeInUp.duration(300).easing(athleteEase));
         return rises.get(delay);
       },
       fade: (delay: number) => {
-        if (reducedMotion) return undefined;
-        if (!fades.has(delay)) fades.set(delay, FadeIn.delay(delay).duration(450).easing(athleteEase));
+        if (reducedMotion || Platform.OS === 'web') return undefined;
+        if (!fades.has(delay)) fades.set(delay, FadeIn.duration(300).easing(athleteEase));
         return fades.get(delay);
       },
     };
