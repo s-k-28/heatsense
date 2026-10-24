@@ -56,7 +56,7 @@ export default function AthleteVitalsScreen() {
         <Text accessibilityRole="header" style={styles.barTitle}>{name}</Text>
         <View style={styles.back} />
       </View>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.column}>
           {member ? (
             <>

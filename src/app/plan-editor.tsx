@@ -110,7 +110,7 @@ function PlanEditorForm({ active, source }: { active: PracticePlan; source?: Pra
         <View style={styles.barEnd} />
       </View>
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.eight }]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.eight }]} keyboardDismissMode="interactive" keyboardShouldPersistTaps="handled">
           <Text style={styles.label}>Plan name</Text>
           <TextInput
             accessibilityLabel="Plan name"

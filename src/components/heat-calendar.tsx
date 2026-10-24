@@ -71,7 +71,7 @@ export function HeatHistory({ past, today, temp, onOpenSession }: { past: Sessio
       <Segmented onChange={selectView} options={[{ key: 'week', label: 'Week' }, { key: 'month', label: 'Month' }]} tone="card" value={view} />
 
       {view === 'week' ? (
-        <ScrollView contentContainerStyle={styles.week} horizontal onContentSizeChange={() => weekScroll.current?.scrollToEnd({ animated: false })} onLayout={() => weekScroll.current?.scrollToEnd({ animated: false })} ref={weekScroll} style={styles.weekViewport}>
+        <ScrollView contentContainerStyle={styles.week} horizontal showsHorizontalScrollIndicator={false} onContentSizeChange={() => weekScroll.current?.scrollToEnd({ animated: false })} onLayout={() => weekScroll.current?.scrollToEnd({ animated: false })} ref={weekScroll} style={styles.weekViewport}>
           {week.map((d) => {
             const on = sameDay(d.date, picked);
             return (
