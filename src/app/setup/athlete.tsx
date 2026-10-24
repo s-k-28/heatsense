@@ -206,9 +206,10 @@ function Content({ role }: { role: MemberRole }) {
         bounces={false}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        style={{ marginTop: insets.top }}
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(12, 26 - insets.top), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <Animated.View entering={fade(200)}>
-          <AthleteHeader bandDock={false} onBack={back} step={1} />
+          <AthleteHeader bandDock={false} onBack={back} step={role === 'athlete' ? 1 : undefined} />
         </Animated.View>
 
         <View style={[styles.above, styles.bandRoom]}><BandSpot height={compact ? 100 : 130} id={`join-${role}`} /></View>
