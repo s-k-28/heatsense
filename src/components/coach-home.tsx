@@ -3,10 +3,11 @@ import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
 import { HeatIcon } from '@/components/heat-icon';
 import { chevron } from '@/components/ui/list';
+import { type InviteShareAction } from '@/components/ui/share-message';
 import { ActionButton } from '@/components/ui/action-button';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedProps, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
@@ -41,7 +42,7 @@ export function zoneColor(zone: Zone) {
 export type HomePersonalBand = { heartRate: number; recovery: 'usual' | 'watch' | 'unknown'; simulated: boolean; stale?: boolean };
 type HomeRole = 'coach' | 'athlete' | 'trainer';
 
-export function CoachHome({ onInvite, onOpenPlan }: { onInvite: () => void; onOpenPlan: () => void }) {
+export function CoachHome({ onInvite, onOpenPlan }: { onInvite: InviteShareAction; onOpenPlan: () => void }) {
   const styles = useAthleteStyles(baseStyles);
   const team = useCoachDataState('coach');
   const [sheet, setSheet] = useState(false);
@@ -57,7 +58,7 @@ export function CoachHome({ onInvite, onOpenPlan }: { onInvite: () => void; onOp
 }
 
 /** One visual composition; role changes data access and destinations, never grants staff actions. */
-export function HomeOverview({ data, role, onAction, onOpenPlan, onInvite, personalBand }: { data: CoachData | null; role: HomeRole; onAction: () => void; onOpenPlan: () => void; onInvite?: () => void; personalBand?: HomePersonalBand | null }) {
+export function HomeOverview({ data, role, onAction, onOpenPlan, onInvite, personalBand }: { data: CoachData | null; role: HomeRole; onAction: () => void; onOpenPlan: () => void; onInvite?: InviteShareAction; personalBand?: HomePersonalBand | null }) {
   const styles = useAthleteStyles(baseStyles);
   const now = useNow();
   const reduced = useReducedMotion();
@@ -105,7 +106,7 @@ function StaffTimeline({ onOpenPlan }: { onOpenPlan: () => void }) {
   return <PracticeTimeline blocks={buildSchedule(plan)} onOpenPlan={onOpenPlan} planName={plan.name} waterEvery={plan.waterEveryMinutes} />;
 }
 
-function StaffPulse({ onInvite, role }: { onInvite?: () => void; role: 'coach' | 'trainer' }) {
+function StaffPulse({ onInvite, role }: { onInvite?: InviteShareAction; role: 'coach' | 'trainer' }) {
   const styles = useAthleteStyles(baseStyles);
   const team = useAthletes(role);
   if (team.status === 'error' || team.vitalsStatus === 'error') return <View style={styles.teamSection}><Text accessibilityRole="header" style={styles.visualTitle}>Team pulse</Text><Text style={styles.visualMeta}>Team band signals couldn’t load.</Text><ActionButton label="Try again" onPress={team.retry} variant="text" /></View>;
@@ -192,10 +193,24 @@ function PracticeTimeline({ blocks, onOpenPlan, planName, waterEvery }: { blocks
   );
 }
 
-function TeamPulse({ live, onInvite, total, watch }: { live: number; onInvite?: () => void; total: number; watch: number | null }) {
+function TeamPulse({ live, onInvite, total, watch }: { live: number; onInvite?: InviteShareAction; total: number; watch: number | null }) {
   const styles = useAthleteStyles(baseStyles);
+  const [sharing, setSharing] = useState(false);
+  const sharingRef = useRef(false);
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const invite = async () => {
+    if (!onInvite || sharingRef.current) return;
+    sharingRef.current = true;
+    setSharing(true);
+    setShareStatus('idle');
+    try {
+      const result = await onInvite();
+      setShareStatus(result === 'copied' ? 'copied' : result === 'error' ? 'error' : 'idle');
+    } catch { setShareStatus('error'); }
+    finally { sharingRef.current = false; setSharing(false); }
+  };
   const metrics = [{ color: '#F7F6F2', label: 'Roster', value: total }, { color: '#30D158', label: 'Live', value: live }, { color: watch ? '#FF9F0A' : '#B7BCBE', label: 'Watch', value: watch ?? '—' }];
-  return <View style={styles.teamSection}><View style={styles.visualHead}><Text accessibilityRole="header" style={styles.visualTitle}>Team pulse</Text>{total === 0 && onInvite ? <Pressable accessibilityRole="button" onPress={onInvite} style={({ pressed }) => pressed && styles.pressed}><Text style={styles.inlineAction}>Share code</Text></Pressable> : null}</View><View style={styles.teamMetrics}>{metrics.map((metric) => <View key={metric.label} style={styles.teamMetric}><Text key={`${metric.label}-${metric.value}`} style={[styles.teamNumber, { color: metric.color }]}>{metric.value}</Text><View style={[styles.teamRule, { backgroundColor: metric.color }]} /><Text style={styles.teamLabel}>{metric.label}</Text></View>)}</View></View>;
+  return <View style={styles.teamSection}><View style={styles.visualHead}><Text accessibilityRole="header" style={styles.visualTitle}>Team pulse</Text>{total === 0 && onInvite ? <ActionButton busy={sharing} busyLabel="Sharing…" label={shareStatus === 'copied' ? 'Copied' : shareStatus === 'error' ? 'Try again' : 'Share code'} onPress={invite} variant="text" /> : null}</View>{shareStatus === 'error' ? <Text accessibilityRole="alert" style={[styles.visualMeta, { color: Palette.emergency }]}>Couldn’t share the code.</Text> : null}<View style={styles.teamMetrics}>{metrics.map((metric) => <View key={metric.label} style={styles.teamMetric}><Text key={`${metric.label}-${metric.value}`} style={[styles.teamNumber, { color: metric.color }]}>{metric.value}</Text><View style={[styles.teamRule, { backgroundColor: metric.color }]} /><Text style={styles.teamLabel}>{metric.label}</Text></View>)}</View></View>;
 }
 
 type HeatDay = { date: Date; peak: { wbgtF: number; zone: Zone } | null };
@@ -217,7 +232,7 @@ function WeeklyHeat({ days, toDisplay, unit }: { days: HeatDay[]; toDisplay: (fa
 function AlertPreview({ count, hasSession, loading, onPress, overdue, readOnly }: { count: number; hasSession: boolean; loading: boolean; onPress: () => void; overdue: boolean; readOnly: boolean }) {
   const styles = useAthleteStyles(baseStyles);
   const tone = loading || !hasSession ? CoachPalette.muted : count ? (overdue ? Palette.emergency : Palette.warning) : Palette.safe;
-  return <Pressable accessibilityRole="button" disabled={!count} onPress={onPress} style={({ pressed }) => [styles.alertStrip, pressed && styles.pressedScale]}><View style={[styles.alertGlyph, { borderColor: tone }]}><Text style={[styles.alertGlyphText, { color: tone }]}>{loading || !hasSession ? '—' : count || '✓'}</Text></View><View style={styles.alertText}><Text style={styles.alertTitle}>{loading ? 'Loading practice…' : !hasSession ? 'No active practice' : count ? (overdue ? 'Reading overdue' : readOnly ? 'Team guidance pending' : 'Guidance to confirm') : 'Field checks current'}</Text><Text style={styles.alertMeta}>{loading ? 'Looking for team updates' : !hasSession ? 'Your coach starts the next practice.' : count ? readOnly ? 'Your coach or trainer records and confirms updates.' : `${count} open ${count === 1 ? 'item' : 'items'}` : 'Based on this practice’s field readings'}</Text></View>{count ? <Text style={styles.alertArrow}>›</Text> : null}</Pressable>;
+  return <Pressable accessibilityRole="button" disabled={!count} onPress={onPress} style={({ pressed }) => [styles.alertStrip, pressed && styles.pressedScale]}><View style={[styles.alertGlyph, { borderColor: tone }]}><Text style={[styles.alertGlyphText, { color: tone }]}>{loading || !hasSession ? '—' : count || '✓'}</Text></View><View style={styles.alertText}><Text style={styles.alertTitle}>{loading ? 'Loading practice…' : !hasSession ? 'No active practice' : count ? (overdue ? 'Reading overdue' : readOnly ? 'Team guidance pending' : 'Guidance to confirm') : 'Field checks current'}</Text><Text style={styles.alertMeta}>{loading ? 'Looking for team updates' : !hasSession ? readOnly ? 'Your coach starts the next practice.' : 'Check field conditions to start.' : count ? readOnly ? 'Your coach or trainer records and confirms updates.' : `${count} open ${count === 1 ? 'item' : 'items'}` : 'Based on this practice’s field readings'}</Text></View>{count ? <Text style={styles.alertArrow}>›</Text> : null}</Pressable>;
 }
 
 /** The practice loop dials, with the active plan's water and equipment rules on one line beneath. */
@@ -348,7 +363,7 @@ function Dial({ color, label, ring, status, summary, unit, value, size, stacked 
 }
 
 /** First-run cards: take a reading, invite athletes, pair bands. Each can be dismissed. */
-export function GetStarted({ onInvite, onReading, showReading }: { onInvite?: () => void; onReading: () => void; showReading: boolean }) {
+export function GetStarted({ onInvite, onReading, showReading }: { onInvite?: InviteShareAction; onReading: () => void; showReading: boolean }) {
   const styles = useAthleteStyles(baseStyles);
   const [dismissed, setDismissed] = useState<string[]>([]);
   const reduced = useReducedMotion();

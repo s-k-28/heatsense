@@ -1,11 +1,12 @@
 import { surfaceStyles } from '@/components/ui/surface';
 import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
+import { shareMessage } from '@/components/ui/share-message';
 import { ActionButton } from '@/components/ui/action-button';
 import { useAuthSession } from '@/state/auth-session';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { Facts, ListRow, Rows, SampleTag } from '@/components/whoop-ui';
@@ -55,6 +56,7 @@ export function TeamTab() {
   const mine = lookup.data;
   const sharing = useRef(false);
   const [shareBusy, setShareBusy] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<{ code: string; status: 'copied' | 'error' } | null>(null);
   const roster = useRoster(data?.teamId ?? null);
   const [busy, setBusy] = useState<{ uid: string; approve: boolean } | null>(null);
   const [view, setView] = useState<'roster' | 'live'>('roster');
@@ -74,8 +76,12 @@ export function TeamTab() {
     if (!code || sharing.current) return;
     sharing.current = true;
     setShareBusy(true);
-    try { await Share.share({ message: `Join ${team?.teamName ?? 'our team'} on HeatSense with the code ${code}.` }); }
-    catch { Alert.alert('Couldn’t share the code', 'Try opening the share sheet again.'); }
+    setShareFeedback(null);
+    try {
+      const result = await shareMessage(`Join ${team?.teamName ?? 'our team'} on HeatSense with the code ${code}.`);
+      if (result === 'copied') setShareFeedback({ code, status: 'copied' });
+    }
+    catch { setShareFeedback({ code, status: 'error' }); }
     finally { sharing.current = false; setShareBusy(false); }
   };
 
@@ -103,8 +109,9 @@ export function TeamTab() {
                   <Text style={styles.codeLabel}>Team code</Text>
                   <Text accessibilityLabel={code ? `Team code ${code.split('').join(' ')}` : 'Team code loading'} style={styles.code}>{code ? code.replace(/(\d{3})(\d{3})/, '$1 $2') : '··· ···'}</Text>
                 </View>
-                <ActionButton accessibilityLabel="Share team code" busy={shareBusy} busyLabel="Opening…" disabled={!code} label="Share" onPress={shareCode} style={styles.shareCode} variant="primary" />
+                <ActionButton accessibilityLabel={shareFeedback?.code === code && shareFeedback?.status === 'copied' ? 'Team invitation copied' : shareFeedback?.code === code && shareFeedback?.status === 'error' ? 'Retry sharing team code' : 'Share team code'} busy={shareBusy} busyLabel="Sharing…" disabled={!code} label={shareFeedback?.code === code && shareFeedback?.status === 'copied' ? 'Copied' : shareFeedback?.code === code && shareFeedback?.status === 'error' ? 'Try again' : 'Share'} onPress={shareCode} style={styles.shareCode} variant="primary" />
               </View>
+              {shareFeedback?.code === code && shareFeedback?.status === 'error' ? <Text accessibilityRole="alert" style={{ color: Palette.emergency }}>Couldn’t share the code. Try again.</Text> : null}
             </View>
           )}
 

@@ -2,13 +2,14 @@ import { Text } from '@/components/ui/text';
 import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { createContext, useContext } from 'react';
-import { Alert, Share, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { CoachLargeTitle, LargeTitle, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';
 import { AlertsTab } from '@/components/alerts-tab';
 import { PlanTab, TeamTab } from '@/components/coach-tabs';
 import { ProfileTab } from '@/components/profile-tab';
+import { shareMessage, type InviteShareResult } from '@/components/ui/share-message';
 import { CoachHome as CoachHomeScreen } from '@/components/coach-home';
 import { LearnTab } from '@/components/learn-tab';
 import { AthleteBand, AthleteHome, AthleteSessions, TrainerHome } from '@/components/role-tabs';
@@ -47,7 +48,7 @@ function useTeam() {
   return { draft, school: draft.school.trim() || 'Liberty High School', name: draft.teamName.trim() || 'Liberty Patriots' };
 }
 
-export async function shareTeamCode(draft: TeamDraft) {
+export async function shareTeamCode(draft: TeamDraft): Promise<InviteShareResult> {
   try {
     // A coach who already created a team shares that team's active code; otherwise use the setup draft.
     const existing = await getMyTeamInvite();
@@ -55,15 +56,15 @@ export async function shareTeamCode(draft: TeamDraft) {
     // No team yet: the code comes from creating one, so go there instead of explaining.
     if (!existing && !complete) {
       router.push('/team/create');
-      return;
+      return 'cancelled';
     }
     const teamName = existing ? existing.team.teamName : draft.teamName;
     const invite = existing
       ? existing.invite
       : await ensureTeamInvite({ school: draft.school, teamName: draft.teamName, sport: draft.sport!, level: draft.level! });
-    await Share.share({ message: `Join ${teamName} on HeatSense with the code ${invite.code}.` });
+    return await shareMessage(`Join ${teamName} on HeatSense with the code ${invite.code}.`);
   } catch {
-    Alert.alert('Couldn’t share the code', 'Check your connection and try again.');
+    return 'error';
   }
 }
 
