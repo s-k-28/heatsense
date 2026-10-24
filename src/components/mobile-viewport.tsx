@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-export const SCREEN_BACKGROUND = '#222222';
+export const SCREEN_BACKGROUND = '#090B0C';
 const DESKTOP_BACKGROUND = '#0A0D0E';
 // Wider than any phone: show the app as a centered phone instead of stretching it across the window.
 const DESKTOP_BREAKPOINT = 600;
@@ -26,13 +26,9 @@ export function PhoneFrame({ children }: { children: ReactNode }) {
   const frame = frameFor(width, height);
   return (
     <FrameContext.Provider value={frame}>
-      {frame.framed ? (
-        <View style={styles.desktop}>
-          <View style={[styles.frame, { width: frame.width, height: frame.height }]}>{children}</View>
-        </View>
-      ) : (
-        <View style={styles.fill}>{children}</View>
-      )}
+      <View style={frame.framed ? styles.desktop : styles.fill}>
+        <View style={frame.framed ? [styles.frame, { width: frame.width, height: frame.height }] : styles.fill}>{children}</View>
+      </View>
     </FrameContext.Provider>
   );
 }
@@ -53,10 +49,9 @@ export function useViewportSize() {
  */
 export function FramedModalContent({ backdrop, children }: { backdrop?: boolean; children: ReactNode }) {
   const frame = useViewportSize();
-  if (!frame.framed) return <View style={styles.fill}>{children}</View>;
   return (
-    <View pointerEvents="box-none" style={[styles.modalCenter, backdrop && styles.modalBackdrop]}>
-      <View style={[styles.modalFrame, { width: frame.width, height: frame.height }]}>{children}</View>
+    <View pointerEvents="box-none" style={frame.framed ? [styles.modalCenter, backdrop && styles.modalBackdrop] : styles.fill}>
+      <View style={frame.framed ? [styles.modalFrame, { width: frame.width, height: frame.height }] : styles.fill}>{children}</View>
     </View>
   );
 }

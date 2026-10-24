@@ -1,15 +1,17 @@
-import { Text } from '@/components/ui/text';
+import { Text, TextInput } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { signOut, updateProfile } from 'firebase/auth';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import { useAthleteAppearance, useAthleteStyles } from '@/components/athlete-appearance';
+import { FramedModalContent } from '@/components/mobile-viewport';
+import { surfaceStyles } from '@/components/ui/surface';
 import { Fill } from '@/components/motion/fill';
 import { FloatingBand } from '@/components/motion/floating-band';
 import { Segmented } from '@/components/motion/segmented';
@@ -72,6 +74,26 @@ function Pencil() {
   return <Svg fill="none" height={14} stroke="#101416" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} viewBox="0 0 24 24" width={14}><Path d="M4 20h4L19 9l-4-4L4 16z" /></Svg>;
 }
 
+function ProfileDialog({ title, onClose, busy = false, children }: { title: string; onClose: () => void; busy?: boolean; children: ReactNode }) {
+  const reduced = useReducedMotion();
+  const close = () => { if (!busy) onClose(); };
+  return <Modal animationType={reduced ? 'none' : 'fade'} onRequestClose={close} transparent visible>
+    <FramedModalContent backdrop>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={baseStyles.dialogViewport}>
+        <Pressable accessible={false} onPress={close} style={StyleSheet.absoluteFill} />
+        <View accessibilityViewIsModal style={[surfaceStyles.card, baseStyles.dialogSheet]}>
+          <ScrollView contentContainerStyle={baseStyles.dialogContent} keyboardShouldPersistTaps="handled">
+            <Text accessibilityRole="header" style={baseStyles.sectionTitle}>{title}</Text>
+            {children}
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </FramedModalContent>
+  </Modal>;
+}
+
+type IdentityDialog = { kind: 'name' | 'photo' | 'notice'; owner: string | null; previous?: string | null; title?: string; message?: string; settings?: boolean };
+
 function Header({ role, team = null, coach = false }: { role: Role; team?: string | null; coach?: boolean }) {
   const styles = useAthleteStyles(baseStyles);
   const { user } = useAuthSession();
@@ -80,42 +102,68 @@ function Header({ role, team = null, coach = false }: { role: Role; team?: strin
   const since = user?.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString([], { month: 'long', year: 'numeric' }) : null;
   const realName = profileName?.trim() || user?.displayName?.trim() || null;
   const name = realName ?? 'Add your name';
-  const initials = realName ? realName.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase() : null;
+  const initials = realName ? realName.split(/\s+/).map((part) => Array.from(part)[0]).slice(0, 2).join('').toUpperCase() : null;
+  const [dialog, setDialog] = useState<IdentityDialog | null>(null);
+  const [draftName, setDraftName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [savingName, setSavingName] = useState(false);
+  const savingNameRef = useRef(false);
 
-  const pick = async (camera: boolean) => {
+  const pick = async (camera: boolean, owner: string | null, previous: string | null) => {
     try {
       if (camera) {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) { Alert.alert('Camera access is off', 'Turn it on in Settings to take a profile picture.', [{ text: 'Not now', style: 'cancel' }, { text: 'Settings', onPress: () => Linking.openSettings() }]); return; }
+        if (!permission.granted) {
+          setDialog({ kind: 'notice', owner, title: 'Camera access is off', message: Platform.OS === 'web' ? 'Allow camera access in your browser, or choose a photo from your library.' : 'Allow camera access in Settings, or choose a photo from your library.', settings: Platform.OS !== 'web' });
+          return;
+        }
       }
-      const options: ImagePicker.ImagePickerOptions = { allowsEditing: true, aspect: [1, 1], mediaTypes: ['images'], quality: 0.7 };
+      const options: ImagePicker.ImagePickerOptions = { allowsEditing: true, aspect: [1, 1], mediaTypes: ['images'], quality: 0.7, base64: Platform.OS === 'web' };
       const result = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       if (result.canceled || !result.assets[0]) return;
-      setProfile({ photoUri: await keepPhoto(result.assets[0].uri, photoUri) }, profileOwner);
+      const asset = result.assets[0];
+      const uri = Platform.OS === 'web' && asset.base64 ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}` : await keepPhoto(asset.uri, previous);
+      setProfile({ photoUri: uri }, owner);
     } catch {
-      Alert.alert('Couldn’t use that photo', camera ? 'This device may not have a camera. Try choosing from your library.' : 'Try another photo.');
+      setDialog({ kind: 'notice', owner, title: 'Couldn’t use that photo', message: camera ? 'Try choosing a photo from your library.' : 'Try another photo.' });
     }
   };
-  const choosePhoto = () => Alert.alert('Profile picture', undefined, [
-    // The picker can't present while this alert is still closing, so it waits a beat.
-    { text: 'Choose from library', onPress: () => setTimeout(() => pick(false), 400) },
-    { text: 'Take photo', onPress: () => setTimeout(() => pick(true), 400) },
-    ...(photoUri ? [{ text: 'Remove photo', style: 'destructive' as const, onPress: () => { try { new File(photoUri).delete(); } catch {} setProfile({ photoUri: null }, profileOwner); } }] : []),
-    { text: 'Cancel', style: 'cancel' as const },
-  ]);
+  const choosePhoto = () => setDialog({ kind: 'photo', owner: profileOwner, previous: photoUri });
+  const launchPhoto = (camera: boolean) => {
+    if (dialog?.kind !== 'photo') return;
+    const { owner, previous } = dialog;
+    setDialog(null);
+    // Let the modal finish closing before a native picker presents.
+    if (Platform.OS === 'web') void pick(camera, owner, previous ?? null);
+    else setTimeout(() => { void pick(camera, owner, previous ?? null); }, 400);
+  };
   const rename = () => {
-    const save = (next?: string) => {
-      const value = next?.trim();
-      if (!value) return;
-      setProfile({ profileName: value }, profileOwner);
+    setDraftName(realName ?? '');
+    setNameError(null);
+    setDialog({ kind: 'name', owner: profileOwner });
+  };
+  const saveName = async () => {
+    const value = draftName.trim();
+    if (!value || dialog?.kind !== 'name' || savingNameRef.current) return;
+    const owner = dialog.owner;
+    savingNameRef.current = true;
+    setSavingName(true);
+    setNameError(null);
+    setProfile({ profileName: value }, owner);
+    try {
       const current = firebaseAuth?.currentUser;
-      if (current && current.uid === profileOwner) updateProfile(current, { displayName: value }).catch(() => {});
-    };
-    if (Platform.OS === 'ios') Alert.prompt('Your name', 'Shown to your team.', save, 'plain-text', realName ?? '');
-    else Alert.alert('Change your name', 'Name changes are available on iPhone for now.');
+      if (current && current.uid === owner) await updateProfile(current, { displayName: value });
+      setDialog(null);
+    } catch {
+      setNameError('Saved on this device. The account update couldn’t finish; try again.');
+    } finally {
+      savingNameRef.current = false;
+      setSavingName(false);
+    }
   };
 
   return (
+    <>
     <View style={[styles.header, coach && styles.coachHeader]}>
       <Pressable accessibilityHint="Changes your profile picture" accessibilityLabel="Profile picture" accessibilityRole="button" onPress={choosePhoto} style={({ pressed }) => [styles.avatarWrap, coach && styles.coachAvatarWrap, pressed && styles.pressed]}>
         {photoUri ? <Image accessibilityIgnoresInvertColors contentFit="cover" source={{ uri: photoUri }} style={[styles.avatar, coach && styles.coachAvatar]} /> : <View style={[styles.avatar, coach && styles.coachAvatar]}>{initials ? <Text style={[styles.avatarText, coach && styles.coachAvatarText]}>{initials}</Text> : <PersonGlyph />}</View>}
@@ -124,12 +172,30 @@ function Header({ role, team = null, coach = false }: { role: Role; team?: strin
       <View style={[styles.identity, coach && styles.coachIdentity]}>
         <View style={styles.nameLine}>
           <Text style={[styles.name, coach && styles.coachName, !realName && styles.namePlaceholder]}>{name}</Text>
-          <ActionButton accessibilityLabel="Edit your name" accessibilityHint="Changes the name shown to your team" label="Edit" onPress={rename} style={styles.editAction} variant="text" />
+          <ActionButton accessibilityLabel="Edit your name" accessibilityHint="Changes your profile name" label="Edit" onPress={rename} style={styles.editAction} variant="text" />
         </View>
         <Text style={[styles.meta, coach && styles.coachMeta]}>{role}{coach && team ? ` · ${team}` : ''}</Text>
         {coach && since ? <Text style={styles.coachSince}>Member since {since}</Text> : null}
       </View>
     </View>
+    {dialog && dialog.owner === profileOwner ? <ProfileDialog busy={savingName} onClose={() => setDialog(null)} title={dialog.kind === 'name' ? 'Your name' : dialog.kind === 'photo' ? 'Profile picture' : dialog.title ?? 'Profile'}>
+      {dialog.kind === 'name' ? <>
+        <TextInput accessibilityLabel="Profile name" autoCapitalize="words" autoComplete="name" autoFocus editable={!savingName} onChangeText={(value) => { setDraftName(value); setNameError(null); }} onSubmitEditing={() => { void saveName(); }} returnKeyType="done" textContentType="name" value={draftName} />
+        {nameError ? <Text accessibilityRole="alert" style={styles.signOutError}>{nameError}</Text> : null}
+        <ActionButton busy={savingName} busyLabel="Saving name…" disabled={!draftName.trim()} label="Save name" onPress={saveName} />
+        <ActionButton disabled={savingName} label="Cancel" onPress={() => setDialog(null)} variant="text" />
+      </> : dialog.kind === 'photo' ? <>
+        <ActionButton label="Choose from library" onPress={() => launchPhoto(false)} variant="secondary" />
+        <ActionButton label="Take photo" onPress={() => launchPhoto(true)} variant="secondary" />
+        {dialog.previous ? <ActionButton label="Remove photo" onPress={() => { if (dialog.previous) { try { new File(dialog.previous).delete(); } catch {} } setProfile({ photoUri: null }, dialog.owner); setDialog(null); }} variant="danger" /> : null}
+        <ActionButton label="Cancel" onPress={() => setDialog(null)} variant="text" />
+      </> : <>
+        <Text style={styles.dialogCopy}>{dialog.message}</Text>
+        {dialog.settings ? <ActionButton label="Open Settings" onPress={() => { setDialog(null); void Linking.openSettings(); }} variant="secondary" /> : null}
+        <ActionButton label="Done" onPress={() => setDialog(null)} variant="text" />
+      </>}
+    </ProfileDialog> : null}
+    </>
   );
 }
 
@@ -250,6 +316,10 @@ export function ProfileTab({ role }: { role: Role }) {
   const loggingOutRef = useRef(false);
   const [signOutPrompt, setSignOutPrompt] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ title: string; message: string; settings?: boolean } | null>(null);
+  const privacy = () => setNotice({ title: 'Data permissions', message: role === 'Athlete' ? 'Your coach sees your name, team and, during practice, your band’s signals. Health answers and emergency contacts are private to you. HeatSense never contacts anyone automatically.' : 'You see athletes on your roster and your team’s practice records. Athletes’ health answers and emergency contacts are private to them.' });
+  const limitations = () => setNotice({ title: 'Safety and limitations', message: 'HeatSense supports your district’s emergency action plan and an athletic trainer’s judgment. It does not diagnose heat illness or replace either.' });
+  const noticeDialog = notice ? <ProfileDialog onClose={() => setNotice(null)} title={notice.title}><Text style={styles.dialogCopy}>{notice.message}</Text>{notice.settings ? <ActionButton label="Open Settings" onPress={() => { setNotice(null); void Linking.openSettings(); }} variant="secondary" /> : null}<ActionButton label="Done" onPress={() => setNotice(null)} variant="text" /></ProfileDialog> : null;
 
   const testAlert = async () => {
     if (testingAlertRef.current) return;
@@ -257,12 +327,12 @@ export function ProfileTab({ role }: { role: Role }) {
     setTestingAlert(true);
     try {
       if (!(await askForHeatAlerts())) {
-        Alert.alert('Notifications are off', 'Turn them on in Settings so HeatSense can warn you about heat.', [{ text: 'Not now', style: 'cancel' }, { text: 'Settings', onPress: () => Linking.openSettings() }]);
+        setNotice({ title: Platform.OS === 'web' ? 'Use the mobile app for heat alerts' : 'Notifications are off', message: Platform.OS === 'web' ? 'Heat alerts are currently available in the iPhone app.' : 'Allow notifications in Settings to receive heat alerts.', settings: Platform.OS !== 'web' });
         return;
       }
       await notifyNow('HeatSense test alert', 'Alerts are working. You’ll hear about rechecks and zone changes like this.');
     } catch {
-      Alert.alert('Couldn’t send the test alert', 'Try again. If it still doesn’t appear, check notification permissions in Settings.');
+      setNotice({ title: 'Couldn’t send the test alert', message: 'Try again. If it still doesn’t appear, check notification permissions in Settings.' });
     } finally {
       testingAlertRef.current = false;
       setTestingAlert(false);
@@ -300,6 +370,7 @@ export function ProfileTab({ role }: { role: Role }) {
   if (role === 'Coach') {
     return (
       <>
+        {noticeDialog}
         <Header coach role={role} team={teamName} />
         <Season coach team={team} waiting={false} />
         <CoachSettingsSection title="Team">
@@ -318,8 +389,8 @@ export function ProfileTab({ role }: { role: Role }) {
         </CoachSettingsSection>
         <CoachSettingsSection title="Support">
           <CoachSettingRow label="UIL heat chart" onPress={() => Linking.openURL(UIL_SOURCE_URL)} />
-          <CoachSettingRow label="Data permissions" onPress={() => Alert.alert('Data permissions', 'You see athletes on your roster and the practice records your team creates. Athletes’ health answers and emergency contacts stay private to them.')} />
-          <CoachSettingRow label="Safety and limitations" onPress={() => Alert.alert('Safety and limitations', 'HeatSense supports, but doesn’t replace, your district’s emergency action plan or an athletic trainer’s judgment. It doesn’t diagnose heat illness.')} />
+          <CoachSettingRow label="Data permissions" onPress={privacy} />
+          <CoachSettingRow label="Safety and limitations" onPress={limitations} />
         </CoachSettingsSection>
         {Platform.OS === 'web' && signOutPrompt ? <View style={styles.signOutConfirm}>
           <Text accessibilityRole="header" style={styles.coachCardTitle}>Log out of HeatSense?</Text>
@@ -333,6 +404,7 @@ export function ProfileTab({ role }: { role: Role }) {
 
   return (
     <>
+      {noticeDialog}
       <Header role={role} />
       <Segmented onChange={setView} options={[{ key: 'overview', label: 'Overview' }, { key: 'settings', label: 'Settings' }]} value={view} />
 
@@ -373,8 +445,8 @@ export function ProfileTab({ role }: { role: Role }) {
       <CapsLabel>Support</CapsLabel>
       <Rows>
         <ListRow label="UIL heat chart" onPress={() => Linking.openURL(UIL_SOURCE_URL)} />
-        <ListRow label="Data permissions" onPress={() => Alert.alert('Data permissions', role === 'Athlete' ? 'Your coach sees your name, team and, during practice, your band’s signals. Health answers and emergency contacts stay private to you.' : 'You see athletes on your roster and the practice records your team creates. Athletes’ health answers and emergency contacts stay private to them.')} />
-        <ListRow label="Safety and limitations" onPress={() => Alert.alert('Safety and limitations', 'HeatSense supports, but doesn’t replace, your district’s emergency action plan or an athletic trainer’s judgment. It doesn’t diagnose heat illness.')} />
+        <ListRow label="Data permissions" onPress={privacy} />
+        <ListRow label="Safety and limitations" onPress={limitations} />
       </Rows>
       <View style={styles.gap}><Rows>
         {since ? <ListRow label="Member since" value={since} /> : null}
@@ -396,7 +468,11 @@ export function ProfileTab({ role }: { role: Role }) {
 const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   gap: { marginTop: 12 },
-  signOutConfirm: { gap: 12, padding: 16 },
+  signOutConfirm: { gap: 12, padding: 20 },
+  dialogViewport: { flex: 1, justifyContent: 'center', padding: 16 },
+  dialogSheet: { maxHeight: '90%', width: '100%' },
+  dialogContent: { gap: 16, padding: 24 },
+  dialogCopy: { color: Palette.inkMuted, fontSize: 16, lineHeight: 24 },
   signOutError: { color: Palette.emergency, fontSize: 16, lineHeight: 22 },
   header: { alignItems: 'center', flexDirection: 'row', gap: 16, marginBottom: 24, marginTop: 16 },
   avatarWrap: { alignSelf: 'flex-start' },
@@ -435,8 +511,8 @@ const baseStyles = StyleSheet.create({
   coachAvatarText: { color: CoachPalette.text, fontSize: 30 },
   coachName: { color: CoachPalette.text, fontSize: 32, fontWeight: '800', letterSpacing: -0.8 },
   coachMeta: { color: CoachPalette.textSecondary, fontSize: 16, fontWeight: '600' },
-  coachSince: { color: CoachPalette.muted, fontSize: 13 },
-  coachSeason: { marginTop: 0, backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, padding: 22 },
+  coachSince: { color: CoachPalette.muted, fontSize: 14, lineHeight: 20 },
+  coachSeason: { ...surfaceStyles.card, marginTop: 0, padding: 22 },
   coachCardTitle: { color: CoachPalette.text, ...CoachType.card },
   coachPeriods: { backgroundColor: CoachPalette.interactive, borderRadius: CoachRadius.pill, padding: 4 },
   coachPeriod: { borderRadius: CoachRadius.pill, paddingHorizontal: 12, paddingVertical: 7 },
@@ -448,10 +524,10 @@ const baseStyles = StyleSheet.create({
   coachSeasonChange: { color: CoachPalette.muted },
   coachSettingsSection: { marginTop: 30 },
   coachSettingsTitle: { color: CoachPalette.text, ...CoachType.section, marginBottom: 12 },
-  coachSettingsCard: { backgroundColor: CoachPalette.surface, borderRadius: CoachRadius.card, overflow: 'hidden', paddingHorizontal: 20 },
+  coachSettingsCard: { ...surfaceStyles.card, paddingHorizontal: 20 },
   coachSettingRow: { alignItems: 'center', borderBottomColor: CoachPalette.hairline, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 12, justifyContent: 'space-between', minHeight: 62, paddingVertical: 8 },
   coachSettingLabel: { flex: 1, color: CoachPalette.textSecondary, fontSize: 16, fontWeight: '600' },
-  coachSettingValue: { color: CoachPalette.muted, fontSize: 15, fontWeight: '600' },
+  coachSettingValue: { color: CoachPalette.muted, flexShrink: 1, fontSize: 15, fontWeight: '600' },
   coachChevron: { color: CoachPalette.muted, fontSize: 26, lineHeight: 28 },
   coachUnits: { backgroundColor: CoachPalette.interactive, borderRadius: CoachRadius.pill, flexDirection: 'row', padding: 3 },
   coachUnit: { borderRadius: CoachRadius.pill, paddingHorizontal: 12, paddingVertical: 6 },
