@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/readme/heatsense-pulse.svg" alt="HeatSense — Know the field. Notice the athlete. Act early." width="100%" />
+  <img src="assets/images/heatsense-logo.png" alt="HeatSense H logo" width="120" />
 </p>
 
 <p align="center">
