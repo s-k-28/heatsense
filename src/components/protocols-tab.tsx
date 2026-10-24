@@ -437,7 +437,7 @@ function SweatRate() {
   const [post, setPost] = useState('');
   const [drank, setDrank] = useState('');
   const [minutes, setMinutes] = useState('');
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
   const a = num(pre), b = num(post), d = num(drank) ?? 0, m = num(minutes);
   const inputIssue = sweatInputIssue(pre, post, drank, minutes);
   const valid = inputIssue === null && a !== null && b !== null && m !== null && a > 0 && b > 0 && m > 0 && a - b > -5;
@@ -463,8 +463,8 @@ function SweatRate() {
         {fields.map((f) => (
           <View key={f.label} style={styles.calcField}>
             <Text accessibilityElementsHidden importantForAccessibility="no" style={styles.fieldLabel}>{f.label}</Text>
-            <View style={styles.calcInputRow}>
-              <TextInput accessibilityLabel={`${f.label} in ${f.unit}`} keyboardType="decimal-pad" onBlur={() => setEditing(false)} onFocus={() => setEditing(true)} onChangeText={f.set} placeholder="–" placeholderTextColor={Palette.inkFaint} style={styles.calcInput} value={f.value} />
+            <View style={[styles.calcInputRow, editing === f.label && styles.calcInputFocused]}>
+              <TextInput accessibilityLabel={`${f.label} in ${f.unit}`} keyboardType="decimal-pad" onBlur={() => setEditing(null)} onFocus={() => setEditing(f.label)} onChangeText={f.set} placeholder="–" placeholderTextColor={Palette.inkFaint} style={styles.calcInput} value={f.value} />
               <Text style={styles.calcUnit}>{f.unit}</Text>
             </View>
           </View>
@@ -603,8 +603,9 @@ const baseStyles = StyleSheet.create({
   shareButton: { marginTop: 12 },
   calcGrid: { gap: 12, marginTop: 14 },
   calcField: { gap: 6 },
-  calcInputRow: { alignItems: 'center', backgroundColor: Palette.surface, borderRadius: 10, flexDirection: 'row', paddingHorizontal: 12 },
-  calcInput: { color: Palette.ink, flex: 1, fontFamily: Face.figure, fontSize: 22, minHeight: 46 },
+  calcInputRow: { alignItems: 'center', backgroundColor: Palette.surfaceMuted, borderColor: 'transparent', borderRadius: 22, borderWidth: 1, flexDirection: 'row', gap: 8, minHeight: 56, paddingHorizontal: 18 },
+  calcInputFocused: { borderColor: Palette.coral },
+  calcInput: { backgroundColor: 'transparent', borderRadius: 0, borderWidth: 0, color: Palette.ink, flex: 1, fontFamily: Face.figure, fontSize: 22, minHeight: 56, paddingHorizontal: 0 },
   calcUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 16 },
   result: { borderTopColor: 'rgba(255,255,255,0.08)', borderTopWidth: StyleSheet.hairlineWidth, marginTop: 16, paddingTop: 14 },
   resultRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
