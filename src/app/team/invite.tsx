@@ -9,7 +9,6 @@ import Animated, {
   FadeIn,
   FadeInUp,
   FadeOut,
-  interpolateColor,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -19,6 +18,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EntryButton, EntryHeader, EntryHeading, entryStyles } from '@/components/entry-ui';
+import { ActionButton } from '@/components/ui/action-button';
+import { surfaceStyles } from '@/components/ui/surface';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { OnboardingBackground } from '@/components/onboarding-background';
 import { Entry, ONBOARDING_STEPS } from '@/constants/entry-theme';
@@ -39,8 +40,6 @@ import { setTeamId, useTeamDraft, type TeamDraft } from '@/state/onboarding';
 // Entry design language: the code large and alone on the page, two quiet pill actions
 // to share it, and the peach primary button.
 const MUTED = Entry.muted;
-const FOCUS_RING = { outlineColor: Entry.peach, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
-const isKeyboardFocus = (event: { target?: unknown }) => Platform.OS !== 'web' || Boolean((event.target as Element | null)?.matches?.(':focus-visible'));
 const ease = Easing.out(Easing.cubic);
 
 const inviteMessage = (code: string) => `Join my team on HeatSense! Use code ${code} to get started.`;
@@ -114,8 +113,8 @@ function Content({ draft }: { draft: TeamDraft | null }) {
         <View style={[styles.codePanel, { marginTop: compact ? 20 : 28 }]}>
         <View style={styles.codeStage}>
         <Animated.View entering={rise(500)} style={styles.identity}>
-          <Text numberOfLines={1} style={[styles.teamName]}>{team?.teamName ?? teamName}</Text>
-          <Text numberOfLines={1} style={[styles.teamMeta]}>{[team?.sport ?? sport, team?.level ?? level].filter(Boolean).join(' · ')}</Text>
+          <Text style={[styles.teamName]}>{team?.teamName ?? teamName}</Text>
+          <Text style={[styles.teamMeta]}>{[team?.sport ?? sport, team?.level ?? level].filter(Boolean).join(' · ')}</Text>
         </Animated.View>
 
         <CodeTiles invite={invite} compact={compact} width={size.width} firstDelay={reducedMotion ? 0 : 650} />
@@ -199,8 +198,8 @@ function CodeTile({ digit, code, delay, width, height }: { digit: string | null;
   const frame = useAnimatedStyle(() => ({ opacity: tile.value, transform: [{ scale: 0.96 + tile.value * 0.04 }] }));
   const text = useAnimatedStyle(() => ({ opacity: glyph.value, transform: [{ scale: 0.92 + glyph.value * 0.08 }] }));
   return (
-    <Animated.View style={[{ width, height }, frame]}>
-      <View style={[styles.tile, { width, height }]}>
+    <Animated.View style={[{ width, minHeight: height }, frame]}>
+      <View style={[styles.tile, { width, minHeight: height, paddingVertical: 8 }]}>
         <AnimatedText style={[styles.digit, { fontSize: Math.round(width * 0.58), lineHeight: Math.round(width * 0.72) }, text]}>{digit ?? ''}</AnimatedText>
       </View>
     </Animated.View>
@@ -208,36 +207,8 @@ function CodeTile({ digit, code, delay, width, height }: { digit: string | null;
 }
 
 // Quiet outlined pill: charcoal with a neutral edge, so the peach Continue stays the one primary action.
-function ActionPill({ label, onPress, disabled, prominent, accessibilityLabel }: { label: string; onPress: () => void; disabled?: boolean; prominent?: boolean; accessibilityLabel?: string }) {
-  const reducedMotion = useReducedMotion();
-  const [focused, setFocused] = useState(false);
-  const hover = useSharedValue(0);
-  const press = useSharedValue(0);
-  const ms = (value: number) => (reducedMotion ? 0 : value);
-  const frame = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(hover.value, [0, 1], [prominent ? Entry.lineStrong : Entry.line, Entry.muted]),
-    backgroundColor: interpolateColor(hover.value, [0, 1], [Entry.surface, Entry.raised]),
-    transform: [{ scale: 1 - press.value * 0.015 }],
-  }));
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
-      aria-disabled={disabled}
-      disabled={disabled}
-      onPress={onPress}
-      onFocus={(event) => setFocused(isKeyboardFocus(event))}
-      onBlur={() => setFocused(false)}
-      onHoverIn={() => { hover.set(withTiming(1, { duration: ms(200), easing: ease })); }}
-      onHoverOut={() => { hover.set(withTiming(0, { duration: ms(200), easing: ease })); }}
-      onPressIn={() => { press.set(withTiming(1, { duration: ms(110), easing: ease })); }}
-      onPressOut={() => { press.set(withTiming(0, { duration: ms(200), easing: ease })); }}
-      style={[{ borderRadius: 999 }, focused && FOCUS_RING]}>
-      <Animated.View style={[styles.pill, disabled && styles.pillDisabled, frame]}>
-        <Text style={[styles.pillText]}>{label}</Text>
-      </Animated.View>
-    </Pressable>
-  );
+function ActionPill({ label, onPress, disabled, prominent, accessibilityLabel, busy = false }: { label: string; onPress: () => void; disabled?: boolean; prominent?: boolean; accessibilityLabel?: string; busy?: boolean }) {
+  return <ActionButton accessibilityLabel={accessibilityLabel} busy={busy} disabled={disabled} label={label} onPress={onPress} style={prominent ? styles.shareAction : undefined} variant="secondary" />;
 }
 
 function useFlash(duration = 1800) {
@@ -254,18 +225,23 @@ function useFlash(duration = 1800) {
 
 function CopyButton({ code }: { code: string | null }) {
   const [flash, setFlash] = useFlash();
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const copy = async () => {
-    if (!code) return;
+    if (!code || busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
     try {
       await Clipboard.setStringAsync(code);
       setFlash('Copied');
     } catch {
       setFlash("Couldn't copy");
-    }
+    } finally { busyRef.current = false; setBusy(false); }
   };
   return (
     <ActionPill
-      label={flash ?? 'Copy code'}
+      busy={busy}
+      label={busy ? 'Copying…' : flash ?? 'Copy code'}
       accessibilityLabel={flash ?? 'Copy code'}
       disabled={!code}
       onPress={copy}
@@ -275,8 +251,12 @@ function CopyButton({ code }: { code: string | null }) {
 
 function ShareButton({ code }: { code: string | null }) {
   const [flash, setFlash] = useFlash(2200);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const share = async () => {
-    if (!code) return;
+    if (!code || busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
     const message = inviteMessage(code);
     try {
       if (Platform.OS !== 'web') { await Share.share({ message }); return; }
@@ -287,12 +267,13 @@ function ShareButton({ code }: { code: string | null }) {
       // Closing the share sheet is not an error worth showing.
       if (error instanceof Error && error.name === 'AbortError') return;
       try { await Clipboard.setStringAsync(message); setFlash('Invitation copied'); } catch { setFlash("Couldn't share"); }
-    }
+    } finally { busyRef.current = false; setBusy(false); }
   };
   return (
     <ActionPill
       prominent
-      label={flash ?? 'Share'}
+      busy={busy}
+      label={busy ? 'Sharing…' : flash ?? 'Share'}
       accessibilityLabel={flash ?? 'Share invitation'}
       disabled={!code}
       onPress={share}
@@ -305,9 +286,11 @@ function RegenerateControl({ invite, onRegenerated }: { invite: TeamInvite | nul
   const reducedMotion = useReducedMotion();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const regenerate = async () => {
-    if (!invite || busy) return;
+    if (!invite || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -316,6 +299,7 @@ function RegenerateControl({ invite, onRegenerated }: { invite: TeamInvite | nul
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : NETWORK_ERROR);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
@@ -376,11 +360,11 @@ function JoinRequests({ teamId }: { teamId: string }) {
           <Animated.View key={athlete.userId} entering={reducedMotion ? undefined : FadeIn.duration(220)} exiting={reducedMotion ? undefined : FadeOut.duration(160)} style={styles.request}>
             <View style={styles.requestRow}>
               <View style={styles.requestCopy}>
-                <Text numberOfLines={1} style={[styles.requestName]}>{athlete.displayName ?? athlete.email ?? 'Athlete'}</Text>
-                {athlete.displayName && athlete.email ? <Text numberOfLines={1} style={[styles.requestMeta]}>{athlete.email}</Text> : null}
+                <Text style={[styles.requestName]}>{athlete.displayName ?? athlete.email ?? 'Athlete'}</Text>
+                {athlete.displayName && athlete.email ? <Text style={[styles.requestMeta]}>{athlete.email}</Text> : null}
               </View>
-              <SmallPill label="Decline" onPress={() => void respond(athlete, false)} disabled={busy !== null} />
-              <SmallPill label={busy === athlete.userId ? '…' : 'Approve'} onPress={() => void respond(athlete, true)} disabled={busy !== null} strong />
+              <SmallPill accessibilityLabel={`Decline request from ${athlete.displayName ?? athlete.email ?? 'athlete'}`} label="Decline" onPress={() => void respond(athlete, false)} disabled={busy !== null} />
+              <SmallPill accessibilityLabel={`Approve request from ${athlete.displayName ?? athlete.email ?? 'athlete'}`} label={busy === athlete.userId ? 'Working…' : 'Approve'} onPress={() => void respond(athlete, true)} disabled={busy !== null} strong />
             </View>
             {error?.userId === athlete.userId && <Text style={[styles.errorText]}>{error.message}</Text>}
           </Animated.View>
@@ -390,17 +374,8 @@ function JoinRequests({ teamId }: { teamId: string }) {
   );
 }
 
-function SmallPill({ label, onPress, disabled, strong }: { label: string; onPress: () => void; disabled?: boolean; strong?: boolean }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      aria-disabled={disabled}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [styles.smallPill, strong && styles.smallPillStrong, pressed && styles.smallPillActive, pressed && { transform: [{ scale: 0.985 }] }, disabled && { opacity: 0.6 }]}>
-      <Text style={[styles.smallPillText, strong && styles.smallPillTextStrong]}>{label}</Text>
-    </Pressable>
-  );
+function SmallPill({ label, onPress, disabled, strong, accessibilityLabel }: { label: string; onPress: () => void; disabled?: boolean; strong?: boolean; accessibilityLabel?: string }) {
+  return <ActionButton accessibilityLabel={accessibilityLabel} disabled={disabled} label={label} onPress={onPress} style={styles.smallAction} variant={strong ? 'secondary' : 'text'} />;
 }
 
 const styles = StyleSheet.create({
@@ -418,31 +393,25 @@ const styles = StyleSheet.create({
   digit: { color: Entry.ink, fontFamily: Entry.heading, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   status: { minHeight: 22, marginTop: 12, alignItems: 'center', justifyContent: 'center' },
   expiry: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13 },
-  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  errorText: { color: Entry.error, fontFamily: Entry.body, fontSize: 13, lineHeight: 18 },
-  retry: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13, textDecorationLine: 'underline' },
+  errorRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, justifyContent: 'center' },
+  errorText: { color: Entry.error, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
+  retry: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 14, textDecorationLine: 'underline' },
   shareRow: { flexDirection: 'row', gap: 10 },
   shareItem: { flex: 1 },
-  pill: { minHeight: 52, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  pillDisabled: { opacity: 0.45 },
-  pillText: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 15, letterSpacing: -0.1 },
+  shareAction: { borderColor: Entry.lineStrong },
+  smallAction: { minHeight: 44, paddingHorizontal: 12, paddingVertical: 8 },
   textAction: { alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 14, paddingVertical: 6, paddingHorizontal: 10 },
   textActionLabel: { color: MUTED, fontFamily: Entry.medium, fontSize: 14 },
   confirm: { marginTop: 14, gap: 12, alignItems: 'center' },
-  confirmText: { color: MUTED, fontFamily: Entry.body, fontSize: 13.5, lineHeight: 19, textAlign: 'center', maxWidth: 310 },
-  confirmRow: { flexDirection: 'row', gap: 10 },
-  smallPill: { height: 40, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1, borderColor: Entry.lineStrong, backgroundColor: Entry.surface, alignItems: 'center', justifyContent: 'center' },
+  confirmText: { color: MUTED, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center', maxWidth: 310 },
+  confirmRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
   // Neutral, so Continue stays the one peach action on the page.
-  smallPillStrong: { borderColor: Entry.ink, backgroundColor: Entry.ink },
-  smallPillActive: { opacity: 0.85 },
-  smallPillText: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 14 },
-  smallPillTextStrong: { color: Entry.canvas },
   requests: { marginTop: 30, gap: 10 },
   requestsLabel: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 14 },
-  requestsEmpty: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13.5, lineHeight: 19 },
-  request: { gap: 6 },
-  requestRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  requestCopy: { flex: 1, gap: 2 },
+  requestsEmpty: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
+  request: { ...surfaceStyles.card, borderRadius: 22, gap: 8, padding: 16 },
+  requestRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
+  requestCopy: { flex: 1, gap: 4, minWidth: 120 },
   requestName: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 15.5 },
   requestMeta: { color: MUTED, fontFamily: Entry.body, fontSize: 13 },
 });
