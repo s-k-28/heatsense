@@ -246,14 +246,14 @@ function Content() {
               <View style={styles.sectionRow}>
                 <AthleteSectionLabel>Secondary emergency contact</AthleteSectionLabel>
                 <Pressable accessibilityRole="button" accessibilityLabel="Remove secondary contact" hitSlop={10} onPress={() => { update({ secondary: null }); if (openSelect === 'secondary') setOpenSelect(null); }}>
-                  {({ hovered }: { hovered?: boolean }) => <Text style={[styles.remove, hovered && styles.underline]}>Remove contact</Text>}
+                  {({ hovered }: { hovered?: boolean; pressed?: boolean }) => <Text style={[styles.remove, hovered && styles.underline]}>Remove contact</Text>}
                 </Pressable>
               </View>
               {contactFields('secondary')}
             </Animated.View>
           ) : (
             <Pressable accessibilityRole="button" accessibilityLabel="Add another contact" hitSlop={10} onPress={() => update({ secondary: EMPTY_CONTACT })} style={styles.addWrap}>
-              {({ hovered }: { hovered?: boolean }) => <Text style={[styles.add, hovered && styles.underline]}>+ Add another contact</Text>}
+              {({ hovered }: { hovered?: boolean; pressed?: boolean }) => <Text style={[styles.add, hovered && styles.underline]}>+ Add another contact</Text>}
             </Pressable>
           )}
         </Animated.View>
