@@ -1,9 +1,10 @@
 import { Text, TextInput } from '@/components/ui/text';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Group, Row, TextLink } from '@/components/ui/list';
+import { shareMessage } from '@/components/ui/share-message';
 import { ActionButton } from '@/components/ui/action-button';
 import { Face, Palette, Spacing, Type } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
@@ -193,6 +194,8 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
   const [listenAttempt, setListenAttempt] = useState(0);
   const [shareError, setShareError] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const sharingRef = useRef(false);
+  const [copiedReport, setCopiedReport] = useState<string | null>(null);
   const retryReadings = () => { setReadings(null); setListenError(false); setListenAttempt(value => value + 1); };
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
@@ -212,6 +215,8 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
     ? <><Notice text="Couldn’t load readings. Check your connection." /><ActionButton label="Try again" onPress={retryReadings} variant="secondary" /></>
     : <ActivityIndicator accessibilityLabel="Loading readings" color={Palette.inkMuted} />;
 
+  const report = sessionReport(session, readings);
+  const copied = copiedReport === report;
   const latest = readings.at(-1) ?? null;
   const recheck = recheckStatus(session, latest, now);
 
@@ -234,11 +239,13 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
       {listenError ? <><Text accessibilityLiveRegion="assertive" style={styles.error}>Readings may be out of date. Check your connection.</Text><ActionButton label="Reload readings" onPress={retryReadings} variant="secondary" /></> : null}
       {readings.length > 0 ? <History readings={readings} temp={temp} /> : null}
 
-      <ActionButton busy={sharing} busyLabel="Opening sharing…" label="Share practice record" onPress={async () => {
-        setSharing(true); setShareError(false);
-        try { await Share.share({ message: sessionReport(session, readings) }); }
+      <ActionButton busy={sharing} busyLabel="Opening sharing…" label={copied ? 'Copied' : 'Share practice record'} onPress={async () => {
+        if (sharingRef.current) return;
+        sharingRef.current = true;
+        setSharing(true); setShareError(false); setCopiedReport(null);
+        try { setCopiedReport(await shareMessage(report) === 'copied' ? report : null); }
         catch { setShareError(true); }
-        finally { setSharing(false); }
+        finally { sharingRef.current = false; setSharing(false); }
       }} variant="text" />
       {shareError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t share the record. Try again; the saved record is unchanged.</Text> : null}
       {canEnd ? (

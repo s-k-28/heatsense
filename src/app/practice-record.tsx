@@ -2,12 +2,13 @@ import { Text } from '@/components/ui/text';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { AthleteAppearanceProvider, useAthleteStyles } from '@/components/athlete-appearance';
 import { ListRow, Rows, SampleTag, SectionTitle } from '@/components/whoop-ui';
+import { shareMessage } from '@/components/ui/share-message';
 import { ActionButton } from '@/components/ui/action-button';
 import { Face, MaxContentWidth, Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
@@ -45,6 +46,7 @@ function PracticeRecordContent() {
   const [attempt, setAttempt] = useState(0);
   const key = `${sample ? 'sample' : uid ?? 'signed-out'}:${authReady ? 'ready' : 'pending'}:${teamId}:${id}:${attempt}`;
   const [sharing, setSharing] = useState(false);
+  const [copiedSnapshot, setCopiedSnapshot] = useState<{ key: string; message: string } | null>(null);
   const sharingRef = useRef(false);
   const selected = state?.key === key ? state : null;
   const record = selected?.status === 'ready' ? selected.record : null;
@@ -70,16 +72,19 @@ function PracticeRecordContent() {
     !hot || reading.wbgtF > hot.wbgtF ? { wbgtF: reading.wbgtF, zone: reading.zone } : hot, null);
   const minutes = session?.endedAt ? Math.max(0, Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000)) : null;
   const canShare = Boolean(session && (sampleRecord || (record && readingResult && !readingResult.error)));
+  const message = !session || !canShare ? null : sampleRecord
+      ? `HeatSense sample practice summary\n${session.venue}\n${session.startedAt.toLocaleDateString()} · ${time(session.startedAt)}${session.endedAt ? `–${time(session.endedAt)}` : ''}\n${minutes ?? '—'} min · ${sampleRecord.readingCount} readings\nPeak WBGT: ${peak ? `${temp.value(peak.wbgtF)}${temp.unit}, ${ZONES[peak.zone].label}` : 'Not available'}\nSample summary only. Individual measurements and guidance confirmations are not available.`
+      : practiceRecordReport(record!, readings);
+  const copied = Boolean(message && copiedSnapshot?.key === key && copiedSnapshot.message === message);
   const originRole = params.role === 'coach' || params.role === 'trainer' ? params.role : 'athlete';
   const close = () => router.canGoBack() ? router.back() : router.replace({ pathname: '/dashboard', params: { role: originRole, tab: originRole === 'athlete' ? 'sessions' : 'home' } });
   const share = async () => {
-    if (sharingRef.current || !canShare || !session) return;
+    if (sharingRef.current || !canShare || !session || message === null) return;
     sharingRef.current = true;
     setSharing(true);
-    const message = sampleRecord
-      ? `HeatSense sample practice summary\n${session.venue}\n${session.startedAt.toLocaleDateString()} · ${time(session.startedAt)}${session.endedAt ? `–${time(session.endedAt)}` : ''}\n${minutes ?? '—'} min · ${sampleRecord.readingCount} readings\nPeak WBGT: ${peak ? `${temp.value(peak.wbgtF)}${temp.unit}, ${ZONES[peak.zone].label}` : 'Not available'}\nSample summary only. Individual measurements and guidance confirmations are not available.`
-      : practiceRecordReport(record!, readings);
-    try { await Share.share({ message }); }
+    setCopiedSnapshot(null);
+
+    try { if (await shareMessage(message) === 'copied') setCopiedSnapshot({ key, message }); }
     catch { Alert.alert('Couldn’t share this record', 'Try again.'); }
     finally { sharingRef.current = false; setSharing(false); }
   };
@@ -145,7 +150,7 @@ function PracticeRecordContent() {
           <Svg fill="none" height={24} stroke={Palette.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={24}><Path d="m15 5-7 7 7 7" /></Svg>
         </Pressable>
         <Text accessibilityRole="header" style={styles.barTitle}>Practice record</Text>
-        <ActionButton accessibilityLabel={sample ? 'Share sample summary' : 'Share practice record'} busy={sharing} disabled={!canShare} label="Share" onPress={share} style={styles.shareAction} />
+        <ActionButton accessibilityLabel={copied ? sample ? 'Copied sample summary' : 'Copied practice record' : sample ? 'Share sample summary' : 'Share practice record'} busy={sharing} busyLabel="Sharing…" disabled={!canShare} label={copied ? 'Copied' : 'Share'} onPress={share} style={styles.shareAction} />
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.column}>{body}</View>

@@ -95,7 +95,7 @@ export function HomeOverview({ data, role, onAction, onOpenPlan, onInvite, perso
       : !data || history.status === 'loading' ? <View style={styles.historySection}><Text accessibilityRole="header" style={styles.visualTitle}>Seven-day heat</Text><Text style={styles.emptyVisual}>Loading practice history…</Text></View>
         : <WeeklyHeat days={weekly} toDisplay={temp.value} unit={temp.unit} />}
     {history.data?.length === 40 ? <Text style={styles.visualMeta}>Based on up to 40 recent saved practices.</Text> : null}
-    <AlertPreview count={alertCount} hasSession={Boolean(session)} loading={!data} onPress={onAction} overdue={Boolean(recheck?.overdue)} readOnly={role === 'athlete'} />
+    <AlertPreview count={alertCount} hasSession={Boolean(session)} needsFirstReading={Boolean(session && !latest)} loading={!data} onPress={onAction} overdue={Boolean(recheck?.overdue)} readOnly={role === 'athlete'} />
   </>;
 }
 
@@ -229,10 +229,10 @@ function WeeklyHeat({ days, toDisplay, unit }: { days: HeatDay[]; toDisplay: (fa
   );
 }
 
-function AlertPreview({ count, hasSession, loading, onPress, overdue, readOnly }: { count: number; hasSession: boolean; loading: boolean; onPress: () => void; overdue: boolean; readOnly: boolean }) {
+function AlertPreview({ count, hasSession, needsFirstReading, loading, onPress, overdue, readOnly }: { count: number; hasSession: boolean; needsFirstReading: boolean; loading: boolean; onPress: () => void; overdue: boolean; readOnly: boolean }) {
   const styles = useAthleteStyles(baseStyles);
-  const tone = loading || !hasSession ? CoachPalette.muted : count ? (overdue ? Palette.emergency : Palette.warning) : Palette.safe;
-  return <Pressable accessibilityRole="button" disabled={!count} onPress={onPress} style={({ pressed }) => [styles.alertStrip, pressed && styles.pressedScale]}><View style={[styles.alertGlyph, { borderColor: tone }]}><Text style={[styles.alertGlyphText, { color: tone }]}>{loading || !hasSession ? '—' : count || '✓'}</Text></View><View style={styles.alertText}><Text style={styles.alertTitle}>{loading ? 'Loading practice…' : !hasSession ? 'No active practice' : count ? (overdue ? 'Reading overdue' : readOnly ? 'Team guidance pending' : 'Guidance to confirm') : 'Field checks current'}</Text><Text style={styles.alertMeta}>{loading ? 'Looking for team updates' : !hasSession ? readOnly ? 'Your coach starts the next practice.' : 'Check field conditions to start.' : count ? readOnly ? 'Your coach or trainer records and confirms updates.' : `${count} open ${count === 1 ? 'item' : 'items'}` : 'Based on this practice’s field readings'}</Text></View>{count ? <Text style={styles.alertArrow}>›</Text> : null}</Pressable>;
+  const tone = loading || !hasSession ? CoachPalette.muted : needsFirstReading ? Palette.warning : count ? (overdue ? Palette.emergency : Palette.warning) : Palette.safe;
+  return <Pressable accessibilityRole="button" disabled={loading || (!count && !needsFirstReading)} onPress={onPress} style={({ pressed }) => [styles.alertStrip, pressed && styles.pressedScale]}><View style={[styles.alertGlyph, { borderColor: tone }]}><Text style={[styles.alertGlyphText, { color: tone }]}>{loading || !hasSession ? '—' : needsFirstReading ? '!' : count || '✓'}</Text></View><View style={styles.alertText}><Text style={styles.alertTitle}>{loading ? 'Loading practice…' : !hasSession ? 'No active practice' : needsFirstReading ? 'First reading due' : count ? (overdue ? 'Reading overdue' : readOnly ? 'Team guidance pending' : 'Guidance to confirm') : 'Field checks current'}</Text><Text style={styles.alertMeta}>{loading ? 'Looking for team updates' : !hasSession ? readOnly ? 'Your coach starts the next practice.' : 'Check field conditions to start.' : needsFirstReading ? readOnly ? 'Your coach or trainer records the first field reading.' : 'Take the first field WBGT reading.' : count ? readOnly ? 'Your coach or trainer records and confirms updates.' : `${count} open ${count === 1 ? 'item' : 'items'}` : 'Based on this practice’s field readings'}</Text></View>{count || needsFirstReading ? <Text style={styles.alertArrow}>›</Text> : null}</Pressable>;
 }
 
 /** The practice loop dials, with the active plan's water and equipment rules on one line beneath. */
