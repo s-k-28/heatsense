@@ -1,3 +1,4 @@
+import { surfaceStyles } from '@/components/ui/surface';
 import { Text, TextInput } from '@/components/ui/text';
 import { CoachPalette, CoachRadius, CoachType } from '@/constants/coach-theme';
 import { ActionButton } from '@/components/ui/action-button';
@@ -236,12 +237,12 @@ const styles = StyleSheet.create({
   flex: {  flex: 1 },
   pressed: { opacity: 0.86, transform: [{ scale: 0.98 }] },
   bar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingBottom: Spacing.four, paddingHorizontal: Spacing.four },
-  barTitle: { color: CoachPalette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4, flex: 1, textAlign: 'center' },
+  barTitle: { color: CoachPalette.text, ...CoachType.card, flex: 1, textAlign: 'center' },
   barEnd: { width: 56 },
   content: { gap: Spacing.two, paddingHorizontal: Spacing.four },
   label: { color: CoachPalette.textSecondary, ...CoachType.label, marginTop: Spacing.five },
-  input: { backgroundColor: CoachPalette.surface, borderCurve: 'continuous', borderRadius: CoachRadius.input, color: CoachPalette.text, ...CoachType.body, minHeight: 58, paddingHorizontal: Spacing.five },
-  card: { backgroundColor: CoachPalette.surface, borderCurve: 'continuous', borderRadius: CoachRadius.card, paddingHorizontal: Spacing.five, paddingVertical: Spacing.three },
+  input: { backgroundColor: CoachPalette.surfaceAlt, borderCurve: 'continuous', borderRadius: CoachRadius.input, color: CoachPalette.text, ...CoachType.body, minHeight: 58, paddingHorizontal: Spacing.five },
+  card: { ...surfaceStyles.card, borderCurve: 'continuous', paddingHorizontal: Spacing.five, paddingVertical: Spacing.three },
   stepper: { alignItems: 'center', flexDirection: 'row', gap: Spacing.three, minHeight: 68 },
   stepperStacked: { alignItems: 'stretch', flexDirection: 'column', gap: 8, paddingVertical: 12 },
   stepLabelCopy: { flexGrow: 1, flexShrink: 1 },
@@ -253,10 +254,10 @@ const styles = StyleSheet.create({
   roundOff: { opacity: 0.35 },
   preview: { marginTop: Spacing.four },
   breaks: { color: CoachPalette.muted, ...Type.footnote, marginBottom: Spacing.two, marginTop: Spacing.three },
-  primary: { alignItems: 'center', backgroundColor: CoachPalette.peach, borderCurve: 'continuous', borderRadius: CoachRadius.pill, justifyContent: 'center', marginTop: Spacing.six, minHeight: 56 },
+  primary: { marginTop: Spacing.six },
   primaryText: { color: CoachPalette.peachInk, fontSize: 17, fontWeight: '800' },
   secondaryRow: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.one, flexWrap: 'wrap' },
-  secondary: { alignItems: 'center', backgroundColor: CoachPalette.interactive, borderCurve: 'continuous', borderRadius: CoachRadius.pill, justifyContent: 'center', minHeight: 52, flexGrow: 1, flexBasis: 180 },
+  secondary: { flexGrow: 1, flexBasis: 180 },
   secondaryText: { color: CoachPalette.text, ...Type.headline },
   checkEmpty: { color: CoachPalette.muted, ...CoachType.body, paddingVertical: Spacing.two },
   checkHead: { alignItems: 'center', flexDirection: 'row', gap: Spacing.two, paddingBottom: Spacing.two, paddingTop: Spacing.two },
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
   checkLabel: { color: CoachPalette.textSecondary,  ...Type.body, flex: 1 },
   checkPlan: { color: CoachPalette.text, ...Type.figure, fontSize: 18 },
   checkRule: { color: CoachPalette.muted, ...Type.footnote,   minWidth: 74, textAlign: 'right' },
-  fix: { alignItems: 'center', backgroundColor: CoachPalette.interactive, borderRadius: CoachRadius.pill, justifyContent: 'center', marginBottom: Spacing.two, marginTop: Spacing.two, minHeight: 46 },
+  fix: { marginBottom: Spacing.two, marginTop: Spacing.two },
   fixText: { color: CoachPalette.peach, ...Type.headline },
   delete: { alignItems: 'center', marginTop: Spacing.four, minHeight: 44, justifyContent: 'center' },
   deleteText: { color: Palette.emergency, ...Type.body },

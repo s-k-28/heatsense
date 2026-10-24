@@ -151,3 +151,30 @@ Root removed only the top-right zone text from the Field conditions section head
 ## Phase boundary / implementation handoff
 
 Wait for root's principles, font choice, shared token/primitive contract and file ownership before phase3 edits. Preferred implementation boundaries are visual components/call-site styles; **existing services, auth, state, calculations, chart colors, source labels, permissions and persistence handlers remain unchanged.** Reachable onboarding routes need separate explicit ownership. Runtime check results should link artifacts rather than replacing unchecked items with unsupported “pass” totals.
+
+
+## Phase 3 implementation checkpoint
+
+Applied after reading [published principles](refinement/design-principles.md) and root's shared font/token/control foundation. Owned visual files only: `coach-home.tsx`, `field-hero.tsx`, `coach-tabs.tsx`, `alerts-tab.tsx`, `field-check-sheet.tsx`, `plan-editor.tsx`, `athlete-vitals.tsx`, and coach-reachable `trainer-athletes.tsx`. This checkpoint does not change services, authentication, state stores, validation, persistence or safety instructions.
+
+### Exact source changes
+
+- Major Home rhythm/history surfaces, hero container, Plan/Team surfaces, Alerts status/cards/empty state, editor groups and roster groups now compose the shared `surfaceStyles.card` foundation. Neutral floating surfaces/shadow/radius follow the same contract. SVG rings, bar shapes, work/rest previews, day bars and chart geometry are not restyled as generic cards.
+- Home supporting labels, alert/card headings, plan/source headings and athlete-detail identity/status hierarchy use the published type roles. The global bundled Text/TextInput wrappers remain the font mechanism; no extra family/loading system added.
+- Hero CTA, New plan and Create team now use the shared ActionButton with their existing callbacks/disabled state. Team Share uses the primary semantic variant instead of secondary ink on a peach surface. Alerts Resolve stays a quiet text action; editor primary/secondary/Fix controls inherit shared sizes and surfaces instead of repainting them locally. Async busy/error/guard behavior remains with the existing handlers.
+- Field-sheet location/WBGT inputs use the shared56pt,22-radius field vocabulary and supporting type; class/unit/source/time radios keep their current choices, radio semantics, selected states and disabled rules. Source content, UIL guidance and confirmation language are unchanged.
+- Plan/Team header and code rows wrap; plan names/status and request names can share narrow width without forcing a fixed line. Coach roster search and athlete-detail headings align with the same input/type family. Existing scroll/keyboard/safe-area behavior stays in place.
+- Metric peach is explicitly pinned to the original `#FFAD83` in Home guidance gradient, work blocks, personal pulse metric rails and Plan work preview. The UI brand token is independent. Zone colors, graph ranges, ring fraction meanings, observed trend/headroom calculations and all medical thresholds remain unchanged.
+- Preserved the user's requested removal of only the top-right Field conditions zone label; the inner-ring zone label remains. Normal-flow Home wrappers, the SVG transform fix, role-specific read-only controls and all existing metadata loading/error/retry branches remain intact.
+
+### Checks actually executed
+
+- Targeted ESLint on the eight owned visual modules: passed without warnings after fixing a duplicate inherited style property and a duplicate theme import.
+- Full `npx tsc --noEmit`: passed for the shared workspace at this checkpoint.
+- Actual production shared Home render-tree fixtures: athlete path mounts no roster/local-plan subscriptions or recording sheet/invite; personal unknown recovery remains unavailable; history loading/error/retry differ from empty; coach uses its roster/plan and scrollable blocks; practice lookup error remains explicit. These use mocked dependencies, not a device renderer.
+- Actual production `useMyTeam` helper lifecycle fixtures: account isolation, late callback rejection, error versus successful no-team, retry loading, sign-out and same-account re-entry. No live account/database operation performed.
+- TypeScript-parser source comparison against HEAD confirmed unchanged `seriesFor`, `trendPerHour`, `arrowFor`, Home recheck/count/acknowledgement/today-peak/weekly/alert calculations, applied ratio and hydration tick calculation. Checked explicit metric peach, removed header label and absence of `originX`.
+
+### Runtime still pending for this styling batch
+
+Root owns browser/native verification. Check actual bundled font faces/weights, brand-button contrast, photo contrast, focused fields, keyboard Save/Done reachability, long names/code, narrow wrapped requests/actions, large text, role-specific Home modal return and Plan/Alerts entering behavior. Re-run the relevant H/F/P/T/A checklist rows above; source typechecking and mocked fixtures do not mark those runtime rows passed. Earlier root observations predate this visual checkpoint unless a new artifact is explicitly attached.
