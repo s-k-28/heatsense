@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text } from '@/components/ui/text';
+import { StyleSheet, View } from 'react-native';
 import { SimulatedTag } from '@/components/vitals';
 import { ActionButton } from '@/components/ui/action-button';
 import { ListRow, Rows } from '@/components/whoop-ui';

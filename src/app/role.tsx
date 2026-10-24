@@ -1,3 +1,4 @@
+import { AnimatedText } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
@@ -29,7 +30,7 @@ export default function RoleScreen() {
         <EntryHeader bandDock={false} onBack={() => router.canGoBack() ? router.back() : router.replace('/sign-in')} />
       </Animated.View>
       <EntryHeading accent="you." compact={compact} delay={150} lead="Made for" size="hero" style={{ marginTop: compact ? 28 : 44 }} />
-      <Animated.Text entering={fade(500)} style={entryStyles.description}>Choose how you’ll use HeatSense.</Animated.Text>
+      <AnimatedText entering={fade(500)} style={entryStyles.description}>Choose how you’ll use HeatSense.</AnimatedText>
       <View style={[styles.open, styles.bandRoom]}><BandSpot height={compact ? 120 : 160} id="role" /></View>
       <View accessibilityRole="radiogroup" accessibilityLabel="Your role" style={[styles.roles, compact && styles.rolesCompact]}>
         {roles.map((role, index) => (

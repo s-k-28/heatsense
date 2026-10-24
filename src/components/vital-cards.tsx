@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { Fill } from '@/components/motion/fill';

@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { useState } from 'react';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { PressScale } from '@/components/motion/press-scale';

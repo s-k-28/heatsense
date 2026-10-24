@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/text';
 import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { createContext, useContext } from 'react';
-import { Alert, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Share, StyleSheet, View } from 'react-native';
 
 import { CoachLargeTitle, LargeTitle, type DashboardRole } from '@/components/dashboard-shell';
 import { HeatIcon } from '@/components/heat-icon';

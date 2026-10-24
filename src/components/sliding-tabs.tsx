@@ -1,3 +1,4 @@
+import { AnimatedText } from '@/components/ui/text';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { Easing, interpolate, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
@@ -11,7 +12,7 @@ import { CoachPalette } from '@/constants/coach-theme';
 const SLIDE_MS = 250;
 const SLIDE_EASE = Easing.bezier(0.22, 1, 0.36, 1);
 const PAD = 3;
-const HEIGHT = 36;
+const HEIGHT = 44;
 const MUTED = 'rgba(193,193,193,0.8)';
 
 type Frame = { width: number; x: number };
@@ -73,20 +74,20 @@ function Segment({ active, index, label, onLayout, onPress, position, variant }:
   const dim = useAnimatedStyle(() => ({ opacity: 1 - interpolate(position.value, [index - 1, index, index + 1], [0, 1, 0], 'clamp') }));
   return (
     <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }} hitSlop={4} onLayout={onLayout} onPress={onPress} style={styles.segment}>
-      <Animated.Text numberOfLines={1} style={[styles.label, { color: variant === 'coach' ? CoachPalette.muted : MUTED }, dim]}>{label}</Animated.Text>
-      <Animated.Text numberOfLines={1} style={[styles.label, styles.labelLit, variant === 'coach' && styles.coachLabelLit, lit]}>{label}</Animated.Text>
+      <AnimatedText numberOfLines={1} style={[styles.label, { color: variant === 'coach' ? CoachPalette.muted : MUTED }, dim]}>{label}</AnimatedText>
+      <AnimatedText numberOfLines={1} style={[styles.label, styles.labelLit, variant === 'coach' && styles.coachLabelLit, lit]}>{label}</AnimatedText>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: { backgroundColor: 'rgba(32,32,32,0.86)', borderColor: 'rgba(191,192,203,0.08)', borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: PAD, padding: PAD },
-  pill: { backgroundColor: 'rgba(69,69,69,0.92)', borderRadius: 999, height: HEIGHT, left: 0, position: 'absolute', top: PAD },
+  bar: { backgroundColor: Palette.surface, borderColor: 'rgba(191,192,203,0.08)', borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: PAD, padding: PAD },
+  pill: { backgroundColor: Palette.interactive, borderRadius: 999, height: HEIGHT, left: 0, position: 'absolute', top: PAD },
   // Each segment starts at its label's width and shares out the spare room, so no label is cut off.
   segment: { alignItems: 'center', flexGrow: 1, height: HEIGHT, justifyContent: 'center', paddingHorizontal: 14 },
   label: { ...Type.subhead, fontWeight: '600' },
   labelLit: { color: Palette.coral, position: 'absolute' },
   coachBar: { backgroundColor: CoachPalette.surface, borderColor: 'transparent', padding: 5 },
-  coachPill: { backgroundColor: CoachPalette.interactive, height: 36, top: 5 },
+  coachPill: { backgroundColor: CoachPalette.interactive, height: 44, top: 5 },
   coachLabelLit: { color: CoachPalette.text },
 });

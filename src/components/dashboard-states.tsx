@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/text';
 import { Redirect, router } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
 
 import { FieldCard, shareTeamCode } from '@/components/dashboard-content';
 import { LargeTitle, SectionHeader } from '@/components/dashboard-shell';

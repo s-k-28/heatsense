@@ -1,7 +1,8 @@
+import { AnimatedText, TextInput } from '@/components/ui/text';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
-import { Keyboard, Linking, ScrollView, StyleSheet, TextInput, View, type LayoutChangeEvent } from 'react-native';
+import { Keyboard, Linking, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -106,7 +107,7 @@ function Content() {
         </Animated.View>
 
         <EntryHeading accent="team." compact={compact} delay={200} lead="Build your" style={{ marginTop: compact ? 26 : 36 }} />
-        <Animated.Text entering={rise(400)} style={[entryStyles.description, styles.noShrink]}>A few details to get started.</Animated.Text>
+        <AnimatedText entering={rise(400)} style={[entryStyles.description, styles.noShrink]}>A few details to get started.</AnimatedText>
 
         <View style={{ gap: compact ? 16 : 20, marginTop: compact ? 24 : 30 }}>
           <Animated.View entering={rise(650)}>

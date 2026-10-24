@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/text';
 import { useAthleteAppearance, useAthleteStyles } from '@/components/athlete-appearance';
 import { Fragment, useId, useState } from 'react';
-import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedProps, useAnimatedStyle, useReducedMotion, type SharedValue } from 'react-native-reanimated';
 import Svg, { Circle, Defs, G, Line, LinearGradient as SvgGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 

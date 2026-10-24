@@ -1,6 +1,7 @@
+import { Text, TextInput } from '@/components/ui/text';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import { Group, Row, TextLink } from '@/components/ui/list';
 import { ActionButton } from '@/components/ui/action-button';

@@ -1,6 +1,7 @@
+import { AnimatedText, Text } from '@/components/ui/text';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -47,7 +48,7 @@ function HeadingLine({ text, progress, style }: { text: string; progress: Shared
   const rise = useAnimatedStyle(() => ({ opacity: Math.min(1, progress.value * 2.2), transform: [{ translateY: 20 * (1 - progress.value) }] }));
   return (
     <View style={entryStyles.headingMask}>
-      <Animated.Text style={[style, rise]}>{text}</Animated.Text>
+      <AnimatedText style={[style, rise]}>{text}</AnimatedText>
     </View>
   );
 }

@@ -1,7 +1,8 @@
+import { AnimatedText, Text } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -158,7 +159,7 @@ function MaskedLine({ children, clock, compact, window, accent = false }: { chil
   });
   return (
     <View style={{ height: lineHeight, overflow: 'hidden' }}>
-      <Animated.Text style={[styles.headline, compact && styles.headlineCompact, accent && styles.accent, rise]}>{children}</Animated.Text>
+      <AnimatedText style={[styles.headline, compact && styles.headlineCompact, accent && styles.accent, rise]}>{children}</AnimatedText>
     </View>
   );
 }
@@ -171,7 +172,7 @@ function Wordmark({ clock }: { clock: SharedValue<number> }) {
   });
   return (
     <View style={styles.wordmarkMask}>
-      <Animated.Text style={[entryStyles.wordmark, slide]}>HeatSense</Animated.Text>
+      <AnimatedText style={[entryStyles.wordmark, slide]}>HeatSense</AnimatedText>
     </View>
   );
 }

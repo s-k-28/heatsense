@@ -1,5 +1,6 @@
+import { Text, TextInput } from '@/components/ui/text';
 import { useCallback, useEffect, useState, type Ref } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type Role, type TextInputProps, type TextStyle } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View, type Role, type TextInputProps, type TextStyle } from 'react-native';
 import Animated, {
   Easing,
   interpolateColor,
@@ -24,7 +25,7 @@ const ROW_HEIGHT = 48;
 const LISTBOX = 'listbox' as Role;
 const MENU_PADDING = 6;
 const FOCUS_RING = { outlineColor: Entry.peach, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 3 } as const;
-const RADIUS = 18;
+const RADIUS = 22;
 // The field draws its own focus state, so drop the browser's default input outline.
 // React Native's types omit 'none', but React Native Web passes it through (Chrome ignores a 0 width on its 'auto' outline).
 const noWebOutline = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as unknown as TextStyle) : null;
@@ -243,8 +244,8 @@ function MenuOption({ label, selected, onPress }: { label: string; selected: boo
 }
 
 const styles = StyleSheet.create({
-  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 2 },
-  error: { color: ERROR, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 2 },
+  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 14, letterSpacing: -0.1, marginBottom: 8, marginLeft: 2 },
+  error: { color: ERROR, fontFamily: Entry.body, fontSize: 13, lineHeight: 17, marginTop: 7, marginLeft: 2 },
   fill: { backgroundColor: Entry.surface },
   lift: { backgroundColor: 'rgba(255,255,255,0.025)' },
   outline: { borderWidth: 1.5 },

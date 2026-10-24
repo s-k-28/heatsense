@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { Face, Palette } from '@/constants/theme';
 import type { DemoMember } from '@/state/demo-team';

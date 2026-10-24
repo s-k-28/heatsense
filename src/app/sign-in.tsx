@@ -1,8 +1,9 @@
+import { Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, Text, View, type TextInput } from 'react-native';
+import { StyleSheet, View, type TextInput } from 'react-native';
 
 import { GoogleLogo } from '@/components/brand-logos';
 import { EntryButton, EntryHeader, EntryHeading, EntryLink, EntryScreen, entryStyles } from '@/components/entry-ui';

@@ -1,6 +1,8 @@
+import { surfaceStyles } from '@/components/ui/surface';
+import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { Children, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
@@ -147,10 +149,10 @@ const baseStyles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   sectionTarget: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' },
   sectionRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', marginBottom: 12, marginTop: 32 },
-  section: { flexShrink: 1, color: Palette.ink, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+  section: { flexShrink: 1, color: Palette.ink, fontSize: 26, fontWeight: '700', letterSpacing: -0.6 },
   sectionAction: { color: Palette.coral, fontSize: 16, fontWeight: '600' },
   caps: { color: Palette.inkMuted, fontSize: 15, fontWeight: '600', marginBottom: 8, marginTop: 24 },
-  rows: { backgroundColor: Palette.surface, borderRadius: 16, overflow: 'hidden' },
+  rows: { ...surfaceStyles.card, backgroundColor: Palette.surface, borderRadius: 28, overflow: 'hidden' },
   divider: { backgroundColor: Palette.border, height: StyleSheet.hairlineWidth, marginLeft: 18 },
   row: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 56, paddingHorizontal: 18, paddingVertical: 13 },
   rowCopy: { flex: 1, gap: 2 },
@@ -167,9 +169,9 @@ const baseStyles = StyleSheet.create({
   statValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 36, lineHeight: 40, letterSpacing: 0.2 },
   statUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 22 },
   statLabel: { color: Palette.inkMuted, fontSize: 15, fontWeight: '500' },
-  card: { backgroundColor: Palette.surface, borderRadius: 16, gap: 14, padding: 18 },
+  card: { ...surfaceStyles.card, backgroundColor: Palette.surface, borderRadius: 28, gap: 14, padding: 18 },
   cardTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  cardTitle: { color: Palette.ink, flex: 1, fontSize: 18, fontWeight: '600' },
+  cardTitle: { color: Palette.ink, flex: 1, fontSize: 20, fontWeight: '700' },
   cardMessage: { color: Palette.inkMuted, fontSize: 17, lineHeight: 24, marginTop: -6 },
   sample: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: 6, marginBottom: 12 },
   sampleDot: { backgroundColor: Palette.info, borderRadius: 3, height: 6, width: 6 },

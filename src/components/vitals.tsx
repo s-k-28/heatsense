@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/text';
 import { useAthleteStyles } from '@/components/athlete-appearance';
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { VitalCards, type BandSignal } from '@/components/vital-cards';
 import { ListRow, Rows } from '@/components/whoop-ui';

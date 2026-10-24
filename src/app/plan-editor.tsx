@@ -1,9 +1,10 @@
+import { Text, TextInput } from '@/components/ui/text';
 import { CoachPalette, CoachRadius, CoachType } from '@/constants/coach-theme';
 import { ActionButton } from '@/components/ui/action-button';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeatIcon } from '@/components/heat-icon';

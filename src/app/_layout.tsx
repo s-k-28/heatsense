@@ -1,15 +1,8 @@
-import {
-  AtkinsonHyperlegibleNext_400Regular,
-  AtkinsonHyperlegibleNext_500Medium,
-  AtkinsonHyperlegibleNext_600SemiBold,
-  AtkinsonHyperlegibleNext_700Bold,
-  AtkinsonHyperlegibleNext_800ExtraBold,
-  useFonts,
-} from '@expo-google-fonts/atkinson-hyperlegible-next';
-import { Fraunces_500Medium_Italic, Fraunces_600SemiBold_Italic } from '@expo-google-fonts/fraunces';
+import { Archivo_700Bold, Archivo_800ExtraBold } from '@expo-google-fonts/archivo';
+import { Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
-import { BarlowCondensed_600SemiBold, BarlowCondensed_700Bold } from '@expo-google-fonts/barlow-condensed';
+import { useReducedMotion } from 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { createTamagui, TamaguiProvider } from 'tamagui';
@@ -29,25 +22,11 @@ SplashScreen.setOptions({ duration: 350, fade: true });
 const tamaguiConfig = createTamagui(defaultConfig);
 
 export default function RootLayout() {
+  const reducedMotion = useReducedMotion();
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [initialAuthReady, setInitialAuthReady] = useState(false);
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_800ExtraBold,
-    BarlowCondensed_600SemiBold,
-    BarlowCondensed_700Bold,
-    AtkinsonHyperlegibleNext_400Regular,
-    AtkinsonHyperlegibleNext_500Medium,
-    AtkinsonHyperlegibleNext_600SemiBold,
-    AtkinsonHyperlegibleNext_700Bold,
-    AtkinsonHyperlegibleNext_800ExtraBold,
-    Fraunces_500Medium_Italic,
-    Fraunces_600SemiBold_Italic,
-  });
+  const [fontsLoaded, fontError] = useFonts({ Archivo_700Bold, Archivo_800ExtraBold, Manrope_600SemiBold, Manrope_700Bold });
 
   useEffect(() => {
     if ((fontsLoaded || fontError) && authReady) {
@@ -93,11 +72,12 @@ export default function RootLayout() {
 
   return (
     <AuthSessionContext.Provider value={{ user, ready: authReady }}>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+      <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
         <PhoneFrame>
         <Stack
           screenOptions={{
-            animation: 'fade',
+            animation: reducedMotion ? 'none' : 'fade',
+            animationDuration: reducedMotion ? 0 : 300,
             contentStyle: { backgroundColor: Palette.canvas },
             headerShown: false,
           }}

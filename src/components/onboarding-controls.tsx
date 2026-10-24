@@ -1,3 +1,4 @@
+import { AnimatedText } from '@/components/ui/text';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, interpolateColor, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -75,8 +76,8 @@ export function OnboardingSelectionSurface({ title, description, selected, onPre
       onHoverOut={() => { hover.set(withTiming(0, { duration: ms(200), easing: ease })); }}
       style={({ pressed }) => [{ borderRadius: 26 }, focused && FOCUS_RING, pressed && { transform: [{ scale: 0.99 }] }]}>
       <Animated.View style={[styles.surface, { minHeight }, frame]}>
-        <Animated.Text style={[styles.title, large && styles.titleLarge, titleStyle]}>{title}</Animated.Text>
-        <Animated.Text style={[styles.description, descriptionStyle]}>{description}</Animated.Text>
+        <AnimatedText style={[styles.title, large && styles.titleLarge, titleStyle]}>{title}</AnimatedText>
+        <AnimatedText style={[styles.description, descriptionStyle]}>{description}</AnimatedText>
       </Animated.View>
     </Pressable>
   );

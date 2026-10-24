@@ -20,10 +20,10 @@ export function PressScale({ children, style, onPressIn, onPressOut, ...rest }: 
   return (
     <AnimatedPressable
       {...rest}
-      onPressIn={(e) => { if (!reduced) scale.set(withTiming(0.97, { duration: 120, easing: EASE_OUT })); onPressIn?.(e); }}
+      onPressIn={(e) => { if (!reduced) scale.set(withTiming(0.97, { duration: 170, easing: EASE_OUT })); onPressIn?.(e); }}
       onPressOut={(e) => {
         if (reduced) { cancelAnimation(scale); scale.set(1); }
-        else scale.set(withTiming(1, { duration: 160, easing: EASE_OUT }));
+        else scale.set(withTiming(1, { duration: 180, easing: EASE_OUT }));
         onPressOut?.(e);
       }}
       style={[style, animated]}>
