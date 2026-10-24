@@ -68,7 +68,7 @@ At375px, Athlete Home was scrolled to the end: final alert action cleared naviga
 - Real BLE hardware/firmware is unfinished. Simulated band data and demo pairing remain labelled; imagery and animations establish no hardware or medical accuracy.
 - Native screen-reader traversal, full keyboard/focus audit, Dynamic Type/200% text, automated accessibility coverage and physical-device performance/energy profiling are not complete. Selected/check states inspected in web are not full accessibility certification.
 - Query/permission/save/offline/retry coverage is partial. Historical source inventories contain additional candidates; do not mark them resolved merely because typography changed.
-- Two temporary **local emulator** audit plans remain awaiting user confirmation for permanent deletion under the computer-use rule. Original Standard is preserved. The newly added cold-reading test was already removed through the recorded emulator-admin cleanup; no production reading was written.
+- Two temporary **local browser** audit plans remain awaiting user confirmation for permanent deletion under the computer-use rule. Plans use the existing device-local store; the test accounts and practice records use Firebase emulators. Original Standard is preserved. The newly added cold-reading test was already removed through the recorded emulator-admin cleanup; no production reading was written.
 
 Review completion against this evidence and the live ledger, not a claimed total of all screens/states. Implementation and available browser checks are recorded; the native and unexercised-state limits above remain explicit.
 
