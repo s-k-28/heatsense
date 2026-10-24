@@ -1,4 +1,4 @@
-import { AnimatedText, TextInput } from '@/components/ui/text';
+import { TextInput } from '@/components/ui/text';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useRef, useState } from 'react';
@@ -6,7 +6,7 @@ import { Keyboard, Linking, ScrollView, StyleSheet, View, type LayoutChangeEvent
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EntryButton, EntryHeader, EntryHeading, EntryLink, entryStyles } from '@/components/entry-ui';
+import { EntryButton, EntryHeader, EntryHeading, EntryLink } from '@/components/entry-ui';
 import { MobileViewport } from '@/components/mobile-viewport';
 import { OnboardingBackground } from '@/components/onboarding-background';
 import { OnboardingSelectField, OnboardingTextField } from '@/components/onboarding-fields';
@@ -85,8 +85,7 @@ function Content() {
     submitting.current = true;
     Keyboard.dismiss();
     setMenu(null);
-    // No team backend exists yet: keep this as a local draft and move on. The team is
-    // not created anywhere until a server accepts it in a later step.
+    // Keep the draft here; the invitation screen creates or loads the saved team.
     setTeamDraft({ school: clean(draft.school), teamName: clean(draft.teamName) });
     router.push('/team/invite');
   };
@@ -107,7 +106,6 @@ function Content() {
         </Animated.View>
 
         <EntryHeading accent="team." compact={compact} delay={200} lead="Build your" style={{ marginTop: compact ? 26 : 36 }} />
-        <AnimatedText entering={rise(400)} style={[entryStyles.description, styles.noShrink]}>A few details to get started.</AnimatedText>
 
         <View style={{ gap: compact ? 16 : 20, marginTop: compact ? 24 : 30 }}>
           <Animated.View entering={rise(650)}>
