@@ -215,7 +215,7 @@ function TabItem({ active, index, onPress, tab, tabWidth, x, variant }: { active
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       onPress={onPress}
-      style={({ pressed }) => [styles.tab, pressed && !active && styles.tabPressed]}>
+      style={({ pressed }) => [styles.tab, pressed && !active && styles.tabPressed]} aria-selected={active}>
       <Animated.View pointerEvents="none" style={[styles.tabLayer, dim]}>{content(athlete ? '#FFFFFF' : variant === 'coach' ? CoachPalette.muted : TAB_MUTED, [styles.tabLabelMuted, athlete && { color: '#FFFFFF' }])}</Animated.View>
       <Animated.View pointerEvents="none" style={[styles.tabLayer, styles.tabLayerLit, lit]}>{content(variant === 'coach' ? CoachPalette.peach : Palette.coral, styles.tabLabelActive)}</Animated.View>
     </Pressable>

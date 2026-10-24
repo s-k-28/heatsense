@@ -10,12 +10,12 @@ import { EASE_IN_OUT } from '@/lib/motion-engine';
 // One segmented control for the whole app. The selected pill travels to the option you tap
 // (220 ms, ease-in-out) instead of jumping there; with Reduce Motion it moves at once.
 
-type Option<T extends string> = { key: T; label: string; badge?: ReactNode; disabled?: boolean };
+type Option<T extends string> = { key: T; label: string; accessibilityLabel?: string; badge?: ReactNode; disabled?: boolean };
 type Tone = 'canvas' | 'card' | 'accent';
 
 const THUMB: Record<Tone, string> = { canvas: Palette.interactive, card: Palette.interactive, accent: Palette.coral };
 
-export function Segmented<T extends string>({ options, value, onChange, size = 'md', tone = 'canvas', itemWidth = 52 }: {
+export function Segmented<T extends string>({ options, value, onChange, size = 'md', tone = 'canvas', itemWidth = 52, highlightedKey }: {
   options: Option<T>[];
   value: T;
   onChange: (next: T) => void;
@@ -23,6 +23,7 @@ export function Segmented<T extends string>({ options, value, onChange, size = '
   size?: 'md' | 'sm';
   tone?: Tone;
   itemWidth?: number;
+  highlightedKey?: T;
 }) {
   const Palette = useAthletePalette();
   const styles = useAthleteStyles(baseStyles);
@@ -58,13 +59,14 @@ export function Segmented<T extends string>({ options, value, onChange, size = '
         return (
           <Pressable
             accessibilityRole="tab"
+            accessibilityLabel={o.accessibilityLabel ?? o.label}
             accessibilityState={{ selected: on, disabled: Boolean(o.disabled) }}
             disabled={o.disabled}
             key={o.key}
             onPress={() => onChange(o.key)}
             onFocus={(event) => setFocused(Platform.OS !== 'web' || Boolean((event.target as unknown as Element | null)?.matches?.(':focus-visible')) ? o.key : null)}
             onBlur={() => setFocused(null)}
-            style={({ pressed }) => [styles.item, sm ? styles.itemSm : styles.itemMd, focused === o.key && styles.focused, o.disabled && styles.disabled, pressed && styles.pressed]}>
+            style={({ pressed }) => [styles.item, sm ? styles.itemSm : styles.itemMd, focused === o.key && styles.focused, highlightedKey === o.key && styles.highlighted, o.disabled && styles.disabled, pressed && styles.pressed]} aria-selected={on}>
             <Text style={[sm ? styles.textSm : styles.textMd, { color: on ? (tone === 'accent' ? '#1A0E07' : Palette.ink) : Palette.inkMuted }]}>{o.label}</Text>
             {o.badge}
           </Pressable>
@@ -84,6 +86,7 @@ const baseStyles = StyleSheet.create({
   item: { alignItems: 'center', borderColor: 'transparent', borderWidth: 1, flex: 1, flexDirection: 'row', gap: 8, justifyContent: 'center', minWidth: 44, paddingHorizontal: 4 },
   itemMd: { borderRadius: 999, minHeight: 48, paddingVertical: 8 },
   itemSm: { borderRadius: 999, minHeight: 44, paddingVertical: 6 },
+  highlighted: { backgroundColor: Palette.coralSoft, borderColor: Palette.coral },
   focused: { borderColor: Palette.ink },
   disabled: { opacity: 0.4 },
   pressed: { opacity: 0.7 },

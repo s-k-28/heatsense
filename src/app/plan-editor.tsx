@@ -1,11 +1,11 @@
-import { surfaceStyles } from '@/components/ui/surface';
+import { Surface, surfaceStyles } from '@/components/ui/surface';
 import { Text, TextInput } from '@/components/ui/text';
 import { CoachPalette, CoachRadius, CoachType } from '@/constants/coach-theme';
 import { ActionButton } from '@/components/ui/action-button';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HeatIcon } from '@/components/heat-icon';
@@ -28,7 +28,7 @@ import {
 import { ZONES } from '@/lib/practice';
 import { checkPlan } from '@/lib/plan-check';
 import { UIL_GUIDANCE } from '@/lib/uil-wbgt';
-import { useCoachData } from '@/state/team-session';
+import { useCoachDataState } from '@/state/team-session';
 
 const minus = { ios: 'minus', android: 'remove', web: 'remove' } as const;
 const plus = { ios: 'plus', android: 'add', web: 'add' } as const;
@@ -69,6 +69,7 @@ function PlanEditorForm({ active, source }: { active: PracticePlan; source?: Pra
   // A new plan starts from today's timings; an existing one from its own.
   const [plan, setPlan] = useState<PracticePlan>(() => (source ? { ...source } : { ...active, builtIn: undefined, id: '', name: '' }));
   const editing = Boolean(source && !source.builtIn);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const set = <K extends keyof PracticePlan>(key: K, value: PracticePlan[K]) => setPlan((current) => ({ ...current, [key]: value }));
   const blocks = buildSchedule(plan);
@@ -91,11 +92,14 @@ function PlanEditorForm({ active, source }: { active: PracticePlan; source?: Pra
     savePlan({ ...named, id: '', name: `${named.name} copy` });
     close();
   };
-  const remove = () =>
+  const deleteAndClose = () => { deletePlan(plan.id); close(); };
+  const remove = () => {
+    if (Platform.OS === 'web') { setConfirmDelete(true); return; }
     Alert.alert(`Delete “${named.name}”?`, 'Today’s plan goes back to the standard one if this was it.', [
       { style: 'cancel', text: 'Cancel' },
-      { onPress: () => { deletePlan(plan.id); close(); }, style: 'destructive', text: 'Delete' },
+      { onPress: deleteAndClose, style: 'destructive', text: 'Delete' },
     ]);
+  };
 
   return (
     <View style={styles.screen}>
@@ -158,7 +162,14 @@ function PlanEditorForm({ active, source }: { active: PracticePlan; source?: Pra
             ) : null}
           </View>
           {editing ? (
-            <ActionButton label="Delete plan" onPress={remove} variant="danger" style={styles.delete} />
+            confirmDelete ? <Surface accessibilityLiveRegion="polite" style={styles.pending}>
+              <Text accessibilityRole="header" style={styles.checkTitle}>Delete “{named.name}”?</Text>
+              <Text style={styles.checkEmpty}>Today’s plan goes back to the standard one if this was it.</Text>
+              <View style={styles.secondaryRow}>
+                <ActionButton label="Cancel" onPress={() => setConfirmDelete(false)} style={styles.secondary} variant="secondary" />
+                <ActionButton label="Delete plan" onPress={deleteAndClose} style={styles.secondary} variant="danger" />
+              </View>
+            </Surface> : <ActionButton label="Delete plan" onPress={remove} variant="danger" style={styles.delete} />
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -171,9 +182,11 @@ function PlanEditorForm({ active, source }: { active: PracticePlan; source?: Pra
  * UIL requires, each checked, with a one-tap fix that spaces the breaks the way the chart allows.
  */
 function ZoneCheck({ plan, onFix }: { plan: PracticePlan; onFix: (fix: Partial<PracticePlan>) => void }) {
-  const data = useCoachData('coach');
+  const team = useCoachDataState('coach');
+  const data = team.data;
   const zone = data?.readings.at(-1)?.zone ?? null;
-  if (!data) return <><Text style={styles.label}>Today’s zone</Text><View style={styles.card}><Text style={styles.checkEmpty}>Practice data is unavailable. This plan has not been checked against a field reading.</Text></View></>;
+  if (team.status === 'loading') return <><Text style={styles.label}>Today’s zone</Text><View style={styles.card}><Text accessibilityLiveRegion="polite" style={styles.checkEmpty}>Loading current field guidance…</Text></View></>;
+  if (team.status === 'error') return <><Text style={styles.label}>Today’s zone</Text><View style={styles.card}><Text accessibilityLiveRegion="polite" style={styles.checkEmpty}>Practice data couldn’t load. This plan has not been checked against a field reading.</Text><ActionButton label="Try again" onPress={team.retry} variant="secondary" /></View></>;
   if (!zone) {
     return (
       <>
@@ -213,17 +226,18 @@ function Stepper({ format, label, last, max, min, onChange, step, value }: { for
   const { width, fontScale } = useWindowDimensions();
   const stacked = width < 390 || fontScale > 1.2;
   const shown = format(value);
+  const web = Platform.OS === 'web';
   return (
-    <View accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]} accessibilityLabel={`${label}, ${shown}`} accessibilityRole="adjustable" accessibilityValue={{ min, max, now: value, text: shown }} accessible onAccessibilityAction={(event) => onChange(Math.max(min, Math.min(max, value + (event.nativeEvent.actionName === 'increment' ? step : -step))))} style={[styles.stepper, stacked && styles.stepperStacked, !last && styles.stepperDivider]}>
+    <View accessibilityActions={web ? undefined : [{ name: 'increment' }, { name: 'decrement' }]} accessibilityLabel={`${label}, ${shown}`} accessibilityRole={web ? undefined : 'adjustable'} role={web ? 'group' : undefined} accessibilityValue={web ? undefined : { min, max, now: value, text: shown }} accessible={!web} onAccessibilityAction={(event) => onChange(Math.max(min, Math.min(max, value + (event.nativeEvent.actionName === 'increment' ? step : -step))))} style={[styles.stepper, stacked && styles.stepperStacked, !last && styles.stepperDivider]}>
       <View style={styles.stepLabelCopy}>
         <Text style={styles.stepLabel}>{label}</Text>
       </View>
       <View style={styles.stepControls}>
-        <Pressable accessibilityElementsHidden importantForAccessibility="no-hide-descendants" disabled={value <= min} hitSlop={6} onPress={() => onChange(Math.max(min, value - step))} style={({ pressed }) => [styles.round, value <= min && styles.roundOff, pressed && styles.pressed]}>
+        <Pressable accessibilityElementsHidden={!web} importantForAccessibility={web ? 'auto' : 'no-hide-descendants'} accessibilityRole="button" accessibilityLabel={`Decrease ${label}`} disabled={value <= min} hitSlop={6} onPress={() => onChange(Math.max(min, value - step))} style={({ pressed }) => [styles.round, value <= min && styles.roundOff, pressed && styles.pressed]}>
           <HeatIcon name={minus} size={14} tintColor={Palette.ink} weight="bold" />
         </Pressable>
         <Text style={styles.stepValue}>{shown}</Text>
-        <Pressable accessibilityElementsHidden importantForAccessibility="no-hide-descendants" disabled={value >= max} hitSlop={6} onPress={() => onChange(Math.min(max, value + step))} style={({ pressed }) => [styles.round, value >= max && styles.roundOff, pressed && styles.pressed]}>
+        <Pressable accessibilityElementsHidden={!web} importantForAccessibility={web ? 'auto' : 'no-hide-descendants'} accessibilityRole="button" accessibilityLabel={`Increase ${label}`} disabled={value >= max} hitSlop={6} onPress={() => onChange(Math.min(max, value + step))} style={({ pressed }) => [styles.round, value >= max && styles.roundOff, pressed && styles.pressed]}>
           <HeatIcon name={plus} size={14} tintColor={Palette.ink} weight="bold" />
         </Pressable>
       </View>

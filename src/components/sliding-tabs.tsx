@@ -73,7 +73,7 @@ function Segment({ active, index, label, onLayout, onPress, position, variant }:
   const lit = useAnimatedStyle(() => ({ opacity: interpolate(position.value, [index - 1, index, index + 1], [0, 1, 0], 'clamp') }));
   const dim = useAnimatedStyle(() => ({ opacity: 1 - interpolate(position.value, [index - 1, index, index + 1], [0, 1, 0], 'clamp') }));
   return (
-    <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }} hitSlop={4} onLayout={onLayout} onPress={onPress} style={styles.segment}>
+    <Pressable accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected: active }} hitSlop={4} onLayout={onLayout} onPress={onPress} style={styles.segment} aria-selected={active}>
       <AnimatedText numberOfLines={1} style={[styles.label, { color: variant === 'coach' ? CoachPalette.muted : MUTED }, dim]}>{label}</AnimatedText>
       <AnimatedText numberOfLines={1} style={[styles.label, styles.labelLit, variant === 'coach' && styles.coachLabelLit, lit]}>{label}</AnimatedText>
     </Pressable>

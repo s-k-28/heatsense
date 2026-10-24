@@ -20,7 +20,7 @@ export function SimulatedTag({ compact = false }: { compact?: boolean }) {
   if (!compact) return <View accessibilityLabel={`Simulated band data, ${DEMO_SPEED} times speed`} accessible style={styles.tag}><View style={styles.tagDot} /><Text style={styles.tagText}>Simulated band data · {DEMO_SPEED}× speed</Text></View>;
   return (
     <View style={styles.source}>
-      <Pressable accessibilityLabel={`Simulated band data, ${DEMO_SPEED} times speed. About these readings`} accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={[styles.tag, compact && styles.tagCompact]}>
+      <Pressable accessibilityLabel={`Simulated band data, ${DEMO_SPEED} times speed. About these readings`} accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={[styles.tag, compact && styles.tagCompact]} aria-expanded={expanded}>
         <View style={styles.tagDot} />
         <Text style={styles.tagText}>{compact ? `Simulated · ${DEMO_SPEED}×` : `Simulated band data · ${DEMO_SPEED}× speed`}</Text>
       </Pressable>

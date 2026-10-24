@@ -126,7 +126,7 @@ function Chips<T extends string | number>({ label, onSelect, options, selected, 
   return (
     <View accessibilityLabel={label} accessibilityRole="radiogroup" style={styles.chips}>
       {options.map((option) => (
-        <Pressable accessibilityRole="radio" accessibilityState={{ checked: option === selected, disabled }} disabled={disabled} key={String(option)} onPress={() => onSelect(option)} style={[styles.chip, option === selected && styles.chipOn, disabled && styles.disabled]}>
+        <Pressable accessibilityRole="radio" accessibilityState={{ checked: option === selected, disabled }} disabled={disabled} key={String(option)} onPress={() => onSelect(option)} style={[styles.chip, option === selected && styles.chipOn, disabled && styles.disabled]} aria-checked={option === selected}>
           <Text style={[styles.chipText, option === selected && styles.chipTextOn]}>{format(option)}</Text>
         </Pressable>
       ))}
@@ -266,7 +266,7 @@ function LatestReading({ latest, session }: { latest: FieldReading; session: Pra
 
   return (
     <View style={styles.reading}>
-      <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={styles.guidanceToggle}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={styles.guidanceToggle} aria-expanded={expanded}>
         <View style={styles.guidanceCopy}>
           <Text style={[styles.guidanceTitle, { color: zone.text }]}>{zone.label} guidance</Text>
           <Text style={styles.help}>{latest.acknowledgedAt ? `Applied at ${time(latest.acknowledgedAt)}` : 'Review and confirm for the latest reading'}</Text>

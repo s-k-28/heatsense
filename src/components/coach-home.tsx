@@ -144,7 +144,7 @@ function GradientRing({ id, progress, radius, reduced, start, end }: { id: strin
 function ConditionRings({ acknowledged, latest, loading, onPress, recheckFraction, reduced, temperature, total }: { acknowledged: number; latest: { zone: Zone } | null; loading: boolean; onPress: () => void; recheckFraction: number; reduced: boolean; temperature: string; total: number }) {
   const styles = useAthleteStyles(baseStyles);
   const zoneIndex = latest ? ZONE_ORDER.indexOf(latest.zone) : -1;
-  const heatTone = latest ? zoneColor(latest.zone) : CoachPalette.faint;
+  const heatTone = latest ? zoneColor(latest.zone) : '#7E8587';
   const applied = total ? acknowledged / total : 0;
   return (
     <View style={styles.visualSection}>
@@ -183,7 +183,7 @@ function PracticeTimeline({ blocks, onOpenPlan, planName, waterEvery }: { blocks
     <View style={styles.timelineSection}>
       <View style={styles.visualHead}><Pressable accessibilityRole="button" onPress={onOpenPlan} style={({ pressed }) => pressed && styles.pressed}><Text accessibilityRole="header" style={styles.visualTitle}>Practice rhythm</Text><Text style={styles.visualMeta}>{planName}  ›</Text></Pressable><Text style={styles.timelineClock}>{active ? clockTime(active.start, true) : '—'}</Text></View>
       <ScrollView accessibilityLabel="Practice blocks" contentContainerStyle={styles.blockScrollContent} horizontal showsHorizontalScrollIndicator>
-      <View accessibilityLabel={blocks.map((block) => `${block.title}, ${block.minutes} minutes`).join(', ')} style={[styles.blockTrack, { minWidth: blocks.length * 48 }]}>{blocks.map((block, index) => <View key={`${block.kind}-${block.start}`} style={{ flex: block.minutes, minWidth: 44 }}><Pressable accessibilityRole="button" accessibilityLabel={`${block.title}, ${block.minutes} minutes, starts ${clockTime(block.start, true)}`} accessibilityState={{ selected: selected === index }} onPress={() => setSelected(index)} style={[styles.block, { backgroundColor: blockTone(block.kind) }, selected === index && styles.blockSelected]} /></View>)}</View>
+      <View accessibilityLabel={blocks.map((block) => `${block.title}, ${block.minutes} minutes`).join(', ')} style={[styles.blockTrack, { minWidth: blocks.length * 48 }]}>{blocks.map((block, index) => <View key={`${block.kind}-${block.start}`} style={{ flex: block.minutes, minWidth: 44 }}><Pressable accessibilityRole="button" accessibilityLabel={`${block.title}, ${block.minutes} minutes, starts ${clockTime(block.start, true)}`} accessibilityState={{ selected: selected === index }} onPress={() => setSelected(index)} style={[styles.block, { backgroundColor: blockTone(block.kind) }, selected === index && styles.blockSelected]} aria-selected={selected === index} /></View>)}</View>
       </ScrollView>
       <View style={styles.timelineDetail}><Text style={styles.timelineDetailTitle}>{active?.title ?? 'No schedule'}</Text><Text style={styles.timelineDetailValue}>{active ? `${active.minutes} min` : '—'}</Text></View>
       <View style={styles.waterRail}><View style={styles.waterLine} />{Array.from({ length: waterStops }, (_, index) => <View key={index} style={[styles.waterTick, { left: `${((index + 1) / (waterStops + 1)) * 100}%` }]} />)}</View>
@@ -194,7 +194,7 @@ function PracticeTimeline({ blocks, onOpenPlan, planName, waterEvery }: { blocks
 
 function TeamPulse({ live, onInvite, total, watch }: { live: number; onInvite?: () => void; total: number; watch: number | null }) {
   const styles = useAthleteStyles(baseStyles);
-  const metrics = [{ color: CoachPalette.text, label: 'Roster', value: total }, { color: '#30D158', label: 'Live', value: live }, { color: watch ? '#FF9F0A' : CoachPalette.muted, label: 'Watch', value: watch ?? '—' }];
+  const metrics = [{ color: '#F7F6F2', label: 'Roster', value: total }, { color: '#30D158', label: 'Live', value: live }, { color: watch ? '#FF9F0A' : '#B7BCBE', label: 'Watch', value: watch ?? '—' }];
   return <View style={styles.teamSection}><View style={styles.visualHead}><Text accessibilityRole="header" style={styles.visualTitle}>Team pulse</Text>{total === 0 && onInvite ? <Pressable accessibilityRole="button" onPress={onInvite} style={({ pressed }) => pressed && styles.pressed}><Text style={styles.inlineAction}>Share code</Text></Pressable> : null}</View><View style={styles.teamMetrics}>{metrics.map((metric) => <View key={metric.label} style={styles.teamMetric}><Text key={`${metric.label}-${metric.value}`} style={[styles.teamNumber, { color: metric.color }]}>{metric.value}</Text><View style={[styles.teamRule, { backgroundColor: metric.color }]} /><Text style={styles.teamLabel}>{metric.label}</Text></View>)}</View></View>;
 }
 
@@ -208,7 +208,7 @@ function WeeklyHeat({ days, toDisplay, unit }: { days: HeatDay[]; toDisplay: (fa
   return (
     <View style={styles.historySection}>
       <View style={styles.visualHead}><Text accessibilityRole="header" style={styles.visualTitle}>Seven-day heat</Text><Text key={current?.date.toISOString()} style={styles.historyReading}>{current?.peak ? `${toDisplay(current.peak.wbgtF)}${unit}` : 'No reading'}</Text></View>
-      <View style={styles.chart}>{days.map((day, index) => { const height = day.peak ? Math.max(18, Math.min(112, 18 + ((day.peak.wbgtF - 70) / 25) * 94)) : 5; return <Pressable accessibilityLabel={`${day.date.toLocaleDateString([], { weekday: 'long' })}, ${day.peak ? `${toDisplay(day.peak.wbgtF)}${unit}` : 'no reading'}`} accessibilityRole="button" key={day.date.toISOString()} onPress={() => setSelected(index)} accessibilityState={{ selected: selected === index }} style={styles.chartColumn}><View style={styles.chartBarSpace}><View style={[styles.chartBar, { height }, selected === index && styles.chartBarSelected]}>{day.peak ? <LinearGradient colors={[tone(day), `${tone(day)}55`]} style={StyleSheet.absoluteFill} /> : null}</View></View><Text style={[styles.chartDay, selected === index && styles.chartDayOn]}>{day.date.toLocaleDateString([], { weekday: 'narrow' })}</Text></Pressable>; })}</View>
+      <View style={styles.chart}>{days.map((day, index) => { const height = day.peak ? Math.max(18, Math.min(112, 18 + ((day.peak.wbgtF - 70) / 25) * 94)) : 5; return <Pressable accessibilityLabel={`${day.date.toLocaleDateString([], { weekday: 'long' })}, ${day.peak ? `${toDisplay(day.peak.wbgtF)}${unit}` : 'no reading'}`} accessibilityRole="button" key={day.date.toISOString()} onPress={() => setSelected(index)} accessibilityState={{ selected: selected === index }} style={styles.chartColumn} aria-selected={selected === index}><View style={styles.chartBarSpace}><View style={[styles.chartBar, { height }, selected === index && styles.chartBarSelected]}>{day.peak ? <LinearGradient colors={[tone(day), `${tone(day)}55`]} style={StyleSheet.absoluteFill} /> : null}</View></View><Text style={[styles.chartDay, selected === index && styles.chartDayOn]}>{day.date.toLocaleDateString([], { weekday: 'narrow' })}</Text></Pressable>; })}</View>
       {!any ? <Text style={styles.emptyVisual}>Completed practices will draw this chart.</Text> : null}
     </View>
   );
@@ -467,7 +467,7 @@ const baseStyles = StyleSheet.create({
   chart: { flexDirection: 'row', gap: 7, height: 154 },
   chartColumn: { alignItems: 'center', flex: 1 },
   chartBarSpace: { flex: 1, justifyContent: 'flex-end', width: '100%' },
-  chartBar: { backgroundColor: CoachPalette.interactive, borderRadius: 10, overflow: 'hidden', width: '100%' },
+  chartBar: { backgroundColor: '#222728', borderRadius: 10, overflow: 'hidden', width: '100%' },
   chartBarSelected: { borderColor: CoachPalette.text, borderWidth: 2 },
   chartDay: { color: CoachPalette.muted, fontSize: 12, fontWeight: '700', marginTop: 8 },
   chartDayOn: { color: CoachPalette.text },

@@ -75,7 +75,7 @@ export function HeatHistory({ past, today, temp, onOpenSession }: { past: Sessio
           {week.map((d) => {
             const on = sameDay(d.date, picked);
             return (
-              <Pressable accessibilityLabel={`${d.date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}${d.peak ? `, peak ${temp.value(d.peak.wbgtF)}${temp.unit}, ${ZONES[d.peak.zone].label}` : ', no saved reading'}`} accessibilityRole="button" accessibilityState={{ selected: on }} key={d.date.toDateString()} onPress={() => setPicked(d.date)} style={({ pressed }) => [styles.weekDay, pressed && styles.pressed]}>
+              <Pressable accessibilityLabel={`${d.date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}${d.peak ? `, peak ${temp.value(d.peak.wbgtF)}${temp.unit}, ${ZONES[d.peak.zone].label}` : ', no saved reading'}`} accessibilityRole="button" accessibilityState={{ selected: on }} key={d.date.toDateString()} onPress={() => setPicked(d.date)} style={({ pressed }) => [styles.weekDay, pressed && styles.pressed]} aria-selected={on}>
                 <Text style={[styles.weekLetter, sameDay(d.date, now) && { color: Palette.ink }]}>{d.date.toLocaleDateString([], { weekday: 'narrow' })}</Text>
                 <View style={[styles.ring, { borderColor: d.peak ? tone(d.peak.zone) : 'rgba(235,235,245,0.14)', borderStyle: d.peak ? 'solid' : 'dashed' }, on && styles.ringOn, { width: dateSize, height: dateSize, borderRadius: dateSize / 2 }]}>
                   <Text style={styles.ringDate}>{d.date.getDate()}</Text>
@@ -104,7 +104,7 @@ export function HeatHistory({ past, today, temp, onOpenSession }: { past: Sessio
                 const future = d.date > now && !sameDay(d.date, now);
                 const on = sameDay(d.date, picked);
                 return (
-                  <Pressable accessibilityLabel={`${d.date.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}${d.peak ? `, ${ZONES[d.peak.zone].label}` : ', no saved reading'}`} accessibilityRole="button" accessibilityState={{ selected: on, disabled: future }} disabled={future} key={c} onPress={() => setPicked(d.date)} style={({ pressed }) => [styles.cell, pressed && styles.pressed]}>
+                  <Pressable accessibilityLabel={`${d.date.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}${d.peak ? `, ${ZONES[d.peak.zone].label}` : ', no saved reading'}`} accessibilityRole="button" accessibilityState={{ selected: on, disabled: future }} disabled={future} key={c} onPress={() => setPicked(d.date)} style={({ pressed }) => [styles.cell, pressed && styles.pressed]} aria-selected={on}>
                     <View style={[styles.tile, d.peak ? { backgroundColor: tone(d.peak.zone) } : styles.tileEmpty, future && styles.dim, on && styles.tileOn]}>
                       <Text style={[styles.tileDate, d.peak && styles.tileDateOn]}>{d.date.getDate()}</Text>
                     </View>

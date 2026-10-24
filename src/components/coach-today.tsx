@@ -253,7 +253,7 @@ export function CoachToday({ onInvite, readOnly = false, role = 'coach', teamPra
 function Metric({ children, label, onPress, selected, value, largeText }: { children: ReactNode; label: string; onPress: () => void; selected: boolean; value: string; largeText: boolean }) {
   const Palette = useAthletePalette();
   const styles = useAthleteStyles(baseStyles);
-  return <Pressable accessibilityRole="button" accessibilityValue={{ text: value }} accessibilityLabel={`${label}, ${selected ? 'hide' : 'show'} details`} accessibilityState={{ expanded: selected }} onPress={onPress} style={({ pressed }) => [styles.metric, largeText && styles.metricLarge, pressed && styles.pressed]}>{children}<Text style={[styles.metricLabel, largeText && styles.metricLabelLarge, selected && { color: Palette.coral }]}>{label} <Text style={styles.disclosure}>{selected ? '⌃' : '›'}</Text></Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityValue={{ text: value }} accessibilityLabel={`${label}, ${selected ? 'hide' : 'show'} details`} accessibilityState={{ expanded: selected }} onPress={onPress} style={({ pressed }) => [styles.metric, largeText && styles.metricLarge, pressed && styles.pressed]} aria-expanded={selected}>{children}<Text style={[styles.metricLabel, largeText && styles.metricLabelLarge, selected && { color: Palette.coral }]}>{label} <Text style={styles.disclosure}>{selected ? '⌃' : '›'}</Text></Text></Pressable>;
 }
 
 const baseStyles = StyleSheet.create({

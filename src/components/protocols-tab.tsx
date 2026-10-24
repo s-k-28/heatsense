@@ -247,7 +247,7 @@ function ResponseSession({ active, teamId }: { active: boolean; teamId: string |
             </PressScale>
           ) : null}
           {plan.steps.map((step, i) => (
-            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: Boolean(done[i]) }} disabled={logState.saving} key={step} onPress={() => toggle(i)} style={({ pressed }) => [styles.step, pressed && styles.pressed]}>
+            <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: Boolean(done[i]) }} disabled={logState.saving} key={step} onPress={() => toggle(i)} style={({ pressed }) => [styles.step, pressed && styles.pressed]} aria-checked={Boolean(done[i])}>
               <Check on={Boolean(done[i])} tone={plan.tone} />
               <View style={styles.stepCopy}>
                 <Text style={[styles.stepText, done[i] ? styles.stepDone : null]}>{step}</Text>
@@ -264,7 +264,7 @@ function ResponseSession({ active, teamId }: { active: boolean; teamId: string |
 
       {situation !== 'cramps' || coolStart !== null ? (
         <View style={styles.timer}>
-          <Pressable accessibilityRole="button" accessibilityState={{ expanded: timerOpen }} onPress={() => setTimerOpen(!timerOpen)} style={styles.timerHead}>
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: timerOpen }} onPress={() => setTimerOpen(!timerOpen)} style={styles.timerHead} aria-expanded={timerOpen}>
             <Text style={styles.cardTitle}>Cold-water immersion</Text>
             <Text style={styles.link}>{timerOpen ? 'Hide' : coolStart !== null ? clock(elapsed) : 'Open timer'}</Text>
           </Pressable>
@@ -349,7 +349,7 @@ function Prepare() {
           {READINESS.map((r, i) => <Fill color={Palette.safe} delay={i * 40} height={8} key={r.id} progress={done[r.id] ? 1 : 0} radius={3} style={styles.readyStep} track="rgba(235,235,245,0.1)" />)}
         </View>
         <Rows>{READINESS.map((r) => (
-          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: Boolean(done[r.id]) }} disabled={readinessState.saving} key={r.id} onPress={() => toggle(r.id)} style={({ pressed }) => [styles.readyRow, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: Boolean(done[r.id]) }} disabled={readinessState.saving} key={r.id} onPress={() => toggle(r.id)} style={({ pressed }) => [styles.readyRow, pressed && styles.pressed]} aria-checked={Boolean(done[r.id])}>
             <Check on={Boolean(done[r.id])} />
             <View style={styles.stepCopy}>
               <Text style={[styles.stepText, done[r.id] ? styles.readyDone : null]}>{r.label}</Text>
@@ -508,7 +508,7 @@ export function ZonePicker({ role = 'trainer' }: { role?: 'trainer' | 'athlete' 
       <Heading>{`UIL zones · Class ${uilClass}`}</Heading>
       <View style={styles.zones}>
         {ORDER.map((z) => (
-          <Pressable accessibilityLabel={`${ZONES[z].label}${z === latestZone && data?.readings.length ? ', latest field reading' : ''}`} accessibilityRole="button" accessibilityState={{ selected: z === shown }} key={z} onPress={() => setZone(z)} style={({ pressed }) => [styles.zone, z === shown && styles.zoneSelected, pressed && styles.pressed]}>
+          <Pressable accessibilityLabel={`${ZONES[z].label}${z === latestZone && data?.readings.length ? ', latest field reading' : ''}`} accessibilityRole="button" accessibilityState={{ selected: z === shown }} key={z} onPress={() => setZone(z)} style={({ pressed }) => [styles.zone, z === shown && styles.zoneSelected, pressed && styles.pressed]} aria-selected={z === shown}>
             <View style={[styles.zoneDot, { backgroundColor: zoneTone(z) }]} />
             <Text style={styles.zoneLabel}>{ZONES[z].label}</Text>
           </Pressable>

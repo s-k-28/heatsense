@@ -1,7 +1,8 @@
+import { Segmented } from '@/components/motion/segmented';
 import { Text } from '@/components/ui/text';
 import { useAthletePalette, useAthleteStyles } from '@/components/athlete-appearance';
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { Surface } from '@/components/ui/surface';
@@ -190,12 +191,8 @@ export function VitalCards({ history, simulated = false, selectedSignal, onSigna
   const active = signals.some((s) => s.id === selected) ? selected : 'heart';
   return (
     <View style={styles.cards}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.signalTabs} accessibilityRole="tablist">
-        {signals.map((signal) => (
-          <Pressable accessibilityRole="tab" accessibilityLabel={`${signal.label}, ${signal.value}`} accessibilityState={{ selected: active === signal.id }} key={signal.id} onPress={() => setSelected(signal.id as BandSignal)} style={({ pressed }) => [styles.signalTab, active === signal.id && styles.signalTabOn, previewHeartRate && signal.id === 'heart' && styles.signalPreview, pressed && { opacity: 0.7 }]}>
-            <Text style={[styles.signalLabel, active === signal.id && styles.signalLabelOn]}>{signal.label === 'Sweat (GSR)' ? 'Sweat' : signal.label}</Text>
-          </Pressable>
-        ))}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityLabel="Band signals">
+        <Segmented size="sm" itemWidth={112} value={active} highlightedKey={previewHeartRate ? 'heart' : undefined} onChange={setSelected} options={signals.map(signal => ({ key: signal.id as BandSignal, label: signal.label === 'Sweat (GSR)' ? 'Sweat' : signal.label, accessibilityLabel: `${signal.label}, ${signal.value}` }))} />
       </ScrollView>
       {active === 'heart' ? <HeartRate history={history} startLabel={startLabel} /> : null}
       {active === 'skin' && complete(skin) ? <SkinTemp simulated={simulated} startLabel={startLabel} t={skin} /> : null}
@@ -246,6 +243,6 @@ const baseStyles = StyleSheet.create({
   gaugeTrack: { backgroundColor: 'rgba(235,235,245,0.08)', borderRadius: 7, height: 14, justifyContent: 'center' },
   gaugeSafe: { backgroundColor: 'rgba(48,209,88,0.18)', borderRadius: 7, bottom: 0, position: 'absolute', right: 0, top: 0 },
   gaugeRange: { backgroundColor: 'rgba(100,210,255,0.55)', borderRadius: 7, bottom: 2, position: 'absolute', top: 2 },
-  gaugeMark: { backgroundColor: Palette.ink, borderRadius: 2, height: 22, marginLeft: -2, position: 'absolute', width: 4 },
+  gaugeMark: { backgroundColor: '#F6F3EC', borderRadius: 2, height: 22, marginLeft: -2, position: 'absolute', width: 4 },
   gaugeAxis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
 });
