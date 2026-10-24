@@ -23,7 +23,7 @@ export const CoachRadius = {
 
 export const CoachType = {
   page: { fontFamily: Typeface.display, fontSize: 40, lineHeight: 44, fontWeight: '800' as const, letterSpacing: -1.5 },
-  section: { fontFamily: Typeface.heading, fontSize: 26, lineHeight: 31, fontWeight: '800' as const, letterSpacing: -0.7 },
+  section: { fontFamily: Typeface.heading, fontSize: 26, lineHeight: 31, fontWeight: '700' as const, letterSpacing: -0.7 },
   card: { fontFamily: Typeface.button, fontSize: 21, lineHeight: 26, fontWeight: '700' as const, letterSpacing: -0.35 },
   body: { fontFamily: Typeface.body, fontSize: 16, lineHeight: 23, fontWeight: '600' as const },
   label: { fontFamily: Typeface.label, fontSize: 14, lineHeight: 18, fontWeight: '600' as const },
