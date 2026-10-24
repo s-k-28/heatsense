@@ -1,0 +1,2623 @@
+[
+  {
+    "file": "src/app/_layout.tsx",
+    "route": true,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/app/athlete/body.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 219,
+        "component": "OnboardingTextField",
+        "label": "\"Height, feet\"",
+        "handler": "{(text) => update({ feet: digits(text, 1) })}"
+      },
+      {
+        "line": 233,
+        "component": "OnboardingTextField",
+        "label": "\"Height, inches\"",
+        "handler": "{(text) => update({ inches: digits(text, 2) })}"
+      },
+      {
+        "line": 249,
+        "component": "OnboardingTextField",
+        "label": "\"Weight (optional)\"",
+        "handler": "{(text) => update({ pounds: digits(text, 3) })}"
+      },
+      {
+        "line": 294,
+        "component": "OnboardingTextField",
+        "label": "\"Other concern (optional)\"",
+        "handler": "{(otherConcern) => update({ otherConcern })}"
+      },
+      {
+        "line": 319,
+        "component": "AthletePillButton",
+        "label": "\"Continue\"",
+        "handler": "{() => void finish('continue')}"
+      },
+      {
+        "line": 320,
+        "component": "AthleteTextLink",
+        "label": "\"Skip for now\"",
+        "handler": "{() => void finish('skip')}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 143,
+        "call": "getAthleteProfile(uid)\n      .then((existing) => {\n        if (!active) return;\n        if (!existing) { router.replace('/athlete/profile'); return; }\n        setProfile(existing);\n      })\n      .catch(() => {})"
+      },
+      {
+        "line": 146,
+        "call": "router.replace('/athlete/profile')"
+      },
+      {
+        "line": 182,
+        "call": "router.push(NEXT_STEP as never)"
+      },
+      {
+        "line": 190,
+        "call": "router.replace('/athlete/profile')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/athlete/done.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 73,
+        "component": "EntryButton",
+        "label": "\"Checking…\"",
+        "handler": "{() => {}}"
+      },
+      {
+        "line": 73,
+        "component": "EntryButton",
+        "label": "{state.kind === 'member' ? 'Go to dashboard' : 'Continue'}",
+        "handler": "{() => router.replace(DASHBOARD as never)}"
+      },
+      {
+        "line": 74,
+        "component": "EntryButton",
+        "label": "\"Join a team\"",
+        "handler": "{() => router.push('/setup/athlete')}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 73,
+        "call": "router.replace(DASHBOARD as never)"
+      },
+      {
+        "line": 74,
+        "call": "router.push('/setup/athlete')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/athlete/profile.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 205,
+        "component": "OnboardingTextField",
+        "label": "\"Full name\"",
+        "handler": "{(fullName) => update({ fullName })}"
+      },
+      {
+        "line": 222,
+        "component": "OnboardingTextField",
+        "label": "\"Date of birth\"",
+        "handler": "{onBirthDateChange}"
+      },
+      {
+        "line": 270,
+        "component": "OnboardingTextField",
+        "label": "\"Jersey number (optional)\"",
+        "handler": "{(text) => update({ jersey: text.replace(/\\D/g, '').slice(0, 3) })}"
+      },
+      {
+        "line": 287,
+        "component": "AthletePillButton",
+        "label": "\"Continue\"",
+        "handler": "{() => void submit()}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 156,
+        "call": "router.replace('/setup/athlete')"
+      },
+      {
+        "line": 177,
+        "call": "router.push(NEXT_STEP as never)"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/athlete/safety.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 180,
+        "component": "OnboardingTextField",
+        "label": "\"Full name\"",
+        "handler": "{(name) => updateContact(which, { name })}"
+      },
+      {
+        "line": 204,
+        "component": "OnboardingTextField",
+        "label": "\"Phone number\"",
+        "handler": "{(text) => updateContact(which, { phone: formatPhoneInput(text) })}"
+      },
+      {
+        "line": 247,
+        "component": "Pressable",
+        "label": "\"Remove secondary contact\"",
+        "handler": "{() => { update({ secondary: null }); if (openSelect === 'secondary') setOpenSelect(null); }}"
+      },
+      {
+        "line": 254,
+        "component": "Pressable",
+        "label": "\"Add another contact\"",
+        "handler": "{() => update({ secondary: EMPTY_CONTACT })}"
+      },
+      {
+        "line": 265,
+        "component": "TextInput",
+        "label": "\"Additional safety notes, optional\"",
+        "handler": "{(notes) => update({ notes })}"
+      },
+      {
+        "line": 289,
+        "component": "AthletePillButton",
+        "label": "\"Finish setup\"",
+        "handler": "{() => void finish('finish')}"
+      },
+      {
+        "line": 290,
+        "component": "AthleteTextLink",
+        "label": "\"Skip for now\"",
+        "handler": "{() => void finish('skip')}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 119,
+        "call": "getAthleteProfile(uid)\n      .then((existing) => { if (active && !existing) router.replace('/athlete/profile'); })\n      .catch(() => {})"
+      },
+      {
+        "line": 120,
+        "call": "router.replace('/athlete/profile')"
+      },
+      {
+        "line": 166,
+        "call": "router.push(NEXT_STEP as never)"
+      },
+      {
+        "line": 174,
+        "call": "router.replace('/athlete/body')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/athlete-vitals.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 52,
+        "component": "Pressable",
+        "label": "\"Back\"",
+        "handler": "{() => (router.canGoBack() ? router.back() : router.replace(staffRole === 'trainer' ? '/dashboard?role=trainer&tab=monitor' : '/dashboard?role=coach&tab=team'))}"
+      },
+      {
+        "line": 64,
+        "component": "ActionButton",
+        "label": "{showSamplePlan ? 'Hide sample practice plan' : 'View sample practice plan'}",
+        "handler": "{() => setShowSamplePlan(!showSamplePlan)}"
+      },
+      {
+        "line": 87,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{reload}"
+      },
+      {
+        "line": 93,
+        "component": "ActionButton",
+        "label": "\"Retry practice history\"",
+        "handler": "{retry}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 52,
+        "call": "router.replace(staffRole === 'trainer' ? '/dashboard?role=trainer&tab=monitor' : '/dashboard?role=coach&tab=team')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/dashboard.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 164,
+        "component": "DashboardContent",
+        "label": "(child content/dynamic)",
+        "handler": "{select}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/app/index.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 168,
+        "component": "Pressable",
+        "label": "\"Skip introduction\"",
+        "handler": "{() => setManualStep({ sourceStep: initialStep, value: steps.length - 1 })}"
+      },
+      {
+        "line": 209,
+        "component": "Pressable",
+        "label": "\"Go to previous step\"",
+        "handler": "{goBack}"
+      },
+      {
+        "line": 220,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{advance}"
+      },
+      {
+        "line": 287,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => onChange(role)}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 142,
+        "call": "router.push({ pathname: '/ready', params: { role } })"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/notifications.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 46,
+        "component": "EntryButton",
+        "label": "\"Turn on heat alerts\"",
+        "handler": "{() => { askForHeatAlerts().catch(() => false).finally(done); }}"
+      },
+      {
+        "line": 47,
+        "component": "EntryLink",
+        "label": "\"Not now\"",
+        "handler": "{done}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 24,
+        "call": "router.replace('/athlete/done')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/pair-band.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 142,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => go('connecting')}"
+      },
+      {
+        "line": 163,
+        "component": "EntryButton",
+        "label": "{action.label}",
+        "handler": "{action.onPress}"
+      },
+      {
+        "line": 164,
+        "component": "EntryLink",
+        "label": "{help ? 'Hide tips' : step === 'wear' ? 'Need help?' : 'Not seeing the light?'}",
+        "handler": "{() => setHelp(!help)}"
+      },
+      {
+        "line": 165,
+        "component": "EntryLink",
+        "label": "\"I don’t have a band yet\"",
+        "handler": "{finish}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 94,
+        "call": "router.replace('/notifications')"
+      },
+      {
+        "line": 94,
+        "call": "router.replace('/dashboard?role=athlete&tab=band')"
+      },
+      {
+        "line": 95,
+        "call": "go(STEPS[index - 1])"
+      },
+      {
+        "line": 119,
+        "call": "go('wear')"
+      },
+      {
+        "line": 120,
+        "call": "go('light')"
+      },
+      {
+        "line": 121,
+        "call": "go('select')"
+      },
+      {
+        "line": 142,
+        "call": "go('connecting')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/plan-editor.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 50,
+        "component": "TextLink",
+        "label": "\"Cancel\"",
+        "handler": "{close}"
+      },
+      {
+        "line": 57,
+        "component": "ActionButton",
+        "label": "{status === 'error' ? 'Try again' : 'Back to plans'}",
+        "handler": "{status === 'error' ? retry : () => router.replace('/dashboard?role=coach&tab=plan')}"
+      },
+      {
+        "line": 102,
+        "component": "TextLink",
+        "label": "\"Cancel\"",
+        "handler": "{close}"
+      },
+      {
+        "line": 109,
+        "component": "TextInput",
+        "label": "\"Plan name\"",
+        "handler": "{(text) => set('name', text)}"
+      },
+      {
+        "line": 151,
+        "component": "ActionButton",
+        "label": "\"Use for today\"",
+        "handler": "{useToday}"
+      },
+      {
+        "line": 153,
+        "component": "ActionButton",
+        "label": "{editing ? 'Save changes' : 'Save plan'}",
+        "handler": "{save}"
+      },
+      {
+        "line": 155,
+        "component": "ActionButton",
+        "label": "\"Save as copy\"",
+        "handler": "{saveCopy}"
+      },
+      {
+        "line": 159,
+        "component": "ActionButton",
+        "label": "\"Delete plan\"",
+        "handler": "{remove}"
+      },
+      {
+        "line": 203,
+        "component": "ActionButton",
+        "label": "\"Fix to meet UIL\"",
+        "handler": "{() => onFix(fix)}"
+      },
+      {
+        "line": 220,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => onChange(Math.max(min, value - step))}"
+      },
+      {
+        "line": 224,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => onChange(Math.min(max, value + step))}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 45,
+        "call": "router.replace('/dashboard?role=coach&tab=plan')"
+      },
+      {
+        "line": 57,
+        "call": "router.replace('/dashboard?role=coach&tab=plan')"
+      },
+      {
+        "line": 79,
+        "call": "router.replace('/dashboard?role=coach&tab=plan')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/practice-record.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 91,
+        "component": "ActionButton",
+        "label": "\"Sign in\"",
+        "handler": "{() => router.replace('/welcome')}"
+      },
+      {
+        "line": 97,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{() => setAttempt((value) => value + 1)}"
+      },
+      {
+        "line": 122,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{() => setAttempt((value) => value + 1)}"
+      },
+      {
+        "line": 143,
+        "component": "Pressable",
+        "label": "\"Back\"",
+        "handler": "{close}"
+      },
+      {
+        "line": 147,
+        "component": "ActionButton",
+        "label": "\"Share\"",
+        "handler": "{share}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 73,
+        "call": "router.replace({ pathname: '/dashboard', params: { role: originRole, tab: originRole === 'athlete' ? 'sessions' : 'home' } })"
+      },
+      {
+        "line": 91,
+        "call": "router.replace('/welcome')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/ready.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 79,
+        "component": "EntryButton",
+        "label": "\"Finish setup\"",
+        "handler": "{() => router.replace(`/dashboard?role=${setup.dashboardRole}` as never)}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 60,
+        "call": "router.replace('/role')"
+      },
+      {
+        "line": 79,
+        "call": "router.replace(`/dashboard?role=${setup.dashboardRole}` as never)"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/role.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 37,
+        "component": "OnboardingSelectionSurface",
+        "label": "{role.title}",
+        "handler": "{() => setOnboardingRole(role.id)}"
+      },
+      {
+        "line": 42,
+        "component": "EntryButton",
+        "label": "{selected ? CONTINUE[selected] : 'Choose a role to continue'}",
+        "handler": "{() => { if (selected) router.push(`/setup/${selected}`); }}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 29,
+        "call": "router.replace('/sign-in')"
+      },
+      {
+        "line": 42,
+        "call": "router.push(`/setup/${selected}`)"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/setup/[role].tsx",
+    "route": true,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/app/setup/athlete.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 228,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => inputRef.current?.focus()}"
+      },
+      {
+        "line": 235,
+        "component": "TextInput",
+        "label": "{`Team code, ${INVITE_CODE_LENGTH} digits`}",
+        "handler": "{onChangeCode}"
+      },
+      {
+        "line": 266,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => void verify(code)}"
+      },
+      {
+        "line": 294,
+        "component": "JoinButton",
+        "label": "\"Continue\"",
+        "handler": "{() => router.push(NEXT_STEP[role] as never)}"
+      },
+      {
+        "line": 295,
+        "component": "JoinButton",
+        "label": "\"Join team\"",
+        "handler": "{() => void join()}"
+      },
+      {
+        "line": 300,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{skip}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 203,
+        "call": "router.push(NEXT_STEP[role] as never)"
+      },
+      {
+        "line": 206,
+        "call": "router.replace('/role')"
+      },
+      {
+        "line": 294,
+        "call": "router.push(NEXT_STEP[role] as never)"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/setup/coach.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 42,
+        "component": "OnboardingSelectionSurface",
+        "label": "{option.title}",
+        "handler": "{() => setTeamChoice(option.id)}"
+      },
+      {
+        "line": 54,
+        "component": "EntryButton",
+        "label": "{choice ? 'Continue' : 'Choose an option to continue'}",
+        "handler": "{next}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 27,
+        "call": "router.replace('/role')"
+      },
+      {
+        "line": 29,
+        "call": "router.push(choice === 'create' ? '/team/create' : '/setup/trainer')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/setup/trainer.tsx",
+    "route": true,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/app/sign-in.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 96,
+        "component": "OnboardingTextField",
+        "label": "\"Name\"",
+        "handler": "{setName}"
+      },
+      {
+        "line": 97,
+        "component": "OnboardingTextField",
+        "label": "\"Email\"",
+        "handler": "{setEmail}"
+      },
+      {
+        "line": 98,
+        "component": "OnboardingTextField",
+        "label": "\"Password\"",
+        "handler": "{setPassword}"
+      },
+      {
+        "line": 100,
+        "component": "EntryButton",
+        "label": "{creating ? 'Create account' : 'Sign in'}",
+        "handler": "{submitEmail}"
+      },
+      {
+        "line": 103,
+        "component": "EntryLink",
+        "label": "{creating ? 'Have an account? Sign in' : 'New to HeatSense? Create an account'}",
+        "handler": "{() => switchMode(creating ? 'signin' : 'create')}"
+      },
+      {
+        "line": 104,
+        "component": "EntryLink",
+        "label": "\"Forgot password?\"",
+        "handler": "{resetPassword}"
+      },
+      {
+        "line": 105,
+        "component": "EntryLink",
+        "label": "\"Use Google instead\"",
+        "handler": "{() => switchMode(null)}"
+      },
+      {
+        "line": 110,
+        "component": "EntryButton",
+        "label": "\"Continue with Google\"",
+        "handler": "{signIn}"
+      },
+      {
+        "line": 112,
+        "component": "EntryButton",
+        "label": "\"Continue with email\"",
+        "handler": "{() => switchMode('signin')}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 36,
+        "call": "router.replace((home === '/role' && next === 'athlete' ? '/setup/athlete' : home) as never)"
+      },
+      {
+        "line": 90,
+        "call": "router.replace('/welcome')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/team/create.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 113,
+        "component": "OnboardingTextField",
+        "label": "\"School or organization\"",
+        "handler": "{(school) => setTeamDraft({ school })}"
+      },
+      {
+        "line": 132,
+        "component": "OnboardingTextField",
+        "label": "\"Team name\"",
+        "handler": "{(teamName) => setTeamDraft({ teamName })}"
+      },
+      {
+        "line": 189,
+        "component": "EntryLink",
+        "label": "\"Not sure? View the UIL chart\"",
+        "handler": "{() => Linking.openURL(UIL_SOURCE_URL)}"
+      },
+      {
+        "line": 195,
+        "component": "EntryButton",
+        "label": "\"Create team\"",
+        "handler": "{next}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 81,
+        "call": "router.replace('/setup/coach')"
+      },
+      {
+        "line": 90,
+        "call": "router.push('/team/invite')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/team/invite.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 126,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => { setLoadError(null); setAttempt((n) => n + 1); }}"
+      },
+      {
+        "line": 152,
+        "component": "EntryButton",
+        "label": "\"Continue\"",
+        "handler": "{next}"
+      },
+      {
+        "line": 222,
+        "component": "Pressable",
+        "label": "{accessibilityLabel ?? label}",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 266,
+        "component": "ActionPill",
+        "label": "{flash ?? 'Copy code'}",
+        "handler": "{copy}"
+      },
+      {
+        "line": 292,
+        "component": "ActionPill",
+        "label": "{flash ?? 'Share'}",
+        "handler": "{share}"
+      },
+      {
+        "line": 324,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => setConfirming(true)}"
+      },
+      {
+        "line": 334,
+        "component": "SmallPill",
+        "label": "\"Cancel\"",
+        "handler": "{() => { setConfirming(false); setError(null); }}"
+      },
+      {
+        "line": 335,
+        "component": "SmallPill",
+        "label": "{busy ? 'Generating…' : 'Generate new code'}",
+        "handler": "{regenerate}"
+      },
+      {
+        "line": 381,
+        "component": "SmallPill",
+        "label": "\"Decline\"",
+        "handler": "{() => void respond(athlete, false)}"
+      },
+      {
+        "line": 382,
+        "component": "SmallPill",
+        "label": "{busy === athlete.userId ? '…' : 'Approve'}",
+        "handler": "{() => void respond(athlete, true)}"
+      },
+      {
+        "line": 394,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 92,
+        "call": "router.replace('/team/create')"
+      },
+      {
+        "line": 93,
+        "call": "router.push('/ready?role=Coach')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/app/welcome.tsx",
+    "route": true,
+    "controls": [
+      {
+        "line": 183,
+        "component": "Pressable",
+        "label": "\"Get started\"",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 286,
+        "component": "GetStarted",
+        "label": "(child content/dynamic)",
+        "handler": "{getStarted}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 256,
+        "call": "router.push('/sign-in')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/components/WristbandIllustration.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/acclimatization-card.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/alerts-tab.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 189,
+        "component": "ActionButton",
+        "label": "{item.action.label}",
+        "handler": "{item.action.onPress}"
+      },
+      {
+        "line": 192,
+        "component": "ActionButton",
+        "label": "\"Resolve\"",
+        "handler": "{onResolve}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 90,
+        "call": "router.push({ pathname: '/plan-editor', params: { id: plan.id } })"
+      },
+      {
+        "line": 94,
+        "call": "router.push({ pathname: '/athlete-vitals', params: { id: m.athlete.id } })"
+      },
+      {
+        "line": 98,
+        "call": "router.push({ pathname: '/athlete-vitals', params: { id: r.athleteUid } })"
+      },
+      {
+        "line": 102,
+        "call": "onNavigate('team')"
+      },
+      {
+        "line": 163,
+        "call": "ago(latest.measuredAt, now)"
+      },
+      {
+        "line": 183,
+        "call": "ago(item.at, now)"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/components/athlete-appearance.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/athlete-onboarding.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 53,
+        "component": "EntryButton",
+        "label": "{label}",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 77,
+        "component": "Pressable",
+        "label": "{choice.label}",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 104,
+        "component": "ChoiceRow",
+        "label": "(child content/dynamic)",
+        "handler": "{() => onChange(value === choice.code ? null : choice.code)}"
+      },
+      {
+        "line": 121,
+        "component": "ChoiceRow",
+        "label": "(child content/dynamic)",
+        "handler": "{() => toggle(choice.code)}"
+      },
+      {
+        "line": 129,
+        "component": "EntryLink",
+        "label": "{label}",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/band-journey.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/band-viewer.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 140,
+        "component": "PressScale",
+        "label": "{zoomed ? 'Zoom out of band view' : 'Zoom in on band view'}",
+        "handler": "{() => setZoomed(value => !value)}"
+      },
+      {
+        "line": 148,
+        "component": "CameraArrow",
+        "label": "(child content/dynamic)",
+        "handler": "{() => changeView(-1)}"
+      },
+      {
+        "line": 154,
+        "component": "CameraArrow",
+        "label": "(child content/dynamic)",
+        "handler": "{() => changeView(1)}"
+      },
+      {
+        "line": 158,
+        "component": "ActionButton",
+        "label": "\"Explore heart rate\"",
+        "handler": "{startPreview}"
+      },
+      {
+        "line": 168,
+        "component": "PressScale",
+        "label": "{direction < 0 ? 'Previous band view' : 'Next band view'}",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/body-strip.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/brand-assemble.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/brand-logos.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/coach-home.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 46,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{team.retry}"
+      },
+      {
+        "line": 81,
+        "component": "ConditionRings",
+        "label": "(child content/dynamic)",
+        "handler": "{onAction}"
+      },
+      {
+        "line": 86,
+        "component": "ActionButton",
+        "label": "\"View practice guidance\"",
+        "handler": "{onOpenPlan}"
+      },
+      {
+        "line": 89,
+        "component": "ActionButton",
+        "label": "\"Retry history\"",
+        "handler": "{history.retry}"
+      },
+      {
+        "line": 93,
+        "component": "AlertPreview",
+        "label": "(child content/dynamic)",
+        "handler": "{onAction}"
+      },
+      {
+        "line": 100,
+        "component": "ActionButton",
+        "label": "\"Retry plan\"",
+        "handler": "{retry}"
+      },
+      {
+        "line": 107,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{team.retry}"
+      },
+      {
+        "line": 148,
+        "component": "Pressable",
+        "label": "{latest ? `${temperature}, ${ZONES[latest.zone].label}. Open practice.` : loading ? 'Practice loading' : 'No field reading. View practice guidance.'}",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 180,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onOpenPlan}"
+      },
+      {
+        "line": 182,
+        "component": "Pressable",
+        "label": "{`${block.title}, ${block.minutes} minutes, starts ${clockTime(block.start, true)}`}",
+        "handler": "{() => setSelected(index)}"
+      },
+      {
+        "line": 194,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onInvite}"
+      },
+      {
+        "line": 207,
+        "component": "Pressable",
+        "label": "{`${day.date.toLocaleDateString([], { weekday: 'long' })}, ${day.peak ? `${toDisplay(day.peak.wbgtF)}${unit}` : 'no reading'}`}",
+        "handler": "{() => setSelected(index)}"
+      },
+      {
+        "line": 216,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 228,
+        "component": "Pressable",
+        "label": "{planStatus === 'ready' ? `${label}. ${readOnly ? 'Opens practice guidance.' : 'Opens the plan.'}` : label}",
+        "handler": "{planStatus === 'error' ? retry : onOpenPlan}"
+      },
+      {
+        "line": 402,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onAction}"
+      },
+      {
+        "line": 407,
+        "component": "Pressable",
+        "label": "{`Dismiss ${title}`}",
+        "handler": "{onDismiss}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/coach-tabs.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 87,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{lookup.retry}"
+      },
+      {
+        "line": 87,
+        "component": "ActionButton",
+        "label": "\"Sign in\"",
+        "handler": "{() => router.push('/sign-in')}"
+      },
+      {
+        "line": 91,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => router.push('/team/create')}"
+      },
+      {
+        "line": 102,
+        "component": "ActionButton",
+        "label": "\"Share\"",
+        "handler": "{shareCode}"
+      },
+      {
+        "line": 115,
+        "component": "ActionButton",
+        "label": "\"Decline\"",
+        "handler": "{() => respond(m.userId, false)}"
+      },
+      {
+        "line": 116,
+        "component": "ActionButton",
+        "label": "\"Approve\"",
+        "handler": "{() => respond(m.userId, true)}"
+      },
+      {
+        "line": 169,
+        "component": "ActionButton",
+        "label": "{showRules ? \"Hide UIL details\" : \"UIL details\"}",
+        "handler": "{() => setShowRules(!showRules)}"
+      },
+      {
+        "line": 174,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => router.push('/plan-editor')}"
+      },
+      {
+        "line": 183,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })}"
+      },
+      {
+        "line": 216,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => Linking.openURL(UIL_SOURCE_URL)}"
+      },
+      {
+        "line": 308,
+        "component": "ListRow",
+        "label": "\"UIL activity chart\"",
+        "handler": "{() => Linking.openURL(UIL_SOURCE_URL)}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 87,
+        "call": "router.push('/sign-in')"
+      },
+      {
+        "line": 91,
+        "call": "router.push('/team/create')"
+      },
+      {
+        "line": 174,
+        "call": "router.push('/plan-editor')"
+      },
+      {
+        "line": 183,
+        "call": "router.push({ pathname: '/plan-editor', params: { id: plan.id } })"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/components/coach-today.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 64,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{team.retry}"
+      },
+      {
+        "line": 93,
+        "component": "ActionButton",
+        "label": "{action}",
+        "handler": "{() => setSheet(true)}"
+      },
+      {
+        "line": 125,
+        "component": "ActionButton",
+        "label": "\"Share team code\"",
+        "handler": "{onInvite}"
+      },
+      {
+        "line": 138,
+        "component": "ActionButton",
+        "label": "\"Open practice\"",
+        "handler": "{() => setSheet(true)}"
+      },
+      {
+        "line": 156,
+        "component": "ActionButton",
+        "label": "\"Retry history\"",
+        "handler": "{history.retry}"
+      },
+      {
+        "line": 184,
+        "component": "Metric",
+        "label": "{role === 'athlete' ? \"Next check\" : \"Recheck\"}",
+        "handler": "{() => setDetail(detail === 'recheck' ? null : 'recheck')}"
+      },
+      {
+        "line": 189,
+        "component": "Metric",
+        "label": "\"Readings\"",
+        "handler": "{() => setDetail(detail === 'readings' ? null : 'readings')}"
+      },
+      {
+        "line": 194,
+        "component": "Metric",
+        "label": "{role === 'athlete' ? \"Team days\" : \"Applied\"}",
+        "handler": "{() => setDetail(detail === 'guidance' ? null : 'guidance')}"
+      },
+      {
+        "line": 218,
+        "component": "ActionButton",
+        "label": "{action}",
+        "handler": "{() => setSheet(true)}"
+      },
+      {
+        "line": 222,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onInvite}"
+      },
+      {
+        "line": 242,
+        "component": "ActionButton",
+        "label": "\"Retry history\"",
+        "handler": "{history.retry}"
+      },
+      {
+        "line": 255,
+        "component": "Pressable",
+        "label": "{`${label}, ${selected ? 'hide' : 'show'} details`}",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 157,
+        "call": "router.push({ pathname: '/practice-record', params: { role, teamId: session.teamId, id: session.id, ...(data?.sample ? { sample: '1' } : {}) } })"
+      },
+      {
+        "line": 243,
+        "call": "router.push({ pathname: '/practice-record', params: { role, teamId: session.teamId, id: session.id, ...(data?.sample ? { sample: '1' } : {}) } })"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/components/dashboard-content.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 78,
+        "component": "AlertsTab",
+        "label": "(child content/dynamic)",
+        "handler": "{go}"
+      },
+      {
+        "line": 121,
+        "component": "CardHeader",
+        "label": "\"Field WBGT\"",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 56,
+        "call": "router.push('/team/create')"
+      },
+      {
+        "line": 89,
+        "call": "go('monitor')"
+      },
+      {
+        "line": 96,
+        "call": "go('band')"
+      },
+      {
+        "line": 98,
+        "call": "go('band')"
+      },
+      {
+        "line": 108,
+        "call": "go('plan')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/components/dashboard-scroll.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/dashboard-shell.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 56,
+        "component": "Pressable",
+        "label": "{band.accessibilityLabel}",
+        "handler": "{band.onPress}"
+      },
+      {
+        "line": 104,
+        "component": "Pressable",
+        "label": "{unreadNotifications > 0 ? `Alerts, ${unreadNotifications} new` : 'Alerts'}",
+        "handler": "{openAlerts}"
+      },
+      {
+        "line": 109,
+        "component": "Pressable",
+        "label": "{shownName ? `${shownName}, account` : 'Account'}",
+        "handler": "{onProfile}"
+      },
+      {
+        "line": 135,
+        "component": "TextLink",
+        "label": "{action}",
+        "handler": "{onActionPress}"
+      },
+      {
+        "line": 171,
+        "component": "TabItem",
+        "label": "(child content/dynamic)",
+        "handler": "{() => onChange(tab.id)}"
+      },
+      {
+        "line": 213,
+        "component": "Pressable",
+        "label": "{tab.label}",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/dashboard-states.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 69,
+        "component": "Button",
+        "label": "\"Try again\"",
+        "handler": "{retry}"
+      },
+      {
+        "line": 94,
+        "component": "Button",
+        "label": "\"Share team code\"",
+        "handler": "{() => shareTeamCode(draft)}"
+      },
+      {
+        "line": 113,
+        "component": "Button",
+        "label": "\"Pair a band\"",
+        "handler": "{() => router.push('/pair-band')}"
+      },
+      {
+        "line": 155,
+        "component": "Button",
+        "label": "\"Document follow-up\"",
+        "handler": "{document}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 113,
+        "call": "router.push('/pair-band')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/components/entry-ui.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 97,
+        "component": "EntryBackButton",
+        "label": "(child content/dynamic)",
+        "handler": "{onBack}"
+      },
+      {
+        "line": 145,
+        "component": "Pressable",
+        "label": "\"Back\"",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 156,
+        "component": "Pressable",
+        "label": "{label}",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 177,
+        "component": "Pressable",
+        "label": "{label}",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/field-check-sheet.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 94,
+        "component": "ActionButton",
+        "label": "\"Sign in\"",
+        "handler": "{() => { onClose(); router.push('/sign-in'); }}"
+      },
+      {
+        "line": 95,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{retryLookup}"
+      },
+      {
+        "line": 100,
+        "component": "ActionButton",
+        "label": "\"Create your team\"",
+        "handler": "{() => { onClose(); router.push('/team/create'); }}"
+      },
+      {
+        "line": 103,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{retrySession}"
+      },
+      {
+        "line": 112,
+        "component": "TextLink",
+        "label": "\"Done\"",
+        "handler": "{onClose}"
+      },
+      {
+        "line": 128,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => onSelect(option)}"
+      },
+      {
+        "line": 162,
+        "component": "TextInput",
+        "label": "\"Practice location\"",
+        "handler": "{setVenue}"
+      },
+      {
+        "line": 165,
+        "component": "Chips",
+        "label": "\"UIL heat class\"",
+        "handler": "{setUilClass}"
+      },
+      {
+        "line": 167,
+        "component": "TextLink",
+        "label": "\"View the UIL WBGT chart\"",
+        "handler": "{() => Linking.openURL(UIL_SOURCE_URL).catch(() => setError('Couldn’t open the UIL chart. Try again.'))}"
+      },
+      {
+        "line": 170,
+        "component": "Chips",
+        "label": "\"Recheck interval\"",
+        "handler": "{setRecheck}"
+      },
+      {
+        "line": 174,
+        "component": "ActionButton",
+        "label": "\"Start practice session\"",
+        "handler": "{start}"
+      },
+      {
+        "line": 211,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{retryReadings}"
+      },
+      {
+        "line": 233,
+        "component": "ActionButton",
+        "label": "\"Reload readings\"",
+        "handler": "{retryReadings}"
+      },
+      {
+        "line": 236,
+        "component": "ActionButton",
+        "label": "\"Share practice record\"",
+        "handler": "{async () => {\n        setSharing(true); setShareError(false);\n        try { await Share.share({ message: sessionReport(session, readings) }); }\n        catch { setShareError(true); }\n        finally { setSharing(false); }\n      }}"
+      },
+      {
+        "line": 244,
+        "component": "ActionButton",
+        "label": "\"End practice\"",
+        "handler": "{async () => {\n          setEnding(true);\n          setEndError(false);\n          try { await endSession(session); }\n          catch { setEndError(true); }\n          finally { setEnding(false); }\n        }}"
+      },
+      {
+        "line": 268,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => setExpanded(!expanded)}"
+      },
+      {
+        "line": 287,
+        "component": "ActionButton",
+        "label": "\"I’ve applied this guidance\"",
+        "handler": "{async () => {\n            setAcking(true);\n            setError(false);\n            try { await acknowledgeReading(session, latest); }\n            catch { setError(true); }\n            finally { setAcking(false); }\n          }}"
+      },
+      {
+        "line": 336,
+        "component": "TextInput",
+        "label": "{`WBGT in degrees ${unit === 'F' ? 'Fahrenheit' : 'Celsius'}`}",
+        "handler": "{setValue}"
+      },
+      {
+        "line": 337,
+        "component": "Chips",
+        "label": "\"Unit\"",
+        "handler": "{setUnit}"
+      },
+      {
+        "line": 341,
+        "component": "ActionButton",
+        "label": "\"Save reading\"",
+        "handler": "{() => { Keyboard.dismiss(); save(); }}"
+      },
+      {
+        "line": 342,
+        "component": "Chips",
+        "label": "\"Where the reading came from\"",
+        "handler": "{setSource}"
+      },
+      {
+        "line": 343,
+        "component": "Chips",
+        "label": "\"When it was measured\"",
+        "handler": "{setMinutesAgo}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 94,
+        "call": "router.push('/sign-in')"
+      },
+      {
+        "line": 100,
+        "call": "router.push('/team/create')"
+      },
+      {
+        "line": 324,
+        "call": "setMinutesAgo(0)"
+      }
+    ],
+    "modals": [
+      {
+        "line": 108,
+        "visible": "{visible}"
+      }
+    ]
+  },
+  {
+    "file": "src/components/field-hero.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 118,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onAction}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/glass-surface.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/heat-calendar.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 73,
+        "component": "Pressable",
+        "label": "{`${d.date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}${d.peak ? `, peak ${temp.value(d.peak.wbgtF)}${temp.unit}, ${ZONES[d.peak.zone].label}` : ', no saved reading'}`}",
+        "handler": "{() => setPicked(d.date)}"
+      },
+      {
+        "line": 85,
+        "component": "Pressable",
+        "label": "\"Previous month\"",
+        "handler": "{() => changeMonth(offset + 1)}"
+      },
+      {
+        "line": 87,
+        "component": "Pressable",
+        "label": "\"Next month\"",
+        "handler": "{() => changeMonth(offset - 1)}"
+      },
+      {
+        "line": 100,
+        "component": "Pressable",
+        "label": "{`${d.date.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}${d.peak ? `, ${ZONES[d.peak.zone].label}` : ', no saved reading'}`}",
+        "handler": "{() => setPicked(d.date)}"
+      },
+      {
+        "line": 127,
+        "component": "Pressable",
+        "label": "{`${practice.session.venue}, ${practice.session.startedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`}",
+        "handler": "{() => onOpenSession(practice)}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/heat-icon.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/heat-orb.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/heatsense-logo.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/learn-tab.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 63,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => toggle(s.label)}"
+      },
+      {
+        "line": 76,
+        "component": "ActionButton",
+        "label": "\"Clear selection\"",
+        "handler": "{() => setPicked([])}"
+      },
+      {
+        "line": 97,
+        "component": "PressScale",
+        "label": "{`Shade ${i + 1} of 8`}",
+        "handler": "{() => setShade(i)}"
+      },
+      {
+        "line": 144,
+        "component": "PressScale",
+        "label": "\"Explore your band and its signals\"",
+        "handler": "{onOpenBand}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/location-card.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 59,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{locate}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/mobile-viewport.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/motion/fill.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/motion/floating-band.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/motion/heartbeat-dot.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/motion/press-scale.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/motion/segmented.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 58,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => onChange(o.key)}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/onboarding-background.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/onboarding-controls.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 66,
+        "component": "Pressable",
+        "label": "{`${title}. ${description}`}",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/onboarding-fields.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 108,
+        "component": "TextInput",
+        "label": "{label}",
+        "handler": "{onChangeText}"
+      },
+      {
+        "line": 188,
+        "component": "Pressable",
+        "label": "{`${label}, ${value ?? 'not selected'}`}",
+        "handler": "{() => onOpenChange(!open)}"
+      },
+      {
+        "line": 214,
+        "component": "MenuOption",
+        "label": "{option}",
+        "handler": "{() => { onChange(option); onOpenChange(false); }}"
+      },
+      {
+        "line": 229,
+        "component": "Pressable",
+        "label": "{label}",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/onboarding-visuals.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 304,
+        "component": "Pressable",
+        "label": "{`${label}, ${value} ${unit}`}",
+        "handler": "{toggleSignal}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/profile-tab.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 119,
+        "component": "Pressable",
+        "label": "\"Profile picture\"",
+        "handler": "{choosePhoto}"
+      },
+      {
+        "line": 126,
+        "component": "ActionButton",
+        "label": "\"Edit\"",
+        "handler": "{rename}"
+      },
+      {
+        "line": 159,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{team.retry}"
+      },
+      {
+        "line": 164,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{history.retry}"
+      },
+      {
+        "line": 195,
+        "component": "Pressable",
+        "label": "{bandConnected ? `HeatSense Band, simulated battery ${battery} percent` : 'Pair your HeatSense Band'}",
+        "handler": "{() => router.push('/pair-band')}"
+      },
+      {
+        "line": 216,
+        "component": "Switch",
+        "label": "{label}",
+        "handler": "{onChange}"
+      },
+      {
+        "line": 222,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 305,
+        "component": "CoachSettingRow",
+        "label": "\"Couldn’t load your team\"",
+        "handler": "{teamLookup.retry}"
+      },
+      {
+        "line": 305,
+        "component": "CoachSettingRow",
+        "label": "{teamName ?? 'Create or manage your team'}",
+        "handler": "{mine === null ? () => router.push('/team/create') : undefined}"
+      },
+      {
+        "line": 308,
+        "component": "Switch",
+        "label": "\"Recheck reminders\"",
+        "handler": "{(v) => setPreference('alertRecheck', v)}"
+      },
+      {
+        "line": 309,
+        "component": "Switch",
+        "label": "\"Zone changes\"",
+        "handler": "{(v) => setPreference('alertZone', v)}"
+      },
+      {
+        "line": 310,
+        "component": "Switch",
+        "label": "\"Slow-recovery alerts\"",
+        "handler": "{(v) => setPreference('alertBand', v)}"
+      },
+      {
+        "line": 311,
+        "component": "ActionButton",
+        "label": "\"Send\"",
+        "handler": "{testAlert}"
+      },
+      {
+        "line": 315,
+        "component": "Switch",
+        "label": "\"Lock Screen practice clock\"",
+        "handler": "{(v) => setPreference('practiceLiveActivity', v)}"
+      },
+      {
+        "line": 316,
+        "component": "Switch",
+        "label": "\"Sample athletes\"",
+        "handler": "{(v) => setPreference('demoTeam', v)}"
+      },
+      {
+        "line": 319,
+        "component": "CoachSettingRow",
+        "label": "\"UIL heat chart\"",
+        "handler": "{() => Linking.openURL(UIL_SOURCE_URL)}"
+      },
+      {
+        "line": 320,
+        "component": "CoachSettingRow",
+        "label": "\"Data permissions\"",
+        "handler": "{() => Alert.alert('Data permissions', 'You see athletes on your roster and the practice records your team creates. Athletes’ health answers and emergency contacts stay private to them.')}"
+      },
+      {
+        "line": 321,
+        "component": "CoachSettingRow",
+        "label": "\"Safety and limitations\"",
+        "handler": "{() => Alert.alert('Safety and limitations', 'HeatSense supports, but doesn’t replace, your district’s emergency action plan or an athletic trainer’s judgment. It doesn’t diagnose heat illness.')}"
+      },
+      {
+        "line": 326,
+        "component": "ActionButton",
+        "label": "\"Log out\"",
+        "handler": "{performSignOut}"
+      },
+      {
+        "line": 327,
+        "component": "ActionButton",
+        "label": "\"Cancel\"",
+        "handler": "{() => { setSignOutPrompt(false); setSignOutError(null); }}"
+      },
+      {
+        "line": 328,
+        "component": "ActionButton",
+        "label": "\"Log out\"",
+        "handler": "{confirmSignOut}"
+      },
+      {
+        "line": 344,
+        "component": "ListRow",
+        "label": "\"Couldn’t load your team\"",
+        "handler": "{team.retry}"
+      },
+      {
+        "line": 347,
+        "component": "ListRow",
+        "label": "\"Join a team\"",
+        "handler": "{() => router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')}"
+      },
+      {
+        "line": 358,
+        "component": "ActionButton",
+        "label": "\"Send a test alert\"",
+        "handler": "{testAlert}"
+      },
+      {
+        "line": 374,
+        "component": "ListRow",
+        "label": "\"UIL heat chart\"",
+        "handler": "{() => Linking.openURL(UIL_SOURCE_URL)}"
+      },
+      {
+        "line": 375,
+        "component": "ListRow",
+        "label": "\"Data permissions\"",
+        "handler": "{() => Alert.alert('Data permissions', role === 'Athlete' ? 'Your coach sees your name, team and, during practice, your band’s signals. Health answers and emergency contacts stay private to you.' : 'You see athletes on your roster and the practice records your team creates. Athletes’ health answers and emergency contacts stay private to them.')}"
+      },
+      {
+        "line": 376,
+        "component": "ListRow",
+        "label": "\"Safety and limitations\"",
+        "handler": "{() => Alert.alert('Safety and limitations', 'HeatSense supports, but doesn’t replace, your district’s emergency action plan or an athletic trainer’s judgment. It doesn’t diagnose heat illness.')}"
+      },
+      {
+        "line": 384,
+        "component": "ActionButton",
+        "label": "\"Log out\"",
+        "handler": "{performSignOut}"
+      },
+      {
+        "line": 385,
+        "component": "ActionButton",
+        "label": "\"Cancel\"",
+        "handler": "{() => { setSignOutPrompt(false); setSignOutError(null); }}"
+      },
+      {
+        "line": 387,
+        "component": "ListRow",
+        "label": "{loggingOut ? 'Logging out…' : 'Log out'}",
+        "handler": "{loggingOut ? undefined : confirmSignOut}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 195,
+        "call": "router.push('/pair-band')"
+      },
+      {
+        "line": 277,
+        "call": "router.replace('/welcome')"
+      },
+      {
+        "line": 305,
+        "call": "router.push('/team/create')"
+      },
+      {
+        "line": 347,
+        "call": "router.push(role === 'Athlete' ? '/setup/athlete' : '/setup/trainer')"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/components/protocols-tab.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 129,
+        "component": "ActionButton",
+        "label": "{action.label}",
+        "handler": "{action.onPress}"
+      },
+      {
+        "line": 141,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{retry}"
+      },
+      {
+        "line": 230,
+        "component": "ListRow",
+        "label": "{SITUATIONS[key].chip}",
+        "handler": "{() => pick(key)}"
+      },
+      {
+        "line": 244,
+        "component": "PressScale",
+        "label": "(child content/dynamic)",
+        "handler": "{callEms}"
+      },
+      {
+        "line": 249,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => toggle(i)}"
+      },
+      {
+        "line": 258,
+        "component": "ActionButton",
+        "label": "\"Save to incident log\"",
+        "handler": "{save}"
+      },
+      {
+        "line": 259,
+        "component": "ActionButton",
+        "label": "\"New response\"",
+        "handler": "{startNew}"
+      },
+      {
+        "line": 266,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => setTimerOpen(!timerOpen)}"
+      },
+      {
+        "line": 277,
+        "component": "ActionButton",
+        "label": "{coolStart === null ? 'Start timer' : coolStop === null ? 'Stop' : 'Restart'}",
+        "handler": "{() => {\n              setNow(Date.now());\n              if (coolStart === null || coolStop !== null) { setCoolStart(Date.now()); setCoolStop(null); } else setCoolStop(Date.now());\n            }}"
+      },
+      {
+        "line": 295,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => share(i)}"
+      },
+      {
+        "line": 351,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => toggle(r.id)}"
+      },
+      {
+        "line": 368,
+        "component": "TextInput",
+        "label": "{f.label}",
+        "handler": "{(text) => setDraft({ ...draft, [f.id]: text })}"
+      },
+      {
+        "line": 384,
+        "component": "ActionButton",
+        "label": "\"Save plan\"",
+        "handler": "{async () => { if (await setEap(draft)) setEditingOwner(current => current === owner ? null : current); }}"
+      },
+      {
+        "line": 385,
+        "component": "ActionButton",
+        "label": "\"Cancel\"",
+        "handler": "{() => setEditingOwner(null)}"
+      },
+      {
+        "line": 394,
+        "component": "ActionButton",
+        "label": "\"Share with staff\"",
+        "handler": "{sharePlan}"
+      },
+      {
+        "line": 459,
+        "component": "ActionButton",
+        "label": "\"Done\"",
+        "handler": "{Keyboard.dismiss}"
+      },
+      {
+        "line": 466,
+        "component": "TextInput",
+        "label": "{`${f.label} in ${f.unit}`}",
+        "handler": "{f.set}"
+      },
+      {
+        "line": 510,
+        "component": "Pressable",
+        "label": "{`${ZONES[z].label}${z === latestZone && data?.readings.length ? ', latest field reading' : ''}`}",
+        "handler": "{() => setZone(z)}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/readings-timeline.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/role-tabs.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 63,
+        "component": "Card",
+        "label": "\"Join your team\"",
+        "handler": "{() => router.push('/setup/athlete')}"
+      },
+      {
+        "line": 66,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{team.retry}"
+      },
+      {
+        "line": 74,
+        "component": "ActionButton",
+        "label": "\"Done\"",
+        "handler": "{() => setRulesOpen(false)}"
+      },
+      {
+        "line": 86,
+        "component": "PressScale",
+        "label": "\"View your band\"",
+        "handler": "{onOpenBand}"
+      },
+      {
+        "line": 96,
+        "component": "ActionButton",
+        "label": "\"Pair your band\"",
+        "handler": "{() => router.push('/pair-band')}"
+      },
+      {
+        "line": 148,
+        "component": "ListRow",
+        "label": "\"HeatSense Band\"",
+        "handler": "{() => router.push('/pair-band')}"
+      },
+      {
+        "line": 161,
+        "component": "ListRow",
+        "label": "\"HeatSense Band\"",
+        "handler": "{() => router.push('/pair-band')}"
+      },
+      {
+        "line": 182,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{team.retry}"
+      },
+      {
+        "line": 184,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{history.retry}"
+      },
+      {
+        "line": 199,
+        "component": "ListRow",
+        "label": "{dayLabel(session.startedAt)}",
+        "handler": "{() => openSession({ session, readingCount, peak })}"
+      },
+      {
+        "line": 214,
+        "component": "ListRow",
+        "label": "{`Show ${Math.min(10, past.length - visible)} more practices`}",
+        "handler": "{() => setVisible((count) => count + 10)}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 63,
+        "call": "router.push('/setup/athlete')"
+      },
+      {
+        "line": 96,
+        "call": "router.push('/pair-band')"
+      },
+      {
+        "line": 148,
+        "call": "router.push('/pair-band')"
+      },
+      {
+        "line": 161,
+        "call": "router.push('/pair-band')"
+      },
+      {
+        "line": 180,
+        "call": "router.push({ pathname: '/practice-record', params: { role: 'athlete', teamId: session.teamId, id: session.id, ...(data?.sample ? { sample: '1' } : {}) } })"
+      }
+    ],
+    "modals": [
+      {
+        "line": 70,
+        "visible": "{rulesOpen}"
+      }
+    ]
+  },
+  {
+    "file": "src/components/sliding-tabs.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 55,
+        "component": "Segment",
+        "label": "{option}",
+        "handler": "{() => onChange(index)}"
+      },
+      {
+        "line": 75,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/team-map.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/team-map.web.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/trainer-athletes.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 60,
+        "component": "TextInput",
+        "label": "\"Search athletes\"",
+        "handler": "{setQuery}"
+      },
+      {
+        "line": 76,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => setFilter(key)}"
+      },
+      {
+        "line": 90,
+        "component": "ActionButton",
+        "label": "\"Retry unavailable data\"",
+        "handler": "{retry}"
+      },
+      {
+        "line": 94,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{retry}"
+      },
+      {
+        "line": 100,
+        "component": "ActionButton",
+        "label": "\"Share code\"",
+        "handler": "{onShare}"
+      },
+      {
+        "line": 101,
+        "component": "ActionButton",
+        "label": "\"Show all athletes\"",
+        "handler": "{() => { setQuery(''); setFilter('all'); }}"
+      },
+      {
+        "line": 110,
+        "component": "Pressable",
+        "label": "{`${athlete.name}, ${athlete.practiceDaysKnown ? `${practiceDayLabel(athlete)} of team practice records` : 'Practice days unavailable'}, ${detail}`}",
+        "handler": "{() => router.push({ pathname: '/athlete-vitals', params: { id: athlete.id, role } })}"
+      },
+      {
+        "line": 128,
+        "component": "ListRow",
+        "label": "{a.name}",
+        "handler": "{() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 110,
+        "call": "router.push({ pathname: '/athlete-vitals', params: { id: athlete.id, role } })"
+      },
+      {
+        "line": 132,
+        "call": "router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/components/trainer-home-overview.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 21,
+        "component": "ActionButton",
+        "label": "\"Monitor\"",
+        "handler": "{onOpenMonitor}"
+      },
+      {
+        "line": 25,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{retry}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/trainer-monitor.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 64,
+        "component": "Pressable",
+        "label": "{`${a.name}, ${live.stale ? 'no recent signal' : `${live.heartRate} beats per minute, ${pct} percent of estimated max`}${!live.stale && live.status === 'watch' ? ', slow recovery' : !live.stale && live.status === 'unknown' ? ', recovery unavailable' : ''}${a.simulated ? ', simulated' : ''}${!live.stale && live.phase ? `, ${live.phase}` : ''}`}",
+        "handler": "{() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })}"
+      },
+      {
+        "line": 101,
+        "component": "ActionButton",
+        "label": "\"Try again\"",
+        "handler": "{() => { team.retry(); retry(); }}"
+      },
+      {
+        "line": 142,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })}"
+      },
+      {
+        "line": 146,
+        "component": "ActionButton",
+        "label": "\"Mark checked in\"",
+        "handler": "{() => setChecked((previous) => ({ ...previous, [a.id]: { scope, kind: cue.kind, at: new Date() } }))}"
+      },
+      {
+        "line": 154,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{() => setShowCheckIns(!showCheckIns)}"
+      }
+    ],
+    "destinations": [
+      {
+        "line": 67,
+        "call": "router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })"
+      },
+      {
+        "line": 142,
+        "call": "router.push({ pathname: '/athlete-vitals', params: { id: a.id, role } })"
+      }
+    ],
+    "modals": []
+  },
+  {
+    "file": "src/components/ui/action-button.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 33,
+        "component": "PressScale",
+        "label": "{accessibilityLabel ?? shownLabel}",
+        "handler": "{() => { if (!blocked) onPress(); }}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/ui/charts.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/ui/list.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 50,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 120,
+        "component": "Pressable",
+        "label": "{label}",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 150,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 163,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/ui/visuals.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/vital-cards.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 187,
+        "component": "Pressable",
+        "label": "{`${signal.label}, ${signal.value}`}",
+        "handler": "{() => setSelected(signal.id as BandSignal)}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/vitals.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 21,
+        "component": "Pressable",
+        "label": "{`Simulated band data, ${DEMO_SPEED} times speed. About these readings`}",
+        "handler": "{() => setExpanded(!expanded)}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/whoop-ui.tsx",
+    "route": false,
+    "controls": [
+      {
+        "line": 20,
+        "component": "PressScale",
+        "label": "(child content/dynamic)",
+        "handler": "{onAction}"
+      },
+      {
+        "line": 59,
+        "component": "Pressable",
+        "label": "(child content/dynamic)",
+        "handler": "{onPress}"
+      },
+      {
+        "line": 131,
+        "component": "PressScale",
+        "label": "(child content/dynamic)",
+        "handler": "{onPress}"
+      }
+    ],
+    "destinations": [],
+    "modals": []
+  },
+  {
+    "file": "src/components/wristband.tsx",
+    "route": false,
+    "controls": [],
+    "destinations": [],
+    "modals": []
+  }
+]
