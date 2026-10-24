@@ -5,8 +5,6 @@ import { Stack } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { createTamagui, TamaguiProvider } from 'tamagui';
-import { defaultConfig } from '@tamagui/config/v6';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 
 import { BandJourneyLayer } from '@/components/band/band-journey';
@@ -19,7 +17,6 @@ import { hydrateOnboardingRole } from '@/state/onboarding';
 SplashScreen.preventAutoHideAsync();
 // The launch screen is the HeatSense H where the welcome intro assembles it; fading out hands over to that intro.
 SplashScreen.setOptions({ duration: 350, fade: true });
-const tamaguiConfig = createTamagui(defaultConfig);
 
 export default function RootLayout() {
   const reducedMotion = useReducedMotion();
@@ -72,8 +69,7 @@ export default function RootLayout() {
 
   return (
     <AuthSessionContext.Provider value={{ user, ready: authReady }}>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
-        <PhoneFrame>
+      <PhoneFrame>
         <Stack
           screenOptions={{
             animation: reducedMotion ? 'none' : 'fade',
@@ -101,8 +97,7 @@ export default function RootLayout() {
           </Stack.Protected>
         </Stack>
         <BandJourneyLayer />
-        </PhoneFrame>
-      </TamaguiProvider>
+      </PhoneFrame>
     </AuthSessionContext.Provider>
   );
 }

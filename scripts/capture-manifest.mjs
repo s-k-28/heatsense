@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
 const projectDirectory = resolve(scriptsDirectory, '..');
-const manifestPath = join(projectDirectory, 'design', 'screen-manifest.json');
+const manifestPath = join(projectDirectory, 'docs', 'design', 'manifests', 'screen-manifest.json');
 const outputDirectory = resolve(process.argv[2] ?? '/tmp/heatsense-screen-set');
 const expoUrl = process.env.HEATSENSE_EXPO_URL ?? 'exp://127.0.0.1:8082/--';
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));

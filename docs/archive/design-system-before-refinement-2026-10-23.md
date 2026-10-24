@@ -1,3 +1,5 @@
+> Historical design proposal. For current tokens and components, see the maintained design-system guide.
+
 # HeatSense design system
 
 How signed-in HeatSense screens should look and behave. Coach Home (`src/components/coach-home.tsx`) is the first screen built on it. Plan, Team, Alerts, Profile, and the athlete dashboard move over one at a time. Onboarding keeps its own Fieldline components (`entry-ui.tsx`) and is not affected.

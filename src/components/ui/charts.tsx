@@ -11,7 +11,7 @@ import { seg, useOneShotClock } from '@/lib/motion-engine';
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedG = Animated.createAnimatedComponent(G);
 
-// Charts draw on once when they appear (MOTION.md), then hold: later readings land without a redraw.
+// Charts draw on once when they appear (docs/design/system/motion.md), then hold: later readings land without a redraw.
 const BAR_STAGGER = 40;
 const BAR_GROW = 500;
 

@@ -1,6 +1,6 @@
 # Reusable agent UI audit prompt
 
-Copy the prompt below and fill in its scope. It uses the [audit protocol](ui-audit-protocol.md) and [Apple research ledger](apple-ui-research-ledger.md).
+Copy the prompt below and fill in its scope. It uses the [audit protocol](ui-audit-protocol.md) and [Apple research ledger](../research/apple-ui-research-ledger.md).
 
 ---
 

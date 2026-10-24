@@ -1,0 +1,195 @@
+{
+  "meta": {
+    "product": "HeatSense",
+    "version": "2026-10-24",
+    "device": "iPhone 17 Pro Max",
+    "notes": "Capture intents only. Authentication, membership and saved-record preconditions depend on the selected environment; this is not a test-pass list."
+  },
+  "screens": [
+    {
+      "page": "01 Entry and setup",
+      "name": "Welcome",
+      "route": "/welcome"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Sign in",
+      "route": "/sign-in"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Role",
+      "route": "/role"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Coach team setup",
+      "route": "/setup/coach"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Create team",
+      "route": "/team/create"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Invite team",
+      "route": "/team/invite"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Athlete join",
+      "route": "/setup/athlete"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Trainer join",
+      "route": "/setup/trainer"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Athlete basics",
+      "route": "/athlete/profile"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Athlete body",
+      "route": "/athlete/body"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Athlete safety",
+      "route": "/athlete/safety"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Pair band",
+      "route": "/pair-band"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Notifications",
+      "route": "/notifications"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Athlete completion",
+      "route": "/athlete/done"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Coach ready",
+      "route": "/ready?role=Coach"
+    },
+    {
+      "page": "01 Entry and setup",
+      "name": "Trainer ready",
+      "route": "/ready?role=Athletic%20trainer"
+    },
+    {
+      "page": "02 Coach",
+      "name": "Home",
+      "route": "/dashboard?role=coach&tab=home"
+    },
+    {
+      "page": "02 Coach",
+      "name": "Plan",
+      "route": "/dashboard?role=coach&tab=plan"
+    },
+    {
+      "page": "02 Coach",
+      "name": "Team",
+      "route": "/dashboard?role=coach&tab=team"
+    },
+    {
+      "page": "02 Coach",
+      "name": "Alerts",
+      "route": "/dashboard?role=coach&tab=alerts"
+    },
+    {
+      "page": "02 Coach",
+      "name": "Profile",
+      "route": "/dashboard?role=coach&tab=profile"
+    },
+    {
+      "page": "03 Trainer",
+      "name": "Home",
+      "route": "/dashboard?role=trainer&tab=home"
+    },
+    {
+      "page": "03 Trainer",
+      "name": "Monitor",
+      "route": "/dashboard?role=trainer&tab=monitor"
+    },
+    {
+      "page": "03 Trainer",
+      "name": "Athletes",
+      "route": "/dashboard?role=trainer&tab=athletes"
+    },
+    {
+      "page": "03 Trainer",
+      "name": "Protocols",
+      "route": "/dashboard?role=trainer&tab=protocols"
+    },
+    {
+      "page": "03 Trainer",
+      "name": "Profile",
+      "route": "/dashboard?role=trainer&tab=profile"
+    },
+    {
+      "page": "04 Athlete",
+      "name": "Home",
+      "route": "/dashboard?role=athlete&tab=home"
+    },
+    {
+      "page": "04 Athlete",
+      "name": "Band",
+      "route": "/dashboard?role=athlete&tab=band"
+    },
+    {
+      "page": "04 Athlete",
+      "name": "Sessions",
+      "route": "/dashboard?role=athlete&tab=sessions"
+    },
+    {
+      "page": "04 Athlete",
+      "name": "Learn",
+      "route": "/dashboard?role=athlete&tab=learn"
+    },
+    {
+      "page": "04 Athlete",
+      "name": "Profile",
+      "route": "/dashboard?role=athlete&tab=profile"
+    },
+    {
+      "page": "05 Details and empty states",
+      "name": "Plan editor",
+      "route": "/plan-editor"
+    },
+    {
+      "page": "05 Details and empty states",
+      "name": "Missing practice record",
+      "route": "/practice-record"
+    },
+    {
+      "page": "05 Details and empty states",
+      "name": "Missing athlete",
+      "route": "/athlete-vitals?role=coach"
+    },
+    {
+      "page": "06 Explicit preview states",
+      "name": "weather-stale",
+      "route": "/dashboard?role=coach&tab=home&state=weather-stale"
+    },
+    {
+      "page": "06 Explicit preview states",
+      "name": "empty-team",
+      "route": "/dashboard?role=coach&tab=team&state=empty-team"
+    },
+    {
+      "page": "06 Explicit preview states",
+      "name": "alert-acknowledged",
+      "route": "/dashboard?role=coach&tab=alerts&state=alert-acknowledged"
+    }
+  ]
+}

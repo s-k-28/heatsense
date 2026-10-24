@@ -2,7 +2,7 @@
 
 Batch 1: 2026-10-23, approximately 18:00–18:07 America/Chicago. Base HEAD `bcbc827`, with existing uncommitted app changes preserved. Owned code: `src/components/profile-tab.tsx`, `src/app/practice-record.tsx`, `src/components/heat-calendar.tsx` only. No browser or Device Hub use by this agent. Root owns runtime inspection.
 
-Method: [UI audit protocol](ui-audit-protocol.md), [Apple source ledger](apple-ui-research-ledger.md), [Strava record/profile evidence](strava-profile-references.md), and project `MOTION.md`. Source checks establish implementation properties; they do not establish rendered quality, native accessibility, persistence or usability. No authorship/vibe percentage is assigned.
+Method: [UI audit protocol](../system/ui-audit-protocol.md), [Apple source ledger](../research/apple-ui-research-ledger.md), [Strava record/profile evidence](../research/strava-profile-references.md), and project `MOTION.md`. Source checks establish implementation properties; they do not establish rendered quality, native accessibility, persistence or usability. No authorship/vibe percentage is assigned.
 
 ## Evidence and dispositions
 

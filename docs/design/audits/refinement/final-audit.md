@@ -63,7 +63,7 @@ At375px, Athlete Home was scrolled to the end: final alert action cleared naviga
 
 ## Remaining limits and cleanup
 
-- The native simulator screen was captured again after the final code changes: [current sign-in typography/photo snapshot](../../screenshots/refinement/native-current.png). The shorter copy is visible. Earlier native AX checked the Home zone-label change. The Device Hub window became unavailable to computer-use; **current native dashboard, keyboard and safe-area interaction remain pending reopening that window**. A read-only simulator screenshot does not establish an interaction pass.
+- The native simulator screen was captured again after the final code changes: [current sign-in typography/photo snapshot](../../../screenshots/refinement/native-current.png). The shorter copy is visible. Earlier native AX checked the Home zone-label change. The Device Hub window became unavailable to computer-use; **current native dashboard, keyboard and safe-area interaction remain pending reopening that window**. A read-only simulator screenshot does not establish an interaction pass.
 - No real camera/library acquisition, native OS notification permission, completed native share, real OAuth credential flow or production account lifecycle was verified here. Menu cancellation and web copy are narrower results.
 - Real BLE hardware/firmware is unfinished. Simulated band data and demo pairing remain labelled; imagery and animations establish no hardware or medical accuracy.
 - Native screen-reader traversal, full keyboard/focus audit, Dynamic Type/200% text, automated accessibility coverage and physical-device performance/energy profiling are not complete. Selected/check states inspected in web are not full accessibility certification.

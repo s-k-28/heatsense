@@ -4,15 +4,15 @@
 
 Explore **Fieldline** as the lead character. It turns HeatSense's existing H and curved signal mark into a grounded field companion. Its peach fold suggests protective shade; the blue crossbar suggests a cooler path through heat. This is a visual metaphor for planning safer practices, not a measurement or medical claim.
 
-Concept art: [character sheet](../../assets/concepts/heatsense-fieldline-v1.png) and [onboarding placement](../../assets/concepts/heatsense-fieldline-onboarding-v1.png). These are exploratory raster images, not production masters. [Scout](../../assets/concepts/heatsense-scout-v2.png) is the more anthropomorphic fallback.
+Concept art: [character sheet](../concepts/heatsense-fieldline-v1.png) and [onboarding placement](../concepts/heatsense-fieldline-onboarding-v1.png). These are exploratory raster images, not production masters. [Scout](../concepts/heatsense-scout-v2.png) is the more anthropomorphic fallback.
 
 ## First implementation
 
-The welcome, sign-in, and role screens now use an original vector implementation in `src/components/fieldline-character.tsx`, with a brief lean after role selection and a static pose under Reduce Motion. The concept PNGs remain references; the app does not render those raster sheets. The entry UI is documented with actual Chrome screenshots in [entry-ui-review.md](../archive/entry-ui-review.md). This is the first in-app iteration; feedback from coaches and athletes and a broader character rollout remain future work.
+The welcome, sign-in, and role screens now use an original vector implementation in `src/components/fieldline-character.tsx`, with a brief lean after role selection and a static pose under Reduce Motion. The concept PNGs remain references; the app does not render those raster sheets. The entry UI is documented with actual Chrome screenshots in [entry-ui-review.md](../../archive/entry-ui-review.md). This is the first in-app iteration; feedback from coaches and athletes and a broader character rollout remain future work.
 
 ## Why the current character misses
 
-The current glossy orange sphere has a familiar face, but no silhouette or behavior that says field, WBGT, guidance, or protection. It also sits beside a separate 2D flame character in the coach UI. The two styles dilute recognition. The app's [UI product contract](ui-product-contract.md) calls for a coherent illustration system and restrained, meaningful motion.
+The current glossy orange sphere has a familiar face, but no silhouette or behavior that says field, WBGT, guidance, or protection. It also sits beside a separate 2D flame character in the coach UI. The two styles dilute recognition. The app's [UI product contract](../system/ui-product-contract.md) calls for a coherent illustration system and restrained, meaningful motion.
 
 ## Research translated into design rules
 

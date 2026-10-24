@@ -25,7 +25,7 @@ No new device/browser/AX run was performed for this document. Findings below are
 
 ## 2. Profile control inventory and exact click checklist
 
-Source: [profile-tab.tsx](../../src/components/profile-tab.tsx). Shared descendants: `ui/action-button.tsx`, `motion/segmented.tsx`, `whoop-ui.tsx`; identity persistence: `state/preferences.ts`.
+Source: [profile-tab.tsx](../../../src/components/dashboard/profile-tab.tsx). Shared descendants: `ui/action-button.tsx`, `motion/segmented.tsx`, `whoop-ui.tsx`; identity persistence: `state/preferences.ts`.
 
 | ID | Visible control / source area | Click / state checklist | Preserve / inspect |
 | --- | --- | --- | --- |

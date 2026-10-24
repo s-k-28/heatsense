@@ -9,7 +9,6 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-google-signin/google-signin": "^16.1.5",
     "@shopify/react-native-skia": "^2.6.2",
-    "@tamagui/config": "^3.0.4",
     "expo": "~57.0.23",
     "expo-asset": "~57.0.20",
     "expo-clipboard": "~57.0.2",
@@ -43,8 +42,7 @@
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.10.1",
-    "tamagui": "^3.0.4"
+    "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -69,7 +67,8 @@
     "emulators": "npx -y firebase-tools@14 emulators:start --only auth,firestore",
     "check:unused": "knip",
     "typecheck": "tsc --noEmit",
-    "test:logic": "node scripts/check-uil-wbgt.ts && node scripts/check-recheck.ts && node scripts/check-plan-check.ts && node scripts/check-band-simulator.ts"
+    "test:logic": "node scripts/check-uil-wbgt.ts && node scripts/check-recheck.ts && node scripts/check-plan-check.ts && node scripts/check-band-simulator.ts",
+    "check:docs": "node scripts/check-doc-links.mjs"
   },
   "private": true
 }

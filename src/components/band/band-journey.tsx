@@ -16,7 +16,7 @@ import { useMotionActive } from '@/lib/motion-activity';
 // flying copy (BandJourneyLayer, above the navigator) carries it from the old spot to
 // the new one, then hands it back. It never teleports: an interrupted flight continues
 // from where it is, and with Reduce Motion the band simply appears in its new place. In flight it
-// rides a small arc and leans; at rest it floats. Motion rules: MOTION.md at the repo root.
+// rides a small arc and leans; at rest it floats. Motion rules: docs/design/system/motion.md.
 
 type Frame = { x: number; y: number; height: number };
 type Measure = (done: (frame: Frame | null) => void) => void;

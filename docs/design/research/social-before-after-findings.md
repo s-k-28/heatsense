@@ -4,7 +4,7 @@ Read through the shared Chrome session on October 23, 2026. The actual posted im
 
 ## LinkedIn: Cal AI concept
 
-[Manohar Sanaka's post](https://www.linkedin.com/posts/manohar-sanaka-b26555317_uxdesign-uidesign-productdesign-activity-7431690134670192640-UAXX/) and [original paired image](../../../HeatSense-design-references-2026-10-23/social-comparisons/linkedin-cal-ai-concept-before-after.jpeg).
+[Manohar Sanaka's post](https://www.linkedin.com/posts/manohar-sanaka-b26555317_uxdesign-uidesign-productdesign-activity-7431690134670192640-UAXX/) and [original paired image](../../../../HeatSense-design-references-2026-10-23/social-comparisons/linkedin-cal-ai-concept-before-after.jpeg).
 
 The redesign combines calorie and macro summaries into one module, replaces three small rings with bars, strengthens the selected date and moves the add action into the center navigation position. It reduces fragmentation. However, fewer dates are visible, the Settings destination disappears, and the bars lose explicit goal context. The comparison changes calories, protein, meal values and dates, so improved completion or retention is unverified. Treat it as a designer's concept, not an official shipped Cal AI update.
 
@@ -12,7 +12,7 @@ HeatSense decision: group related information, retain useful quantities and prog
 
 ## X: Claude component review
 
-[Yahia Bakour's post](https://x.com/mynameisyahia/status/2111598658982756648) and [original review screenshot](../../../HeatSense-design-references-2026-10-23/social-comparisons/x-claude-component-review.jpeg).
+[Yahia Bakour's post](https://x.com/mynameisyahia/status/2111598658982756648) and [original review screenshot](../../../../HeatSense-design-references-2026-10-23/social-comparisons/x-claude-component-review.jpeg).
 
 The author describes using Claude to build a component comparison interface with per-item decisions and aggregated feedback. The screenshot exposes a real design conflict: documented outline buttons versus filled implementations. It presents two explicit choices and a feedback field instead of a vague instruction to improve the whole page.
 

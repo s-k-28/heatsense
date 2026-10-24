@@ -11,7 +11,7 @@ Snapshot: source inventory taken around 18:26 Chicago, while coordinated work re
 - Other agents report production helper/callback/store fixtures in their ledgers. Those were not independently rerun by this inventory author, and are not added into a synthetic app-wide test total.
 - **Zero native screen passes, screenshots, OS Share/notification workflows or Accessibility Inspector results were captured by this author.** Root owns runtime testing. The Profile ledger records one root-reported narrow-calendar defect; that is evidence of a defect before the fix, not a passing native workflow. Root should append exact runtime artifacts separately.
 
-Audit ledgers: [Monitor, roster and shared state](audit-monitor-roster.md), [Profile and saved records](audit-profile-records.md), [Protocols, Learn and Alerts](audit-protocols-learn-alerts.md), [Staff forms and plans](audit-staff-forms.md). Review method: [UI audit protocol](ui-audit-protocol.md). Earlier layout context: [Home/Sessions/Band](home-sessions-band-audit.md), [Home copy](home-copy-hierarchy-audit.md), [Rossark polish](rossark-app-polish.md).
+Audit ledgers: [Monitor, roster and shared state](audit-monitor-roster.md), [Profile and saved records](audit-profile-records.md), [Protocols, Learn and Alerts](audit-protocols-learn-alerts.md), [Staff forms and plans](audit-staff-forms.md). Review method: [UI audit protocol](../system/ui-audit-protocol.md). Earlier layout context: [Home/Sessions/Band](home-sessions-band-audit.md), [Home copy](home-copy-hierarchy-audit.md), [Rossark polish](../system/rossark-app-polish.md).
 
 ## Actual route inventory
 
