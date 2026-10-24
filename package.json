@@ -15,10 +15,8 @@
     "expo-clipboard": "~57.0.2",
     "expo-constants": "~57.0.16",
     "expo-crypto": "~57.0.4",
-    "expo-device": "~57.0.2",
     "expo-file-system": "~57.0.7",
     "expo-font": "~57.0.2",
-    "expo-glass-effect": "~57.0.3",
     "expo-image": "~57.0.5",
     "expo-image-picker": "~57.0.20",
     "expo-linear-gradient": "~57.0.2",
@@ -53,13 +51,13 @@
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
     "firebase-admin": "^14.5.0",
+    "knip": "6.43.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "postinstall": "setup-skia-web public",
     "preweb": "setup-skia-web public",
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "screenshots": "node ./scripts/capture-manifest.mjs",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -68,7 +66,10 @@
     "check:auth": "node scripts/check-auth-config.mjs",
     "check:auth:android": "node scripts/check-auth-config.mjs --android",
     "test:invites": "npx -y firebase-tools@14 emulators:exec --only auth,firestore \"node scripts/test-team-invites.mjs\"",
-    "emulators": "npx -y firebase-tools@14 emulators:start --only auth,firestore"
+    "emulators": "npx -y firebase-tools@14 emulators:start --only auth,firestore",
+    "check:unused": "knip",
+    "typecheck": "tsc --noEmit",
+    "test:logic": "node scripts/check-uil-wbgt.ts && node scripts/check-recheck.ts && node scripts/check-plan-check.ts && node scripts/check-band-simulator.ts"
   },
   "private": true
 }

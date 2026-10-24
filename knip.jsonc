@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  "entry": ["scripts/**/*.{mjs,ts}", "src/widgets/PracticeActivity.tsx"],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{js,mjs,ts}", "*.{js,ts}"],
+  "include": ["files", "dependencies", "devDependencies", "unlisted", "unresolved"],
+  // Expo's analyzer assumes expo-updates by default; this app does not use OTA updates.
+  "ignoreDependencies": ["expo-updates"]
+}

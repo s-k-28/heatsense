@@ -31,8 +31,8 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
-.env
+.env*
+!.env.example
 
 # typescript
 *.tsbuildinfo
@@ -53,3 +53,6 @@ example
 .impeccable/
 .claude/proven-config*.json
 .claude/.proven-config-version
+
+# Local session history (AGENTS.md may reference it; it is not project documentation).
+/CONTEXT.md
