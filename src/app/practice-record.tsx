@@ -150,7 +150,7 @@ function PracticeRecordContent() {
           <Svg fill="none" height={24} stroke={Palette.ink} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} viewBox="0 0 24 24" width={24}><Path d="m15 5-7 7 7 7" /></Svg>
         </Pressable>
         <Text accessibilityRole="header" style={styles.barTitle}>Practice record</Text>
-        <ActionButton accessibilityLabel={copied ? sample ? 'Copied sample summary' : 'Copied practice record' : sample ? 'Share sample summary' : 'Share practice record'} busy={sharing} busyLabel="Sharing…" disabled={!canShare} label={copied ? 'Copied' : 'Share'} onPress={share} style={styles.shareAction} />
+        <ActionButton accessibilityLabel={copied ? sample ? 'Copied sample summary' : 'Copied practice record' : sample ? 'Share sample summary' : 'Share practice record'} busy={sharing} busyLabel="Share" disabled={!canShare} label={copied ? 'Copied' : 'Share'} onPress={share} style={styles.shareAction} />
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.column}>{body}</View>
@@ -164,7 +164,7 @@ const baseStyles = StyleSheet.create({
   bar: { alignItems: 'center', flexDirection: 'row', gap: 12, paddingHorizontal: 16 },
   back: { alignItems: 'center', justifyContent: 'center', minHeight: 48, minWidth: 48 },
   barTitle: { color: Palette.ink, flex: 1, fontSize: 17, fontWeight: '600', textAlign: 'center' },
-  shareAction: { flexShrink: 1, maxWidth: 140, minWidth: 76, paddingHorizontal: 12, paddingVertical: 8 },
+  shareAction: { flexShrink: 0, width: 132, paddingHorizontal: 12, paddingVertical: 8 },
   content: { alignItems: 'center', paddingTop: 24 },
   column: { maxWidth: MaxContentWidth, paddingHorizontal: 16, width: '100%' },
   date: { color: Palette.inkMuted, fontSize: 16, lineHeight: 24 },
