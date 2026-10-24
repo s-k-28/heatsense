@@ -189,10 +189,11 @@ function Content() {
     <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined} onLayout={(event: LayoutChangeEvent) => setSize(event.nativeEvent.layout)}>
       <StatusBar style="light" />
       <ScrollView
+        style={{ marginTop: insets.top }}
         bounces={false}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 12, 26), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(12, 26 - insets.top), paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         {size.height > 0 && <OnboardingBackground variant="form" height={size.height} />}
         <Animated.View entering={fade(200)}>
           <AthleteHeader onBack={back} step={2} />
