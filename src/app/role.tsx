@@ -1,10 +1,9 @@
-import { AnimatedText } from '@/components/ui/text';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
 import { BandSpot } from '@/components/band-journey';
-import { EntryButton, EntryHeader, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
+import { EntryButton, EntryHeader, EntryHeading, EntryScreen } from '@/components/entry-ui';
 import { OnboardingSelectionSurface } from '@/components/onboarding-controls';
 import { setOnboardingRole, useOnboardingRole, type OnboardingRole } from '@/state/onboarding';
 
@@ -22,15 +21,14 @@ export default function RoleScreen() {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const selected = useOnboardingRole();
-  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(520));
-  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(420));
+  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(Math.min(delay, 60)).duration(240));
+  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(Math.min(delay, 60)).duration(240));
   return (
     <EntryScreen background="role" backgroundDrawIn={250}>{(compact) => <>
       <Animated.View entering={fade(0)}>
         <EntryHeader bandDock={false} onBack={() => router.canGoBack() ? router.back() : router.replace('/sign-in')} />
       </Animated.View>
       <EntryHeading accent="you." compact={compact} delay={150} lead="Made for" size="hero" style={{ marginTop: compact ? 28 : 44 }} />
-      <AnimatedText entering={fade(500)} style={entryStyles.description}>Choose how you’ll use HeatSense.</AnimatedText>
       <View style={[styles.open, styles.bandRoom]}><BandSpot height={compact ? 120 : 160} id="role" /></View>
       <View accessibilityRole="radiogroup" accessibilityLabel="Your role" style={[styles.roles, compact && styles.rolesCompact]}>
         {roles.map((role, index) => (

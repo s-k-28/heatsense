@@ -1,11 +1,11 @@
-import { AnimatedText, Text } from '@/components/ui/text';
+import { Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 
 import { BandSpot } from '@/components/band-journey';
 import { BrandAssemble } from '@/components/brand-assemble';
-import { EntryButton, EntryHeader, EntryHeading, EntryScreen, entryStyles } from '@/components/entry-ui';
+import { EntryButton, EntryHeader, EntryHeading, EntryScreen } from '@/components/entry-ui';
 import { Entry } from '@/constants/entry-theme';
 
 // End of setup: what happens next, in three steps, instead of a preview full of sample numbers.
@@ -53,8 +53,8 @@ export default function ReadyScreen() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const key = (role && role in SETUP ? role : 'Coach') as ReadyRole;
   const setup = SETUP[key];
-  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(560));
-  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(420));
+  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(Math.min(delay, 60)).duration(240));
+  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(Math.min(delay, 60)).duration(240));
   return (
     <EntryScreen background="ready" backgroundDrawIn={450}>{(compact) => <>
       <Animated.View entering={fade(0)}>
@@ -63,7 +63,6 @@ export default function ReadyScreen() {
       {/* The branded finish: the H assembles above the headline, then the three next steps follow. */}
       <BrandAssemble delay={200} size={compact ? 44 : 52} style={{ marginTop: compact ? 26 : 40 }} />
       <EntryHeading accent={HEADING[key].accent} compact={compact} delay={650} lead={HEADING[key].lead} size="hero" style={styles.heading} />
-      <AnimatedText entering={fade(1000)} style={entryStyles.description}>Three things to do first.</AnimatedText>
       <View style={[styles.list, { marginTop: compact ? 22 : 30 }]}>
         {setup.steps.map((step, i) => (
           <Animated.View accessible entering={rise(1100 + i * 110)} key={step.title} style={styles.item}>
@@ -87,10 +86,10 @@ const styles = StyleSheet.create({
   heading: { marginTop: 22 },
   list: { gap: 20 },
   item: { flexDirection: 'row', gap: 16 },
-  index: { color: Entry.peach, fontFamily: Entry.heading, fontSize: 17, lineHeight: 22, width: 16 },
+  index: { color: Entry.peach, fontFamily: Entry.heading, fontSize: 17, lineHeight: 24, minWidth: 24 },
   copy: { flex: 1, gap: 3 },
-  itemTitle: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16.5, lineHeight: 22, letterSpacing: -0.2 },
-  itemDetail: { color: Entry.muted, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
+  itemTitle: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16, lineHeight: 24, letterSpacing: -0.2 },
+  itemDetail: { color: Entry.muted, fontFamily: Entry.body, fontSize: 16, lineHeight: 24 },
   open: { flexGrow: 1, minHeight: 28 },
   bandRoom: { alignItems: 'center', justifyContent: 'center' },
 });

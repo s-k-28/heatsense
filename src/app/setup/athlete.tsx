@@ -15,9 +15,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ActionButton } from '@/components/ui/action-button';
 import { BandSpot } from '@/components/band-journey';
 import { AthleteHeader, AthletePillButton as JoinButton } from '@/components/athlete-onboarding';
-import { EntryHeading, entryStyles } from '@/components/entry-ui';
+import { EntryButton, EntryHeading, entryStyles } from '@/components/entry-ui';
 import { OnboardingBackground } from '@/components/onboarding-background';
 import { Entry } from '@/constants/entry-theme';
 import { MobileViewport } from '@/components/mobile-viewport';
@@ -61,7 +62,7 @@ function CodeBox({ digit, active, error, found, width, height }: { digit: string
   const focus = useSharedValue(active ? 1 : 0);
   const success = useSharedValue(found ? 1 : 0);
   useEffect(() => { focus.set(withTiming(active ? 1 : 0, { duration: ms(180), easing: easeOut })); }, [active, focus, ms]);
-  useEffect(() => { success.set(withTiming(found ? 1 : 0, { duration: ms(360), easing: easeOut })); }, [found, ms, success]);
+  useEffect(() => { success.set(withTiming(found ? 1 : 0, { duration: ms(250), easing: easeOut })); }, [found, ms, success]);
   const idle = error ? T.outlineError : digit ? T.outline : T.outlineIdle;
   // The active box lifts 2 px; a found code warms every box to a peach edge and tint.
   const frame = useAnimatedStyle(() => ({
@@ -70,7 +71,7 @@ function CodeBox({ digit, active, error, found, width, height }: { digit: string
     transform: [{ translateY: -2 * focus.value }],
   }));
   return (
-    <Animated.View style={[styles.box, { width, height }, frame]}>
+    <Animated.View style={[styles.box, { width, minHeight: height, paddingVertical: 8 }, frame]}>
       {digit ? <AnimatedText key={digit} entering={ms(1) ? FadeIn.duration(160) : undefined} style={styles.digit}>{digit}</AnimatedText> : null}
     </Animated.View>
   );
@@ -107,7 +108,8 @@ function Content({ role }: { role: MemberRole }) {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [pending, setPending] = useState<'pending' | 'member' | null>(null);
-  const [noCodeHover, setNoCodeHover] = useState(false);
+  const [membershipError, setMembershipError] = useState(false);
+  const [membershipAttempt, setMembershipAttempt] = useState(0);
 
   // Live membership: picks up a request sent earlier (after a refresh) and the
   // coach's approval or decline without the athlete reloading anything.
@@ -115,6 +117,7 @@ function Content({ role }: { role: MemberRole }) {
     const userId = getCurrentUserId();
     if (!userId) return;
     return watchMyMembership(userId, (membership) => {
+      setMembershipError(false);
       if (membership?.status === 'active' || membership?.status === 'pending') {
         const status = membership.status === 'active' ? 'member' : 'pending';
         setPending(status);
@@ -126,8 +129,8 @@ function Content({ role }: { role: MemberRole }) {
         return null;
       });
       setAthleteTeam({ status: 'unassigned', teamId: null });
-    }, () => {});
-  }, []);
+    }, () => setMembershipError(true));
+  }, [membershipAttempt]);
 
   const compact = size.height > 0 && size.height < 760;
   const contentWidth = Math.max(0, size.width - 52);
@@ -135,8 +138,8 @@ function Content({ role }: { role: MemberRole }) {
   const boxWidth = Math.min(62, Math.floor((contentWidth - gap * (INVITE_CODE_LENGTH - 1)) / INVITE_CODE_LENGTH));
   const boxHeight = compact ? 62 : 66;
 
-  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(520).easing(easeOut));
-  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(450).easing(easeOut));
+  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(Math.min(delay, 60)).duration(240).easing(easeOut));
+  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(Math.min(delay, 60)).duration(240).easing(easeOut));
 
   const verify = useCallback(async (value: string) => {
     const id = ++checkId.current;
@@ -252,17 +255,15 @@ function Content({ role }: { role: MemberRole }) {
             <Animated.View entering={fade(0)} style={styles.statusRow}>
               <Text accessibilityRole="alert" style={[styles.errorText]}>{codeError}</Text>
               {check.state === 'network-error' && (
-                <Pressable accessibilityRole="button" onPress={() => void verify(code)} hitSlop={8}>
-                  <Text style={[styles.retry]}>Try again</Text>
-                </Pressable>
+                <ActionButton label="Try again" onPress={() => { void verify(code); }} variant="text" />
               )}
             </Animated.View>
           )}
           {valid && (
             <Animated.View entering={rise(0)} accessibilityLiveRegion="polite" style={styles.preview}>
               <Text style={styles.found}>Team found</Text>
-              <Text numberOfLines={1} style={[styles.teamName]}>{valid.team.teamName}</Text>
-              <Text numberOfLines={1} style={[styles.teamMeta]}>{[valid.team.school, valid.team.sport].filter(Boolean).join(' · ')}</Text>
+              <Text style={[styles.teamName]}>{valid.team.teamName}</Text>
+              <Text style={[styles.teamMeta]}>{[valid.team.school, valid.team.sport].filter(Boolean).join(' · ')}</Text>
             </Animated.View>
           )}
           {pending && (
@@ -273,6 +274,10 @@ function Content({ role }: { role: MemberRole }) {
               </Text>
             </Animated.View>
           )}
+          {membershipError ? <View style={styles.membershipNotice}>
+            <Text accessibilityRole="alert" style={styles.errorText}>Couldn’t refresh your team status.</Text>
+            <ActionButton label="Retry team status" onPress={() => { setMembershipError(false); setMembershipAttempt((value) => value + 1); }} variant="text" />
+          </View> : null}
           {joinError && <Text accessibilityRole="alert" style={[styles.errorText, styles.joinError]}>{joinError}</Text>}
         </View>
 
@@ -281,21 +286,12 @@ function Content({ role }: { role: MemberRole }) {
         <Animated.View entering={rise(1000)}>
           {pending
             ? <JoinButton label="Continue" enabled loading={false} onPress={() => router.push(NEXT_STEP[role] as never)} />
-            : <JoinButton label="Join team" enabled={valid !== null && !joining} loading={joining} onPress={() => void join()} />}
+            : <EntryButton label="Join team" disabled={!valid || joining} loading={joining} loadingLabel="Sending request…" onPress={() => void join()} />}
         </Animated.View>
 
         {!pending && (
           <Animated.View entering={fade(1150)} style={styles.noCodeWrap}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={skip}
-              onHoverIn={() => setNoCodeHover(true)}
-              onHoverOut={() => setNoCodeHover(false)}
-              onFocus={() => setNoCodeHover(true)}
-              onBlur={() => setNoCodeHover(false)}
-              hitSlop={10}>
-              <Text style={[styles.noCode, noCodeHover && styles.underline]}>I don’t have a code</Text>
-            </Pressable>
+            <ActionButton label="I don’t have a code" onPress={skip} variant="text" />
           </Animated.View>
         )}
       </ScrollView>
@@ -312,25 +308,23 @@ const styles = StyleSheet.create({
   centered: { alignSelf: 'center', textAlign: 'center' },
   codeWrap: { alignSelf: 'center' },
   codeRow: { flexDirection: 'row', justifyContent: 'center' },
-  box: { borderRadius: 18, borderWidth: 1.5, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center' },
+  box: { borderRadius: 22, borderWidth: 1.5, backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center' },
   digit: { color: Entry.ink, fontFamily: Entry.heading, fontSize: 27, letterSpacing: -0.5 },
   // iOS ignores taps on views at 1% opacity or less, so the input stays just above that.
   hiddenInput: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.02, color: 'transparent', fontSize: 16 },
   status: { minHeight: 56, marginTop: 20, alignItems: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
   statusText: { color: MUTED, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
+  membershipNotice: { alignItems: 'center', gap: 4, marginTop: 12 },
   pendingWrap: { alignItems: 'center', marginTop: 14, gap: 4 },
   pendingTitle: { color: Entry.ink, fontFamily: Entry.strong, fontSize: 16, lineHeight: 22, textAlign: 'center' },
   pendingText: { textAlign: 'center' },
   errorText: { color: ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   joinError: { marginTop: 12 },
-  retry: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 14, lineHeight: 20, textDecorationLine: 'underline' },
   preview: { alignItems: 'center', alignSelf: 'stretch', gap: 3, paddingVertical: 16, paddingHorizontal: 20, borderRadius: 22, backgroundColor: Entry.peachTint },
-  found: { color: Entry.peach, fontFamily: Entry.medium, fontSize: 13, lineHeight: 18 },
+  found: { color: Entry.peach, fontFamily: Entry.medium, fontSize: 14, lineHeight: 20 },
   teamName: { color: Entry.ink, fontFamily: Entry.heading, fontSize: 20, lineHeight: 26, letterSpacing: -0.5 },
   teamMeta: { color: MUTED, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   spacer: { flexGrow: 1, minHeight: 24 },
   noCodeWrap: { alignItems: 'center', marginTop: 16 },
-  noCode: { color: MUTED, fontFamily: Entry.medium, fontSize: 14, lineHeight: 20 },
-  underline: { textDecorationLine: 'underline' },
 });

@@ -233,7 +233,7 @@ function Content() {
 
         <EntryHeading accent="first." compact={compact} delay={300} lead="Safety comes" style={{ marginTop: compact ? 26 : 36 }} />
         {/* HeatSense doesn't send emergency notifications, so the page never says it will reach anyone. */}
-        <AnimatedText entering={fade(550)} style={entryStyles.description}>Emergency contacts, kept for authorized safety staff.</AnimatedText>
+        <AnimatedText entering={fade(550)} style={entryStyles.description}>Optional contacts and notes for your own reference.</AnimatedText>
 
         <Animated.View entering={rise(700)} style={styles.section}>
           <AthleteSectionLabel>Primary emergency contact</AthleteSectionLabel>
@@ -245,7 +245,7 @@ function Content() {
             <Animated.View entering={revealed(true)} exiting={revealed(false)} style={styles.section}>
               <View style={styles.sectionRow}>
                 <AthleteSectionLabel>Secondary emergency contact</AthleteSectionLabel>
-                <Pressable accessibilityRole="button" accessibilityLabel="Remove secondary contact" hitSlop={10} onPress={() => { update({ secondary: null }); if (openSelect === 'secondary') setOpenSelect(null); }}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Remove secondary contact" style={styles.removeTarget} onPress={() => { update({ secondary: null }); if (openSelect === 'secondary') setOpenSelect(null); }}>
                   {({ hovered }: { hovered?: boolean; pressed?: boolean }) => <Text style={[styles.remove, hovered && styles.underline]}>Remove contact</Text>}
                 </Pressable>
               </View>
@@ -261,7 +261,7 @@ function Content() {
         <Animated.View entering={rise(900)} style={styles.section}>
           <View>
             <AthleteSectionLabel>Additional safety notes (optional)</AthleteSectionLabel>
-            <Text style={[styles.hint]}>Share anything important authorized safety staff should know. No medical records, medication lists, or insurance details.</Text>
+            <Text style={[styles.hint]}>No medical records, medication lists, or insurance details.</Text>
           </View>
           <TextInput
             accessibilityLabel="Additional safety notes, optional"
@@ -269,7 +269,7 @@ function Content() {
             onChangeText={(notes) => update({ notes })}
             onFocus={() => setNotesFocused(true)}
             onBlur={() => setNotesFocused(false)}
-            placeholder="Add any additional information here..."
+            placeholder="Add a safety note"
             placeholderTextColor={Entry.placeholder}
             selectionColor={Entry.peach}
             cursorColor={Entry.peach}
@@ -300,21 +300,22 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 26 },
   section: { marginTop: 30, gap: 16 },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  sectionRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   fields: { gap: 16 },
   // Keep an open dropdown above the field that follows it.
   select: { zIndex: 1 },
   secondaryWrap: { marginTop: 4 },
-  addWrap: { alignSelf: 'flex-start', marginTop: 18, paddingVertical: 4 },
+  addWrap: { alignSelf: 'flex-start', justifyContent: 'center', marginTop: 18, minHeight: 44, paddingVertical: 8 },
   add: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 14.5 },
-  remove: { color: Entry.muted, fontFamily: Entry.medium, fontSize: 13.5 },
+  removeTarget: { justifyContent: 'center', minHeight: 44, paddingVertical: 8 },
+  remove: { color: Entry.muted, fontFamily: Entry.medium, fontSize: 14 },
   underline: { textDecorationLine: 'underline' },
-  hint: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13, lineHeight: 18, marginTop: 6 },
-  notes: { minHeight: 120, borderRadius: 18, borderWidth: 1.5, borderColor: Entry.line, backgroundColor: Entry.surface, color: Entry.ink, fontFamily: Entry.body, fontSize: 16, lineHeight: 22, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 16 },
+  hint: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, marginTop: 6 },
+  notes: { minHeight: 120, borderRadius: 22, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.surface, color: Entry.ink, fontFamily: Entry.body, fontSize: 16, lineHeight: 22, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 16 },
   notesFocused: { borderColor: Entry.peach },
-  counter: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12, textAlign: 'right', marginTop: -8, marginRight: 6 },
+  counter: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 14, textAlign: 'right', marginTop: -8, marginRight: 6 },
   privacyRow: { marginTop: 24, paddingRight: 8 },
-  privacy: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 18 },
+  privacy: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 14, lineHeight: 20 },
   actions: { marginTop: 28, gap: 14 },
   saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
 });

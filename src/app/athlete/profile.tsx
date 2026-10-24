@@ -299,7 +299,7 @@ function TeamSportField({ sport, teamName, pending }: { sport: string; teamName:
     <View>
       <Text style={[styles.label]}>Sport</Text>
       <View accessible accessibilityLabel={`Sport, ${sport}, set by ${teamName}`} style={styles.readOnly}>
-        <Text numberOfLines={1} style={[styles.readOnlyText]}>{sport}</Text>
+        <Text style={[styles.readOnlyText]}>{sport}</Text>
       </View>
       <Text style={[styles.hint]}>
         {pending ? `From ${teamName}. Your request to join is waiting for your coach.` : `From your team, ${teamName}.`}
@@ -314,11 +314,11 @@ const styles = StyleSheet.create({
   form: { gap: 16 },
   // Keep an open dropdown above the fields that follow it.
   select: { zIndex: 1 },
-  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 13.5, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
+  label: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 14, letterSpacing: -0.1, marginBottom: 8, marginLeft: 4 },
   // Set by the team: shown, not editable, so it reads as information rather than a field.
-  readOnly: { height: 60, borderRadius: 18, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.canvas, justifyContent: 'center', paddingHorizontal: 18 },
+  readOnly: { minHeight: 60, paddingVertical: 14, borderRadius: 22, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.canvas, justifyContent: 'center', paddingHorizontal: 18 },
   readOnlyText: { color: Entry.ink, fontFamily: Entry.medium, fontSize: 16, letterSpacing: -0.1 },
-  hint: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 12.5, lineHeight: 17, marginTop: 7, marginLeft: 6 },
+  hint: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, marginTop: 7, marginLeft: 6 },
   spacer: { flexGrow: 1, minHeight: 28 },
   actions: { gap: 12 },
   saveError: { color: ATHLETE_ERROR, fontFamily: Entry.body, fontSize: 14, lineHeight: 20, textAlign: 'center' },
