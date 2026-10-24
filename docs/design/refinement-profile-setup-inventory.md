@@ -94,3 +94,45 @@ Source: [profile-tab.tsx](../../src/components/profile-tab.tsx). Shared descenda
 Run coach, approved athlete, pending athlete, declined athlete and trainer with separate emulator UIDs, including one account with no local profile override. Capture role/route, build revision, viewport, text scale, units, Reduce Motion and timestamps. Use at least a narrow320–375pt layout and current simulator size; large text; long name/team/sport; no team; loading; denied query; failed save; retry; cancellation; repeated tap; keyboard open and route return. Keep source/simulation/safety/units and saved policy facts.
 
 For each real control mark **not run / visual only / AX checked / task outcome checked**. A pretty screenshot is not a successful membership write or pairing save. Screenshots/AX should include open menus and confirmations, not just initial pages. Stop source research once a concrete control and consequence is established; next step is runtime evidence under root's shared design principles. No code or tokens changed during this inventory.
+
+## Phase 3/4 implementation update — published foundations applied
+
+The phase-1 sections above are the historical inventory, not a claim that the listed defects remain. Implementation follows [refinement principles](refinement/design-principles.md), root's Archivo/Manrope text wrappers, shared tonal surfaces,56pt pill actions and22pt fields. Root owns shared primitives; this agent did not change their implementation. No service, authentication method, Firestore rule or health/safety storage gate was changed.
+
+### Profile group (root published `e637618`)
+
+- P01/P02 now use framed in-app dialogs: name edit/save/cancel and photo library/camera/remove choices. Dialog content scrolls with keyboard-aware normal flow and uses shared fields/actions. Captured account ownership and local profile persistence are preserved. Web photo selection starts synchronously in the click gesture; native selection waits for the closing dialog. Web base64 image data avoids relying on native document files.
+- Profile help, privacy, safety and test-alert feedback use the same readable in-app dialog instead of platform-dependent alerts. Native destructive sign-out and web inline sign-out retain their existing guarded semantics.
+- Name-save failures distinguish the local saved override from an account update that did not finish. Privacy copy reflects current access: health answers and emergency contacts are athlete-private, never an invented safety-staff sharing feature.
+- Coach cards adopt the shared surface/radius; values can shrink/wrap without truncating essential content. Existing coach vs athlete composition, saved-record periods/provenance, simulation labels and controls remain.
+- **Root-reported runtime evidence:**375/390/430pt and desktop Profile checks exercised name validation/save/cancel, photo-choice cancel, privacy/safety/test-alert dialogs, periods, three switches restored and °C→°F restored. Root fixed/verified framed dialog behavior across the desktop breakpoint. This agent did not operate the browser. Actual native photo/camera/OS notification permissions remain separate checks; a photo-choice cancel is not a successful photo import.
+
+### Coach form group (complete, frozen for root QA)
+
+Files: `setup/coach.tsx`, `team/create.tsx`, `team/invite.tsx`.
+
+- Removed the repeated choose-create/join and “few details” subtitles; actual choice descriptions, field labels, validation, UIL class/source link, data limits and navigation remain.
+- Invite Copy/Share use shared secondary actions with real pending guards and existing success/failure/cancel fallback. Regeneration remains a confirmed operation with its old-code warning and guarded pending state.
+- Confirmation/approval controls use shared text/secondary actions. Approve/Decline accessibility labels identify the requester. Request rows, errors and confirmations wrap; long team names/email remain available; code tiles use minimum heights so scaled text can expand. Metadata/errors are readable14/20 instead of13pt. Request surfaces follow the shared foundation.
+- Corrected the obsolete “no backend” comment: team persistence still occurs through the existing invite service. No invite, membership or class-setting logic was changed.
+
+### Athlete/reachable form group (complete, frozen for root QA)
+
+| File(s) | Concrete refinement | Semantics preserved / remaining QA |
+| --- | --- | --- |
+| `setup/athlete.tsx` (trainer wrapper inherits) | Wrapped team preview, expanding code tiles,44pt secondary/retry actions, operation-specific sending label; failed membership refresh is visible with retry. Local route arrivals capped at300ms. | Same numeric parsing, lookup version guard, role, pending/member writes and Next routes. Root still needs invalid/expired/offline/approved/declined and keyboard/large-text walkthrough. Return-to-Profile routing remains the existing onboarding sequence. |
+| `athlete/profile.tsx` | Team-derived Sport can wrap in a minimum-height22-radius information field; labels, hints and errors are14/20. | Full name, DOB parsing/age handling, grade, inherited/self sport, jersey, validation and saves unchanged. |
+| `athlete/body.tsx` | More readable privacy/instructions/errors; height pair can wrap at narrow widths, with sensible minimum field widths. | Optionality, conversions, exclusive answers, conditional clearing, medical-data minimization and storage gates unchanged. |
+| `athlete/safety.tsx` | Removed contradictory “authorized staff” sharing claims. Optional contacts/notes are explicitly for the athlete's own reference. Add/remove contact targets≥44pt, section header wraps, notes field22-radius and privacy/errors14pt. | Current athlete-only privacy and no automatic contact warning retained. Contact validation, notes limit/counter, skip/blank/secondary-promotion behavior and production storage gate unchanged. Root's two hover callback typing fixes retained. |
+| `athlete/done.tsx` | Listener failure and six-second nonresponse now show a retryable unavailable state rather than falsely No team. Approval copy no longer promises timing. “Go to dashboard” names the real destination. | Approved/pending/none remain real service results; late callbacks are cancelled on retry. Root must exercise error/retry and returned membership. |
+| `notifications.tsx` | One explicitly labelled example zone alert, rather than a dimmed wall including staff-only rechecks. Mobile permission request has true pending state/duplicate guard; web says alerts are mobile-only and offers Continue. | No fake “enabled” state; permission stays optional and completion route unchanged. Native OS request outcome still requires native testing. |
+| `sign-in.tsx` | Original auth methods have duplicate guards; reset-link operation has pending feedback; successful auth shows account-opening progress; home-route failure has a specific retry view rather than a permanent signing-in spinner. Error headings identify the operation. | Google/email/create/reset services, password/name/email validation and destination selection unchanged. No actual email or credentials were entered by this agent; emulator-only walkthrough pending root. |
+| `role.tsx`, `ready.tsx` | Removed redundant instruction subtitles; existing choice/role information stays. More readable first-action detail; local route entrance helpers capped at300ms. | Role IDs, choices, steps, assets and final destinations unchanged. |
+| `setup/[role].tsx`, `setup/trainer.tsx` | Updated stale fallback comment; trainer delegates the refined Join screen. | No new placeholder feature or route behavior. |
+
+### Checks and evidence limits
+
+- Full `npx tsc --noEmit` passed after the completed Profile, Coach and Athlete/auth groups. One intermediate run encountered root's in-progress `band-journey.tsx` edit; later complete runs passed. This was not classified as a user-facing app failure.
+- Scoped ESLint passed for all owned implementation files after cleanup, including root's preserved Safety callback typings. `git diff --check` passed for these changes.
+- Forms/auth files are now frozen for root's stable interaction/visual QA. Earlier Fast Refresh during live edits reset an auth mode; root correctly did not classify it as a persistent app bug.
+- This agent ran source/type/lint checks only. Root browser QA and native OS permission/photo/share checks must be recorded separately. No claim of complete accessibility, saved emulator outcomes, or all-route runtime success is made here.

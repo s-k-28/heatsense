@@ -17,26 +17,30 @@ import { getCurrentUserId, setAthleteTeam } from '@/state/onboarding';
 // athlete flow lands today.
 const DASHBOARD = '/dashboard?role=athlete';
 
-type State = { kind: 'loading' } | { kind: 'member'; teamName: string | null } | { kind: 'pending'; teamName: string | null } | { kind: 'none' };
+type State = { kind: 'loading' } | { kind: 'member'; teamName: string | null } | { kind: 'pending'; teamName: string | null } | { kind: 'none' } | { kind: 'error' };
 
 const COPY = {
   loading: { lead: 'One', accent: 'moment.', detail: () => 'Checking your team status…' },
   member: { lead: 'You’re on', accent: 'the team.', detail: (team: string | null) => (team ? `Welcome to ${team}.` : 'Your coach approved your request.') },
-  pending: { lead: 'Request', accent: 'sent.', detail: (team: string | null) => (team ? `${team} will approve your request soon.` : 'Your coach will approve your request soon.') },
+  pending: { lead: 'Request', accent: 'sent.', detail: (team: string | null) => (team ? `Waiting for approval from ${team}.` : 'Waiting for your coach to review your request.') },
+  error: { lead: 'Team status', accent: 'unavailable.', detail: () => 'Couldn’t check your team. Try again, or continue to the dashboard.' },
   none: { lead: 'You’re', accent: 'all set.', detail: () => 'Join a team anytime with a code from your coach.' },
 };
 
 export default function AthleteDoneScreen() {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
-  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(delay).duration(600));
-  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(delay).duration(500));
+  const rise = (delay: number) => (reducedMotion ? undefined : FadeInUp.delay(Math.min(delay, 60)).duration(240));
+  const fade = (delay: number) => (reducedMotion ? undefined : FadeIn.delay(Math.min(delay, 60)).duration(240));
   const uid = getCurrentUserId();
+  const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<State>(uid ? { kind: 'loading' } : { kind: 'none' });
 
   useEffect(() => {
     if (!uid) return;
+    let active = true;
     const apply = (membership: Membership | null) => {
+      if (!active) return;
       const teamName = membership?.team?.teamName ?? null;
       if (membership?.status === 'active') {
         setState({ kind: 'member', teamName });
@@ -49,14 +53,15 @@ export default function AthleteDoneScreen() {
         setAthleteTeam({ status: 'unassigned', teamId: null });
       }
     };
-    // If the status can't be read, don't guess at team access: show the no-team state.
-    return watchMyMembership(uid, apply, () => setState({ kind: 'none' }));
-  }, [uid]);
+    // A failed lookup is not evidence that there is no membership.
+    const stop = watchMyMembership(uid, apply, () => { if (active) setState({ kind: 'error' }); });
+    return () => { active = false; stop(); };
+  }, [attempt, uid]);
 
   // A listener that never answers (offline, or no account in this build) must not spin forever.
   useEffect(() => {
     if (state.kind !== 'loading') return;
-    const timer = setTimeout(() => setState((current) => (current.kind === 'loading' ? { kind: 'none' } : current)), 6000);
+    const timer = setTimeout(() => setState((current) => (current.kind === 'loading' ? { kind: 'error' } : current)), 6000);
     return () => clearTimeout(timer);
   }, [state.kind]);
 
@@ -71,7 +76,10 @@ export default function AthleteDoneScreen() {
       <AnimatedText accessibilityLiveRegion="polite" entering={fade(1100)} style={[entryStyles.description, styles.centered]}>{copy.detail(teamName)}</AnimatedText>
       <View style={styles.open} />
       <Animated.View entering={rise(1250)} style={styles.actions}>
-        {state.kind === 'loading' ? <EntryButton disabled label="Checking…" onPress={() => {}} /> : <EntryButton label={state.kind === 'member' ? 'Go to dashboard' : 'Continue'} onPress={() => router.replace(DASHBOARD as never)} />}
+        {state.kind === 'loading' ? <EntryButton disabled label="Checking…" onPress={() => {}} /> : state.kind === 'error' ? <>
+          <EntryButton label="Try again" onPress={() => { setState({ kind: 'loading' }); setAttempt((value) => value + 1); }} />
+          <EntryButton label="Go to dashboard" onPress={() => router.replace(DASHBOARD as never)} secondary />
+        </> : <EntryButton label="Go to dashboard" onPress={() => router.replace(DASHBOARD as never)} />}
         {state.kind === 'none' ? <EntryButton label="Join a team" onPress={() => router.push('/setup/athlete')} secondary /> : null}
       </Animated.View>
     </>}</EntryScreen>
