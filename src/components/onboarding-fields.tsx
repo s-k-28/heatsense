@@ -20,7 +20,7 @@ import { Entry } from '@/constants/entry-theme';
 // red edge plus a short message, so color is never the only signal.
 const ease = Easing.out(Easing.cubic);
 const ERROR = Entry.error;
-const ROW_HEIGHT = 48;
+const ROW_HEIGHT = 56;
 // React Native's Role type omits 'listbox'; React Native Web passes it through to the DOM.
 const LISTBOX = 'listbox' as Role;
 const MENU_PADDING = 6;
@@ -57,7 +57,7 @@ function FieldFrame({ height, active, invalid, hover, press, children }: { heigh
   const lift = useAnimatedStyle(() => ({ opacity: Math.max(focus.value, hover.value * 0.5) }));
   const radius = RADIUS;
   return (
-    <Animated.View style={[{ height, borderRadius: radius }, styles.fill, frame]}>
+    <Animated.View style={[{ minHeight: height, borderRadius: radius }, styles.fill, frame]}>
       {/* Decorative layers: on web an absolutely positioned layer paints above the input, so none of them take touches. */}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.lift, { borderRadius: radius }, lift]} />
       {children}
@@ -174,10 +174,7 @@ export function OnboardingSelectField({ label, placeholder, options, value, onCh
   }, [ms, open, progress]);
 
   const rows = Math.min(options.length, maxVisibleRows);
-  const menuHeight = rows * ROW_HEIGHT + MENU_PADDING * 2 + 2;
-  const scrolls = options.length > maxVisibleRows;
   const menu = useAnimatedStyle(() => ({
-    height: progress.value * menuHeight,
     marginTop: progress.value * 8,
     opacity: progress.value,
     transform: [{ translateY: (1 - progress.value) * -6 }],
@@ -210,7 +207,7 @@ export function OnboardingSelectField({ label, placeholder, options, value, onCh
       {mounted && (
         <Animated.View style={[styles.menuClip, menu]}>
           <View style={styles.menu}>
-            <ScrollView role={LISTBOX} aria-label={label} nestedScrollEnabled scrollEnabled={scrolls} showsVerticalScrollIndicator={scrolls} style={{ maxHeight: rows * ROW_HEIGHT }} contentContainerStyle={styles.menuList}>
+            <ScrollView role={LISTBOX} aria-label={label} nestedScrollEnabled scrollEnabled showsVerticalScrollIndicator style={{ maxHeight: rows * ROW_HEIGHT }} contentContainerStyle={styles.menuList}>
               {options.map((option) => (
                 <MenuOption key={option} label={option} selected={option === value} onPress={() => { onChange(option); onOpenChange(false); }} />
               ))}
@@ -237,7 +234,7 @@ function MenuOption({ label, selected, onPress }: { label: string; selected: boo
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
       style={({ pressed }) => [styles.option, (hovered || focused) && styles.optionHover, pressed && styles.optionPressed, focused && { ...FOCUS_RING, outlineOffset: -2 }]}>
-      <Text numberOfLines={1} style={[styles.optionText, selected && styles.optionTextSelected, null]}>{label}</Text>
+      <Text style={[styles.optionText, selected && styles.optionTextSelected, null]}>{label}</Text>
       {selected && <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={Entry.peach} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><Path d="m5 12 4 4L19 6" /></Svg>}
     </Pressable>
   );
@@ -259,9 +256,9 @@ const styles = StyleSheet.create({
   menuClip: { overflow: 'hidden' },
   menu: { borderRadius: RADIUS, borderWidth: 1, borderColor: Entry.line, backgroundColor: Entry.raised, overflow: 'hidden' },
   menuList: { padding: MENU_PADDING },
-  option: { height: ROW_HEIGHT, borderRadius: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  option: { minHeight: ROW_HEIGHT, paddingVertical: 12, borderRadius: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   optionHover: { backgroundColor: 'rgba(255,255,255,0.05)' },
   optionPressed: { backgroundColor: 'rgba(255,255,255,0.09)' },
-  optionText: { color: Entry.muted, fontFamily: Entry.body, fontSize: 15.5 },
+  optionText: { flexShrink: 1, color: Entry.muted, fontFamily: Entry.body, fontSize: 15.5 },
   optionTextSelected: { color: Entry.ink, fontFamily: Entry.strong },
 });
