@@ -157,12 +157,13 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
 /** The field right now: zone, reading, and a live countdown to the next recheck. */
 function StatusBar({ latest, now, overdue, msLeft, unit, value }: { latest: { zone: Zone; measuredAt: Date } | null; now: number; overdue: boolean; msLeft: number | null; unit: string; value: number | string | null }) {
   const tone = latest ? zoneColor(latest.zone) : Palette.inkFaint;
+  const missingReading = msLeft === null ? 'No practice in progress.' : overdue ? 'First field reading is overdue.' : 'First field reading needed.';
   return (
-    <View accessible accessibilityLabel={latest ? `${ZONES[latest.zone].label}, ${value}${unit}. ${msLeft === null ? '' : overdue ? 'Reading overdue' : `Next reading in ${Math.ceil(msLeft / 60_000)} minutes`}` : 'No reading yet'} style={styles.status}>
+    <View accessible accessibilityLabel={latest ? `${ZONES[latest.zone].label}, ${value}${unit}. ${msLeft === null ? '' : overdue ? 'Reading overdue' : `Next reading in ${Math.ceil(msLeft / 60_000)} minutes`}` : `No reading yet. ${missingReading}`} style={styles.status}>
       <View style={[styles.statusEdge, { backgroundColor: tone }]} />
       <View style={styles.statusCopy}>
         <Text style={[styles.statusZone, latest && { color: ZONES[latest.zone].text }]}>{latest ? ZONES[latest.zone].label : 'No reading yet'}</Text>
-        <Text style={styles.statusMeta}>{latest ? `${value}${unit} · ${ago(latest.measuredAt, now)}` : 'Alerts start with the first reading'}</Text>
+        <Text style={styles.statusMeta}>{latest ? `${value}${unit} · ${ago(latest.measuredAt, now)}` : missingReading}</Text>
       </View>
       {msLeft !== null ? (
         <View style={styles.countdown}>

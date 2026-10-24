@@ -79,7 +79,7 @@ export function AthleteHome({ onOpenBand }: { onOpenBand: () => void }) {
             {latest && guidance ? <>
               <Text style={styles.homeGuidanceSummary}>{guidance.summary}</Text>
               <ZoneRules hideSummary latest={latest} uilClass={data?.session?.uilClass ?? 3} />
-            </> : <Text style={styles.homeGuidanceRule}>Your coach’s field readings and current zone guidance will appear when practice starts.</Text>}
+            </> : <Text style={styles.homeGuidanceRule}>Your team needs to record its first field reading before current zone guidance is available.</Text>}
           </ScrollView>
         </View>
       </Modal>
