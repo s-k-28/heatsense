@@ -9,13 +9,15 @@ import { StyleSheet, View } from 'react-native';
 import { CoachPalette } from '@/constants/coach-theme';
 import { Palette, Spacing } from '@/constants/theme';
 import { SAMPLE_HOURLY_WBGT, ZONES } from '@/lib/practice';
-import { zoneThresholds, type UilClass, type Zone } from '@/lib/uil-wbgt';
+import { classifyWbgt, zoneThresholds, type UilClass, type Zone } from '@/lib/uil-wbgt';
 import { useTemperature } from '@/state/preferences';
 import { useNow, type CoachData } from '@/state/team-session';
+import { useWeatherEstimate } from '@/state/weather-estimate';
 
 // Coach Home's first card: the field photo carries the latest WBGT, which way it's heading, how far
 // it is from the next zone, and the next thing to do. One card instead of a photo plus
-// a separate reading card. Sample builds draw the sample day ending at the sample reading.
+// a separate reading card. Sample builds draw the sample day ending at the sample reading. Between
+// readings (10+ minutes since the last, or none yet) a labeled local-weather estimate sits under it.
 
 const PHOTO = require('@/assets/images/home/field-hero.webp');
 const ORDER: Zone[] = ['green', 'yellow', 'orange', 'red', 'black'];
@@ -76,6 +78,9 @@ export function FieldHero({ data, onAction, readOnly = false }: { data: CoachDat
   const rate = trendPerHour(points);
   const headroom = latest && nextAt !== null ? nextAt - latest.wbgtF : null;
   const minutesAgo = latest ? Math.max(0, Math.round((now - latest.measuredAt.getTime()) / 60_000)) : 0;
+  const estimate = useWeatherEstimate();
+  const estimateZone = estimate ? classifyWbgt(estimate.wbgtF, uilClass) : null;
+  const showEstimate = Boolean(data && estimate && estimateZone && (!latest || minutesAgo >= 10));
   const action = !data ? 'Loading practice…' : readOnly ? 'View guidance' : !session ? 'Check field conditions' : latest && !latest.acknowledgedAt ? 'Review guidance' : latest ? 'Add a reading' : 'Take first reading';
 
   return (
@@ -117,6 +122,13 @@ export function FieldHero({ data, onAction, readOnly = false }: { data: CoachDat
           <Text accessibilityLiveRegion="polite" style={styles.headroom}>{!data ? 'Loading your team’s practice…' : session ? 'No reading yet this practice.' : 'No practice started.'}</Text>
         )}
 
+        {showEstimate && estimate && estimateZone ? (
+          <View accessible accessibilityLabel={`Weather estimate now, about ${temp.value(estimate.wbgtF)} degrees, ${ZONES[estimateZone].label}. Take a reading to confirm.`} style={styles.estimate}>
+            <View style={[styles.dot, { backgroundColor: zoneColor(estimateZone) }]} />
+            <Text style={styles.estimateText}>Weather estimate now ≈ {temp.value(estimate.wbgtF)}{temp.unit} · {zoneName(estimateZone)}</Text>
+          </View>
+        ) : null}
+
         <View style={styles.actionRow}>
           <ActionButton disabled={!data} label={action} onPress={onAction} style={styles.button} />
           {latest ? <Text style={styles.measured}>Measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text> : null}
@@ -140,6 +152,8 @@ const baseStyles = StyleSheet.create({
   unit: { color: 'rgba(255,255,255,0.75)', fontSize: 22, fontWeight: '600', letterSpacing: 0 },
   rate: { color: Palette.white, fontSize: 17, fontVariant: ['tabular-nums'], fontWeight: '600' },
   headroom: { color: 'rgba(255,255,255,0.85)', fontSize: 16, lineHeight: 24 },
+  estimate: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 8, flexDirection: 'row', gap: 7, marginTop: 10, paddingHorizontal: 10, paddingVertical: 6 },
+  estimateText: { color: 'rgba(255,255,255,0.9)', flexShrink: 1, fontSize: 14, fontVariant: ['tabular-nums'], fontWeight: '600' },
   actionRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 14 },
   button: { flexShrink: 1, maxWidth: '100%' },
   buttonText: { color: CoachPalette.peachInk, fontSize: 16, fontWeight: '800' },
