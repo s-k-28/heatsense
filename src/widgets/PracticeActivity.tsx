@@ -6,6 +6,8 @@ export type PracticeActivityProps = {
   zone: 'green' | 'yellow' | 'orange' | 'red' | 'black' | 'none';
   zoneLabel: string;
   wbgt: string;
+  /** False before a practice starts: the island shows only the zone and WBGT, no clocks. */
+  practicing: boolean;
   startedAt: string;
   endsAt: string;
   nextBreakAt: string;
@@ -22,8 +24,9 @@ export type PracticeActivityProps = {
 // Runs in the widget's own isolated runtime: no hooks, no outside variables, only SwiftUI
 // components. Everything it needs comes in through props.
 //
-// All clear: the logo on the left of the island, and on the right the zone's dot beside the time
-// left in practice; holding it shows the zone, WBGT and both clocks.
+// No practice running: the logo, and the zone's dot beside the WBGT; holding it shows the zone and WBGT.
+// All clear during practice: the logo on the left of the island, and on the right the zone's dot beside
+// the time left in practice; holding it shows the zone, WBGT and both clocks.
 // During an incident it carries no words at all: the athlete's band with a red
 // dot, their name, and their heart rate beside a heart.
 //
@@ -38,6 +41,7 @@ const PracticeActivity = (props: PracticeActivityProps) => {
   const ends = new Date(props.endsAt);
   const nextBreak = new Date(props.nextBreakAt);
   const warning = props.incident !== '';
+  const idle = !props.practicing;
   const red = '#FF453A';
   const muted = '#AEAEB2';
   const inset = 4;
@@ -119,13 +123,18 @@ const PracticeActivity = (props: PracticeActivityProps) => {
           <Spacer />
           <Text modifiers={[font({ size: 16, weight: 'semibold' }), monospacedDigit(), foregroundStyle('#FFFFFF')]}>{`WBGT ${props.wbgt}`}</Text>
         </HStack>
-        {clocks(20)}
+        {idle ? caption('No practice running') : clocks(20)}
       </VStack>
     ),
 
     compactLeading: warning ? band(24) : picture(props.logoUri, 22),
     compactTrailing: warning ? (
       heartRate(15)
+    ) : idle ? (
+      <HStack spacing={5}>
+        {zoneDot(8)}
+        <Text modifiers={[font({ size: 14, weight: 'semibold' }), monospacedDigit(), foregroundStyle('#FFFFFF'), lineLimit(1), fixedSize({ horizontal: true, vertical: false })]}>{props.wbgt}</Text>
+      </HStack>
     ) : (
       <HStack spacing={5}>
         {zoneDot(8)}
@@ -158,6 +167,11 @@ const PracticeActivity = (props: PracticeActivityProps) => {
     ),
     expandedBottom: warning ? (
       <Spacer modifiers={[frame({ height: 2 })]} />
+    ) : idle ? (
+      <HStack modifiers={[padding({ leading: inset, trailing: inset, top: 6 })]}>
+        {caption('No practice running')}
+        <Spacer />
+      </HStack>
     ) : (
       <VStack modifiers={[padding({ leading: inset, trailing: inset, top: 6 })]}>{clocks(22)}</VStack>
     ),

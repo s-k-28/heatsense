@@ -6,8 +6,6 @@ import { INCIDENT, TODAY, ZONES, formatWbgt, type Zone } from '@/lib/practice';
 import { firestore } from '@/services/firebase';
 import { getActivePlan } from '@/state/practice-plans';
 
-// The sample session starts the first time this runs in an app launch.
-const session = { startedAt: Date.now() };
 const shared = new Map<string, string>();
 
 type StartOptions = { celsius: boolean; incidentOpen?: boolean; startedAt?: number | null };
@@ -35,11 +33,16 @@ async function shareImage(widgetsDirectory: string, name: string, source: number
   return target.uri;
 }
 
-/** Starts the practice Live Activity, or refreshes it if it's already running. Never throws. */
+/**
+ * Starts the Live Activity, or refreshes it if it's already running. Never throws. With no practice
+ * running it shows only the zone and WBGT; once a practice starts, its clocks join them.
+ */
 export async function startPracticeActivity(options: StartOptions) {
   const { celsius, startedAt: practiceStart } = options;
-  // The sample incident belongs to the sample practice only; a real team's island shows no made-up athlete.
-  const incidentOpen = (options.incidentOpen ?? true) && team === null;
+  const practicing = practiceStart != null;
+  // The sample incident belongs to a sample practice only: never before one starts, and a real
+  // team's island shows no made-up athlete.
+  const incidentOpen = practicing && (options.incidentOpen ?? true) && team === null;
   if (Platform.OS !== 'ios') return;
   shown = options;
   try {
@@ -49,8 +52,8 @@ export async function startPracticeActivity(options: StartOptions) {
     const PracticeActivity = require('@/widgets/PracticeActivity').default as typeof import('@/widgets/PracticeActivity').default;
     if (!widgetsDirectory) return;
 
-    // A practice the coach started from the field check, or the sample session already under way.
-    const start = practiceStart ?? session.startedAt;
+    // The practice the coach started from the field check. Without one the clocks aren't shown.
+    const start = practiceStart ?? Date.now();
     const startedAt = new Date(start);
     // Length and water come from today's plan. Water falls every so many minutes from the start;
     // point at the next one still ahead.
@@ -63,6 +66,7 @@ export async function startPracticeActivity(options: StartOptions) {
         if (!reading) return { zone: 'none' as const, zoneLabel: 'No reading yet', wbgt: '--' };
         return { zone: reading.zone, zoneLabel: ZONES[reading.zone].label, wbgt: formatWbgt(reading.wbgtF, celsius) };
       })(),
+      practicing,
       startedAt: startedAt.toISOString(),
       endsAt: new Date(start + plan.lengthMinutes * 60_000).toISOString(),
       nextBreakAt: new Date(nextBreak).toISOString(),
