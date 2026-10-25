@@ -19,10 +19,33 @@ Regression: `npm run check:email-auth` tests the actual Firebase and native Goog
 1. The dedicated **HeatSense** Firebase project is `heatsense-aa3c8`. Google Authentication is enabled with `siddarthakodithyala28@gmail.com` as its support email. Add each deployed web domain to Authorized domains before using web sign-in there.
    Google Auth Platform currently lists the audience as **External** and **In production** (checked October 16, 2026), so the consent screen is not limited to test accounts. The current app does not request sensitive or restricted Google scopes.
 2. No environment file is required for the team's project. For overrides, copy `.env.example` to `.env.local`. It contains the public Firebase web app and Google OAuth client identifiers for this project. These are client configuration, not admin credentials. Never place a service account JSON or OAuth client secret in the app.
-3. The registered iOS app uses bundle ID `com.s-k-28.heatsense-app`. Its reversed OAuth URL scheme is declared in the Google Sign-In plugin in `app.json`, so every native prebuild includes the callback scheme. The `GoogleService-Info.plist` file is not needed in the repository for this Firebase JS SDK setup. If the iOS OAuth client is rotated, update its client ID in `.env.example` and the reversed URL scheme in `app.json` from the latest Firebase configuration file.
+3. The default iOS app uses bundle ID `com.s-k-28.heatsense-app`. `app.config.js` reads `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` for the Google Sign-In plugin and falls back to the existing scheme in `app.json`. Override this together with `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` for a different registered bundle ID. The `GoogleService-Info.plist` file is not needed in the repository for this Firebase JS SDK setup.
 4. For Android, first choose an `android.package` in `app.json`, then register it in Firebase with development and release SHA-1 certificates. Rebuild after changing native configuration.
 5. Rebuild the iOS development app if the native OAuth URL scheme changes; a Metro reload alone cannot add it. If the scheme is already installed and only client values change, restart Metro and reload. An app with an embedded bundle needs a new build to receive JavaScript changes.
 6. Run `npm run check:auth` before a hosted build. It checks bundled Firebase and Google IDs, the native iOS callback scheme, all effective local environment overrides, emulator flags, and the absence of the old sign-in bypass, then runs `npm run test:auth` for service behavior and environment precedence. Those regressions include a fresh checkout with no env file. GitHub Actions runs this command, TypeScript, lint, and the web export on each push and pull request. `npm run check:auth:android` intentionally fails until an Android package is configured; Android also needs its signing SHA-1 certificates registered and a device test before release.
+
+## Teammate's free Apple ID test build
+
+Registered on October 25, 2026 in the same Firebase project:
+
+- Nickname: **HeatSense test build**
+- Apple bundle ID: `com.sathwikgopu.heatsense`
+- Firebase app ID: `1:160498199797:ios:b49893b0c385032fd7e9bc`
+- Google iOS client ID: `160498199797-oqmq8bucoc3hno6ihb08im2jlfe395e5.apps.googleusercontent.com`
+- Reversed URL scheme: `com.googleusercontent.apps.160498199797-oqmq8bucoc3hno6ihb08im2jlfe395e5`
+
+For that build, set these two values in the teammate's ignored `.env.local`:
+
+```dotenv
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=160498199797-oqmq8bucoc3hno6ihb08im2jlfe395e5.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME=com.googleusercontent.apps.160498199797-oqmq8bucoc3hno6ihb08im2jlfe395e5
+```
+
+Keep the shared Firebase web configuration and Google **web** client ID. The native Firebase app ID above does not replace the Firebase JS SDK's web app ID. Email/password uses the same hosted Firebase accounts for both bundles.
+
+Run `npm run check:auth`, regenerate the native configuration with `npx expo prebuild --platform ios`, then select the teammate's signing team and `com.sathwikgopu.heatsense` bundle identifier in Xcode before building. Prebuild takes the default bundle ID from `app.json`, so recheck the Xcode bundle identifier after regenerating. Rebuild and reinstall on the iPhone; a Metro reload cannot install a changed URL scheme. This registration does not require a paid Apple Developer team or a TestFlight invitation. Actual Google sign-in on that iPhone remains a device test for the teammate.
+
+The default `.env.example`, bundled client IDs, and `app.json` bundle identifier continue to describe `com.s-k-28.heatsense-app`. Do not replace those shared defaults with the test build's values.
 
 ## Verification
 

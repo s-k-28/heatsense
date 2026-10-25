@@ -31,12 +31,26 @@ for (const mode of ['development', 'production']) {
   const effective = { ...env, ...process.env };
   const source = files.join(', ') || 'shell environment';
   for (const key of required) {
+    // Other registered iOS bundle IDs in this Firebase project have their own
+    // OAuth clients. Validate the client/scheme pair below instead of requiring
+    // the default bundle's iOS client.
+    if (key === 'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID') continue;
     if (effective[key] !== undefined && effective[key] !== example[key]) {
       problems.push(`${mode}: ${key} from ${source} or shell differs from the configured HeatSense client`);
     }
   }
   for (const key of ['EXPO_PUBLIC_USE_FIREBASE_EMULATORS', 'EXPO_PUBLIC_USE_AUTH_EMULATOR']) {
     if (effective[key] === '1') problems.push(`${mode}: ${key}=1 routes accounts or data to local emulators. Unset it before hosted sign-in or a device build.`);
+  }
+  const iosClient = effective.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? bundledGoogle.iosClientId;
+  const scheme = effective.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME || expo.plugins.find((plugin) =>
+    Array.isArray(plugin) && plugin[0] === '@react-native-google-signin/google-signin',
+  )?.[1]?.iosUrlScheme;
+  if (!new RegExp(`^${bundledClient.messagingSenderId}-[a-z0-9]+\\.apps\\.googleusercontent\\.com$`).test(iosClient)) {
+    problems.push(`${mode}: EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID must be an iOS OAuth client in the HeatSense project`);
+  }
+  if (scheme !== `com.googleusercontent.apps.${iosClient.replace(/\.apps\.googleusercontent\.com$/, '')}`) {
+    problems.push(`${mode}: EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME must match EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID; rebuild iOS after changing the callback scheme`);
   }
 }
 

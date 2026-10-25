@@ -905,6 +905,7 @@ Email/password and Google sign-in work on a fresh install without a local `.env`
 | `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | The project number |
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Google Sign-In OAuth client (web) |
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Google Sign-In OAuth client (iOS) |
+| `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` | Reversed iOS OAuth client ID for native callbacks; override together with the iOS client ID |
 
 Local `.env` files are gitignored, so they never get committed. If overriding Firebase, supply the complete configuration and that project's Google client IDs; partial custom projects are rejected rather than mixed with HeatSense defaults. `.env.local` overrides `.env`, so back up or correct stale emulator settings before hosted sign-in. Run `npm run check:auth` before a hosted build. Google Sign-In setup is explained step by step in [docs/engineering/auth-setup.md](docs/engineering/auth-setup.md).
 
