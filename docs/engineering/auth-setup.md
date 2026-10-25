@@ -8,7 +8,7 @@ A fresh build includes the public HeatSense Firebase configuration from `src/con
 
 If an older build says **“Sign-in is unavailable in this sample build”**, pull current `main`, restart Metro with `npm start -- --dev-client --clear`, and reload the app. An installed bundle needs a new build if it is not loading from Metro. No native module was added for this fix.
 
-For a custom project, set all required Firebase client values together. For hosted accounts, leave both emulator flags unset. Accounts created in the local Auth emulator do not exist in the hosted project; the default loopback emulator cannot be reached through a phone's own `127.0.0.1`.
+Local files containing only some matching HeatSense Firebase identifiers use the complete bundled HeatSense configuration. Any different identifier selects a custom configuration, which must supply all required Firebase client values together. For hosted accounts, leave both emulator flags unset. Accounts created in the local Auth emulator do not exist in the hosted project; the default loopback emulator cannot be reached through a phone's own `127.0.0.1`.
 
 If sign-in reports incomplete Firebase configuration, inspect **`.env.local` as well as `.env`**. Expo gives local files priority; an old emulator config can override correct hosted settings. Back up any emulator config, copy `.env.example` to `.env.local`, run `npm run check:auth`, then restart Metro with `npm start -- --dev-client --clear` and reload the app. This preflight checks both development and production environments, including shell overrides, and rejects emulator settings for hosted device builds.
 

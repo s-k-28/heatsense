@@ -19,7 +19,12 @@ const environmentConfig = {
 // service-account credentials. A fresh device build must support real sign-in
 // without a developer's ignored .env file. A custom project must supply its full
 // config; never fill an incomplete custom project with HeatSense identifiers.
-const config = Object.values(environmentConfig).some(Boolean) ? environmentConfig : heatSenseClient;
+// A local file with only some matching HeatSense values is still the default
+// project, so it must not disable the complete bundled client configuration.
+const hasCustomConfig = Object.entries(environmentConfig).some(([field, value]) =>
+  value && value !== heatSenseClient[field as keyof typeof heatSenseClient],
+);
+const config = hasCustomConfig ? environmentConfig : heatSenseClient;
 
 const configured = Boolean(config.apiKey && config.authDomain && config.projectId && config.appId);
 export const firebaseApp = configured ? (getApps().length ? getApp() : initializeApp(config)) : null;

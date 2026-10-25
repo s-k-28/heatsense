@@ -96,6 +96,16 @@ try {
   console.log('email-auth: fresh-install configuration passed');
   await sdk.deleteApp(fresh.firebase.firebaseApp);
 
+  // An ignored local file may contain only some of HeatSense's own identifiers.
+  // It must not disable the complete public configuration shipped with the app.
+  for (const [key, value] of Object.entries(defaults).filter(([key]) => key.startsWith('EXPO_PUBLIC_FIREBASE_'))) {
+    const partialHeatSense = services({ [key]: value });
+    assert.ok(partialHeatSense.firebase.firebaseAuth, `A partial matching HeatSense override (${key}) must retain the bundled config`);
+    assert.equal(partialHeatSense.firebase.requireFirebaseAuth().app.options.appId, defaults.EXPO_PUBLIC_FIREBASE_APP_ID);
+    await sdk.deleteApp(partialHeatSense.firebase.firebaseApp);
+  }
+  console.log('email-auth: partial matching HeatSense overrides retain the complete bundled config');
+
   const custom = services({ EXPO_PUBLIC_FIREBASE_API_KEY: 'custom-public-key', EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: 'custom-project.firebaseapp.com', EXPO_PUBLIC_FIREBASE_PROJECT_ID: 'custom-project', EXPO_PUBLIC_FIREBASE_APP_ID: 'custom-app' });
   assert.equal(custom.firebase.requireFirebaseAuth().app.options.projectId, 'custom-project');
   assert.equal(custom.firebase.firebaseAuth.app.options.apiKey, 'custom-public-key');
