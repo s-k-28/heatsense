@@ -891,9 +891,9 @@ npm install
 
 ### 3. Firebase and sign-in
 
-Email/password sign-in works on a fresh install without a local `.env` file. The app bundles the same **public client identifiers** as `.env.example` in `src/constants/firebase-client.json`; Firebase Auth and Firestore rules still enforce identity and access. No admin credential is bundled.
+Email/password and Google sign-in work on a fresh install without a local `.env` file. The app bundles the same **public client identifiers** as `.env.example` in `src/constants/firebase-client.json` and `src/constants/google-client.json`; Firebase Auth and Firestore rules still enforce identity and access. No admin credential is bundled.
 
-1. For Google OAuth configuration, a different Firebase project or local emulator testing, copy the optional template: `cp .env.example .env.local`.
+1. For a different Firebase project or local emulator testing, copy the optional template: `cp .env.example .env.local`.
 2. The values in `.env.example` already point at the team's Firebase project (`heatsense-aa3c8`). To use your own project, replace them with the values from **Firebase console → Project settings → Your apps**:
 
 | Variable | What it is |
@@ -906,7 +906,7 @@ Email/password sign-in works on a fresh install without a local `.env` file. The
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Google Sign-In OAuth client (web) |
 | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Google Sign-In OAuth client (iOS) |
 
-Local `.env` files are gitignored, so they never get committed. If overriding Firebase, supply the complete configuration; partial custom projects are rejected rather than mixed with HeatSense defaults. Google Sign-In setup is explained step by step in [docs/engineering/auth-setup.md](docs/engineering/auth-setup.md).
+Local `.env` files are gitignored, so they never get committed. If overriding Firebase, supply the complete configuration and that project's Google client IDs; partial custom projects are rejected rather than mixed with HeatSense defaults. `.env.local` overrides `.env`, so back up or correct stale emulator settings before hosted sign-in. Run `npm run check:auth` before a hosted build. Google Sign-In setup is explained step by step in [docs/engineering/auth-setup.md](docs/engineering/auth-setup.md).
 
 3. **Using your own Firebase project?** Turn on both sign-in methods: **Firebase console → Authentication → Sign-in method → Google** and **→ Email/Password**. The team project already has both on.
 

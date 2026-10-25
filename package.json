@@ -45,6 +45,7 @@
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
+    "@expo/env": "^2.4.3",
     "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
@@ -61,7 +62,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "check:auth": "node scripts/check-auth-config.mjs",
+    "check:auth": "node scripts/check-auth-config.mjs && npm run test:auth",
     "check:auth:android": "node scripts/check-auth-config.mjs --android",
     "test:invites": "npx -y firebase-tools@14 emulators:exec --only auth,firestore \"node scripts/test-team-invites.mjs\"",
     "emulators": "npx -y firebase-tools@14 emulators:start --only auth,firestore",
@@ -69,7 +70,8 @@
     "typecheck": "tsc --noEmit",
     "test:logic": "node scripts/check-uil-wbgt.ts && node scripts/check-recheck.ts && node scripts/check-plan-check.ts && node scripts/check-band-simulator.ts",
     "check:docs": "python3 scripts/check-doc-links.py",
-    "check:email-auth": "node scripts/check-email-auth.mjs"
+    "check:email-auth": "node scripts/check-email-auth.mjs",
+    "test:auth": "node scripts/check-email-auth.mjs && node scripts/check-auth-preflight.mjs"
   },
   "private": true
 }

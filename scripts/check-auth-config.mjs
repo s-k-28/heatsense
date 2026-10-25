@@ -1,19 +1,13 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { parseEnv, parseProjectEnv } from '@expo/env';
 
 const root = new URL('..', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const expo = JSON.parse(read('app.json')).expo;
-const parseEnv = (source) => Object.fromEntries(
-  source.split(/\r?\n/)
-    .filter((line) => line && !line.startsWith('#'))
-    .map((line) => {
-      const separator = line.indexOf('=');
-      return [line.slice(0, separator), line.slice(separator + 1)];
-    }),
-);
 const example = parseEnv(read('.env.example'));
 const bundledClient = JSON.parse(read('src/constants/firebase-client.json'));
-const localEnv = existsSync(new URL('.env', root)) ? parseEnv(read('.env')) : null;
+const bundledGoogle = JSON.parse(read('src/constants/google-client.json'));
 const problems = [];
 const required = [
   'EXPO_PUBLIC_FIREBASE_API_KEY',
@@ -27,8 +21,22 @@ const required = [
 
 for (const key of required) {
   if (!example[key]) problems.push(`${key} is missing from .env.example`);
-  if (localEnv && localEnv[key] !== example[key]) {
-    problems.push(`${key} in .env differs from the configured HeatSense client`);
+}
+
+// Use Expo's parser and precedence, including .env.local and shell overrides.
+// Checking only .env let stale emulator values pass this check while Metro used
+// those values instead of the hosted project. Check development and release.
+for (const mode of ['development', 'production']) {
+  const { env, files } = parseProjectEnv(fileURLToPath(root), { mode });
+  const effective = { ...env, ...process.env };
+  const source = files.join(', ') || 'shell environment';
+  for (const key of required) {
+    if (effective[key] !== undefined && effective[key] !== example[key]) {
+      problems.push(`${mode}: ${key} from ${source} or shell differs from the configured HeatSense client`);
+    }
+  }
+  for (const key of ['EXPO_PUBLIC_USE_FIREBASE_EMULATORS', 'EXPO_PUBLIC_USE_AUTH_EMULATOR']) {
+    if (effective[key] === '1') problems.push(`${mode}: ${key}=1 routes accounts or data to local emulators. Unset it before hosted sign-in or a device build.`);
   }
 }
 
@@ -36,6 +44,11 @@ for (const key of required) {
 for (const [field, envKey] of Object.entries({ apiKey: 'API_KEY', authDomain: 'AUTH_DOMAIN', projectId: 'PROJECT_ID', appId: 'APP_ID', messagingSenderId: 'MESSAGING_SENDER_ID' })) {
   if (bundledClient[field] !== example[`EXPO_PUBLIC_FIREBASE_${envKey}`]) {
     problems.push(`Bundled Firebase ${field} differs from .env.example`);
+  }
+}
+for (const [field, envKey] of Object.entries({ webClientId: 'WEB', iosClientId: 'IOS' })) {
+  if (bundledGoogle[field] !== example[`EXPO_PUBLIC_GOOGLE_${envKey}_CLIENT_ID`]) {
+    problems.push(`Bundled Google ${field} differs from .env.example`);
   }
 }
 
