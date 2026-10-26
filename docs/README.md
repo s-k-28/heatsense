@@ -1,19 +1,13 @@
-# Documentation
+# Technical documentation
 
-| Start here | Purpose |
+The root [README](../README.md) describes the implemented submission and its limitations. The current source code and Firestore rules are authoritative when dated design notes differ.
+
+| Guide | Scope |
 | --- | --- |
-| [Development](engineering/development.md) | Install, configure, run and verify the app |
-| [Architecture](engineering/architecture.md) | Source ownership, dependencies and navigation |
-| [Authentication setup](engineering/auth-setup.md) | Firebase and Google sign-in configuration |
-| [Maintenance](engineering/repository-maintenance.md) | Cleanup decisions and ongoing checks |
-| [Design records](design/README.md) | Current design rules, research, audits and concepts |
-| [Contest research](research/cac-tx04-research-2026.md) | Dated TX04 research and source links |
+| [Development](engineering/development.md) | Installation, Firebase configuration, native builds, and verification commands |
+| [Architecture](engineering/architecture.md) | Runtime layers, source ownership, and navigation |
+| [Authentication](engineering/auth-setup.md) | Firebase and Google sign-in configuration |
+| [Repository maintenance](engineering/repository-maintenance.md) | Build checks and cleanup decisions |
+| [Design system](design/system/design-system.md) | Current UI tokens and component guidance |
 
-## Historical records
-
-- [Product and engineering overview, October23](archive/project-overview-2026-10-23.md): detailed data model, UIL explanation, hardware/BLE proposal, roadmap and submission placeholders.
-- [Session handoff, October23](archive/handoff-2026-10-23.md).
-- [September15 handoff](archive/agent-session-handoff-2026-09-15.md).
-- [Earlier entry UI review](archive/entry-ui-review.md).
-
-Historical records retain the findings and assumptions from their original build. Use the current source and engineering guides for setup and implementation.
+Historical plans, research, and audit records remain in their dated directories for traceability; they do not establish current functionality.
