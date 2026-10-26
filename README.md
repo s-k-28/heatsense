@@ -31,7 +31,7 @@
 
 **HeatSense helps Texas school coaches turn a field WBGT reading into a clear practice plan, follow through on it, and keep a record.**
 
-> **In one line:** the UIL made WBGT heat protocols mandatory for every Texas school on August 1, 2026. HeatSense is the sideline tool that makes following them fast, provable and shared by the whole staff, with a wearable band in development to catch the athlete who is struggling before anyone sees it.
+> **In one line:** the UIL made WBGT heat protocols mandatory for member schools on August 1, 2026. HeatSense helps staff turn a reading into practice guidance and a shared record. A wearable band prototype explores individual signals; the submitted team's band display uses labeled simulated data.
 
 ## Why this matters
 
@@ -128,7 +128,8 @@ We want to be clear about what is real and what is not yet.
 | 🟢 **Works today** | Three role-specific apps: coach (team-centred), athlete (their own band, past practices), athletic trainer (logs readings, watches vitals) | See [Roles](#roles). Access is enforced in `firebase/firestore.rules` |
 | 🧪 **Simulated** | Band vitals for a demo team (heart rate, skin temperature, sweat, movement, blood oxygen, recovery check), each with its own chart over the last 30 minutes | `src/lib/band-simulator.ts`. Every screen labels it **SIMULATED BAND DATA**; on by default only in builds without Firebase |
 | 🔵 **Planned** | Custom (non-UIL) school heat policies | Every session already stores its policy version (`uil-wbgt@2025-26`), so a second policy can be added without migrating data |
-| 🔵 **Planned** | Live sensor or weather-based WBGT | Today, every reading is typed in by a coach |
+| 🟢 **Works today** | Labeled local-weather WBGT estimate between field readings | The estimate is separate from the last measured field WBGT and does not replace a required reading |
+| 🔵 **Planned** | Automated field WBGT input | Today, staff enter each measured reading |
 | 🟢 **Works today** | Band backend: pairing record and live practice vitals in Firestore | `src/services/band-vitals.ts`. An approved athlete's phone reports a sample every 30 s during practice; the coach and trainers read it, teammates can't; rules cap writes at one per 10 s. Samples are marked `simulated` until the firmware lands |
 | 🛠️ **In development** | HeatSense Band wearable | Pairing flow in onboarding, a tested signal simulator, and the backend above. No firmware or Bluetooth code yet. See [HeatSense Band](#heatsense-band-hardware-in-development) |
 
@@ -441,9 +442,9 @@ This table is a summary to help explain the app. A school should always follow t
 ## HeatSense Band (hardware, in development)
 
 > [!WARNING]
-> **In development.** Right now the band is a design and a parts list. **The repository contains no firmware and no Bluetooth code, and no BLE library is installed.** `src/app/pair-band.tsx` is a pairing screen whose search and pairing are *simulated* with short delays. Nothing below has been built or tested. The band does not and will not diagnose heat illness. Its signals are only meant to give a coach or athletic trainer extra awareness, alongside WBGT, which stays the primary input.
+> **In development.** The team has separately assembled and tested a wired hardware prototype, but **this repository contains no band firmware, Bluetooth integration, or BLE library.** `src/app/pair-band.tsx` simulates device discovery and pairing, and the submitted team vitals remain labeled simulated data. The hardware measurements have not been clinically validated. The band does not diagnose heat illness or replace field WBGT and staff judgment.
 
-The HeatSense Band is a screenless wearable that an athlete wears on the wrist or upper arm, similar in shape to a WHOOP strap. It pairs with the HeatSense app. It would add a little individual context (pulse, movement load, and skin conductance) to the team-wide WBGT picture.
+The planned HeatSense Band is a screenless wearable for the wrist or upper arm. Once integrated with the submitted app, it could add individual pulse and movement context to the team-wide WBGT picture.
 
 ### What exists today vs. what's planned
 
@@ -453,10 +454,10 @@ The HeatSense Band is a screenless wearable that an athlete wears on the wrist o
 | ✅ Exists | Signal simulator (`src/lib/band-simulator.ts`) that produces the same signals the band is designed to send, with a self-check (`scripts/check-band-simulator.ts`) |
 | ✅ Exists | Vitals screens fed by the simulator: coach Team tab, trainer Monitor, athlete vitals detail (`src/app/athlete-vitals.tsx`), athlete Band tab |
 | ✅ Exists | The band as an optional part of the product design. The app is fully usable without it |
-| 🔵 Planned | Firmware for the ESP32 Nano (C++, Arduino framework, built with PlatformIO) |
+| 🔵 Planned in this repository | Firmware source for the ESP32 Nano and integration with the submitted app |
 | 🔵 Planned | A BLE library in the app, for example `react-native-ble-plx` (needs a native build, not Expo Go) |
 | 🔵 Planned | The GATT service and packet format below, then versioning them |
-| 🔵 Planned | Bench testing each sensor on its own, then on-body testing against a reference device |
+| 🔵 Planned | Systematic on-body validation against reference devices during activity and rest |
 | 🔵 Planned | A consent flow before any band data leaves the athlete's phone |
 
 ### Bill of materials
