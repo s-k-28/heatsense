@@ -1,10 +1,23 @@
+<p align="center"><img src="assets/readme/heatsense-overview.svg" alt="HeatSense field readings and practice guidance" width="1100" /></p>
+
 # HeatSense
+
+**Field measurement → policy decision → practice action → auditable record.**
 
 HeatSense is an Expo and React Native application for UIL member schools managing heat exposure during outdoor practice. Staff enter a measured wet-bulb globe temperature (WBGT), and the app maps it to the school's UIL Class 2 or Class 3 zone, presents the corresponding activity limits, checks a practice plan, schedules rechecks, and records what staff acknowledged. Coaches, athletic trainers, and athletes use role-specific views of the same team and practice data.
 
 The project is a 2026 Congressional App Challenge entry for Texas District 4. [Watch the three-minute demonstration](https://youtu.be/qMQcvorwxp8). The [UIL 2026–27 required plan](https://www.uiltexas.org/health/info/heat-stress-and-athletic-participation) is the governing source for school practice decisions. HeatSense is a decision-support prototype, not a medical device or a substitute for a school's emergency action plan.
 
 ## Implemented system
+
+```mermaid
+flowchart LR
+  M["Measured WBGT<br/>Class 2 or 3"] --> C["Typed classifier<br/>zone + UIL limits"]
+  C --> P["Plan constraint check<br/>work · rest · duration"]
+  P --> S["Practice session<br/>recheck clock · Live Activity"]
+  S --> F["Firestore write<br/>rules recompute zone"]
+  F --> T["Role-scoped team views<br/>append-only reading history"]
+```
 
 | Component | Implementation |
 | --- | --- |
@@ -19,11 +32,17 @@ The project is a 2026 Congressional App Challenge entry for Texas District 4. [W
 
 ### WBGT and practice invariant
 
+The central engineering choice is **dual-layer validation**. The client computes guidance immediately, while Firestore rules independently validate the submitted zone and caller's role before accepting a write. A modified client cannot grant itself coach permissions or relabel a WBGT value to bypass the stored policy invariant.
+
 `src/lib/uil-wbgt.ts` classifies plausible WBGT values after conversion and rounding to one decimal place, using the school's fixed UIL class. `src/lib/plan-check.ts` compares a proposed practice schedule with the zone's activity limits. `src/services/practice-sessions.ts` persists measured readings and their timestamps. Firestore rules in `firebase/firestore.rules` independently recompute the submitted zone and reject a mismatch; the app's UI is not the authorization boundary. Readings cannot be deleted through the rules, and later changes are limited to the permitted guidance acknowledgment.
 
 For example, **88.4°F WBGT in UIL Class 3 is Orange**: practice is limited to two hours, with at least four separate rest breaks per hour of at least four minutes. The school must follow the complete UIL plan, including its other equipment and rapid-cooling requirements.
 
+The recheck clock uses `measuredAt + recheckMinutes`, not the time a slow network write finishes. The plan checker evaluates work/rest cycles, minimum break duration, total rest where applicable, and maximum practice duration; its suggested correction is returned as a partial timing change for staff review. No outdoor timing fix is offered when the zone prohibits outdoor practice.
+
 ### Team data and access
+
+The Firestore schema treats identity, membership, practice state, and telemetry as separate trust domains. Authentication establishes a UID; a coach-owned membership record establishes authorization; session rules constrain when readings and vitals may be written. Each reading carries provenance through its entered value, unit, source, measurement time, recorder, and derived zone.
 
 A coach creates the team and its invitation code. Athletes and athletic trainers request membership; the coach approves or rejects each request. Firebase Authentication identifies the caller, while Firestore rules decide which records that caller may read or mutate. Coaches manage sessions; approved trainers can add readings; athletes follow team conditions and access their own data. The vitals collection restricts writes to the athlete's document during an active practice and prevents teammates from reading one another's telemetry.
 
