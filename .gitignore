@@ -33,6 +33,7 @@ yarn-error.*
 # local env files
 .env*
 !.env.example
+/functions/.secret.local
 
 # typescript
 *.tsbuildinfo
@@ -44,6 +45,7 @@ example
 /android
 # Generated from the installed Skia version by postinstall/preweb.
 /public/canvaskit.wasm
+/functions/lib/
 
 # Firebase emulator logs
 *-debug.log
