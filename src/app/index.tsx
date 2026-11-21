@@ -61,7 +61,7 @@ const steps = [
   {
     eyebrow: '',
     title: 'Four signals. One personal baseline.',
-    description: 'Available when an optional HeatSense wristband is paired.',
+    description: 'Explore four simulated wristband signals and see how they are compared with a sample baseline.',
     visual: SignalsVisual,
   },
   {
@@ -75,7 +75,7 @@ const steps = [
     eyebrow: '',
     title: 'Make rising risk hard to miss.',
     description:
-      'Combined signals move through four levels. Collapse detection goes directly to Emergency.',
+      'The simulation demonstrates four alert levels, including an example emergency alert.',
     visual: AlertLevelsVisual,
   },
   {

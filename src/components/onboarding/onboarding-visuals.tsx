@@ -551,7 +551,7 @@ export function AlertLevelsVisual() {
 
       <View style={styles.alertFooter}>
         <HeatIcon name={iconNames.emergency} size={19} tintColor={Palette.emergency} />
-        <Text style={styles.alertFooterText}>Collapse detection bypasses scoring and triggers Emergency.</Text>
+        <Text style={styles.alertFooterText}>A simulated collapse triggers an example emergency alert.</Text>
       </View>
     </View>
   );

@@ -13,7 +13,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { EntryScreen, entryStyles, isKeyboardFocus } from '@/components/onboarding/entry-ui';
+import { EntryLink, EntryScreen, entryStyles, isKeyboardFocus } from '@/components/onboarding/entry-ui';
 import { HeatSenseLogo } from '@/components/branding/heatsense-logo';
 import { Wristband } from '@/components/band/wristband';
 import { Entry } from '@/constants/entry-theme';
@@ -287,7 +287,7 @@ function Welcome({ fresh }: { fresh: boolean }) {
             <GetStarted onPress={getStarted} />
           </Animated.View>
           <Animated.View style={footer}>
-            <Text style={styles.footer}>Made for coaches and athletes.</Text>
+            <EntryLink label="Try the practice heat drill" onPress={() => router.push('/demo')} />
           </Animated.View>
         </>;
       }}</EntryScreen>
@@ -315,5 +315,4 @@ const styles = StyleSheet.create({
   pillLabel: { color: Entry.canvas, fontFamily: Entry.strong, fontSize: 16.5, letterSpacing: -0.2 },
   focus: Platform.OS === 'web' ? { outlineColor: Entry.peach, outlineOffset: 4, outlineStyle: 'solid', outlineWidth: 2 } : {},
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
-  footer: { color: Entry.subtle, fontFamily: Entry.body, fontSize: 13, lineHeight: 18, marginTop: 22, textAlign: 'center' },
 });
