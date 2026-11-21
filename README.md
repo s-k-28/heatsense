@@ -8,6 +8,8 @@ HeatSense is an Expo and React Native application for UIL member schools managin
 
 The project is a 2026 Congressional App Challenge entry for Texas District 4. [Watch the three-minute demonstration](https://youtu.be/qMQcvorwxp8). The [UIL 2026–27 required plan](https://www.uiltexas.org/health/info/heat-stress-and-athletic-participation) is the governing source for school practice decisions. HeatSense is a decision-support prototype, not a medical device or a substitute for a school's emergency action plan.
 
+**Try the practice heat drill.** Open `/demo` on the web build or choose **Try the practice heat drill** on the welcome screen. Follow three simulated readings, apply the timing changes, and see how an outdoor practice stops at the Black zone. The drill needs no account and uses no athlete data. [Run the demo or prepare a submission](docs/competition-readiness.md).
+
 ## Implemented system
 
 ```mermaid
