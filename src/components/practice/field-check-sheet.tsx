@@ -246,7 +246,8 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
   const copied = copiedReport === report;
   const latest = readings.at(-1) ?? null;
   const began = outdoorStartTime(session);
-  const startCheck = listenError ? 'unavailable' : checkOutdoorStart(latest, now);
+  const syncingReading = session.latestReadingId !== undefined && session.latestReadingId !== (latest?.id ?? null);
+  const startCheck = listenError ? 'unavailable' : syncingReading ? 'syncing' : checkOutdoorStart(latest, now);
   const recheck = recheckStatus(session, latest, now);
   const decision = latest?.decision?.kind;
   const outdoorExit = decision === 'moved_indoors' || decision === 'stopped_outdoors';

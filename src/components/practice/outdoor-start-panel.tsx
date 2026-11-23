@@ -12,10 +12,11 @@ const STATUS = {
   stop: { title: 'Keep practice off the field', detail: 'UIL Black zone calls for no outdoor activity.', color: Palette.emergency },
   ready: { title: 'Fresh field reading', detail: 'Review your school’s heat plan and the zone guidance before recording outdoor start.', color: Palette.safe },
   unavailable: { title: 'Reconnect to verify the reading', detail: 'The last reading may be out of date.', color: Palette.warning },
+  syncing: { title: 'Syncing the latest reading', detail: 'Wait for the field log to update before recording outdoor start.', color: Palette.warning },
 };
 
 export function OutdoorStartPanel({ status, measurement, children }: {
-  status: OutdoorStartCheck | 'unavailable';
+  status: OutdoorStartCheck | 'unavailable' | 'syncing';
   measurement?: string;
   children?: ReactNode;
 }) {

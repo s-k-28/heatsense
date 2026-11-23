@@ -40,7 +40,9 @@ The central engineering choice is **dual-layer validation**. The client computes
 
 For example, **88.4°F WBGT in UIL Class 3 is Orange**: practice is limited to two hours, with at least four separate rest breaks per hour of at least four minutes. The school must follow the complete UIL plan, including its other equipment and rapid-cooling requirements.
 
-Opening a team record lets staff collect measurements. For new records, the coach confirms outdoor start against a field reading taken within the previous 15 minutes. Firestore verifies the referenced reading belongs to the same practice record, is within that window, and has a zone below Black.
+Opening a team record lets staff collect measurements. In new practice records, Firestore advances the latest reading in the same transaction that saves the measurement. The coach's outdoor start must cite that reading, taken in the previous 15 minutes and in a zone below Black. A backdated entry stays in the log without replacing a newer measurement. Firestore also verifies the normalized Fahrenheit value against the number and unit staff entered.
+
+Athlete vitals can be written after the coach records outdoor start and until the practice closes. Closed practice records retain their readings, acknowledgments, and staff decisions as a read-only history.
 
 The recheck clock uses `measuredAt + recheckMinutes`, not the time a slow network write finishes. The plan checker evaluates work/rest cycles, minimum break duration, total rest where applicable, and maximum practice duration; its suggested correction is returned as a partial timing change for staff review. No outdoor timing fix is offered when the zone prohibits outdoor practice.
 

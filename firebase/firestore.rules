@@ -233,8 +233,11 @@ service cloud.firestore {
     }
 
     match /teams/{teamId}/sessions/{sessionId} {
+      function readingPath(readingId) {
+        return /databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)/readings/$(readingId);
+      }
       function freshOpeningReading(readingId) {
-        let reading = get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)/readings/$(readingId)).data;
+        let reading = get(readingPath(readingId)).data;
         return reading.zone in ['green', 'yellow', 'orange', 'red']
           && reading.measuredAt is timestamp
           && reading.measuredAt <= request.time
@@ -246,31 +249,56 @@ service cloud.firestore {
           && start is map && start.keys().hasOnly(['at', 'by', 'readingId'])
           && start.at == request.time && start.by == request.auth.uid
           && start.readingId is string && start.readingId.matches('^[A-Za-z0-9]{20}$')
+          && (!('latestReading' in resource.data)
+            || (resource.data.latestReading != null && start.readingId == resource.data.latestReading.id))
           && freshOpeningReading(start.readingId);
+      }
+      function matchingNewReading(next) {
+        let reading = getAfter(readingPath(next.id)).data;
+        return !exists(readingPath(next.id))
+          && reading.measuredAt == next.measuredAt
+          && reading.recordedAt == request.time && reading.recordedBy == request.auth.uid;
+      }
+      function validReadingHead() {
+        let next = request.resource.data.latestReading;
+        let previous = resource.data.latestReading;
+        return next is map && next.keys().hasOnly(['id', 'measuredAt'])
+          && next.id is string && next.id.matches('^[A-Za-z0-9]{20}$')
+          && next.measuredAt is timestamp
+          && (previous == null || next.measuredAt >= previous.measuredAt)
+          && matchingNewReading(next);
       }
       allow read: if isCoach(teamId) || isActiveMember(teamId);
       allow create: if isCoach(teamId)
-        && request.resource.data.keys().hasOnly(['venue', 'uilClass', 'recheckMinutes', 'policy', 'startedBy', 'startedAt', 'endedAt', 'outdoorStart'])
+        && request.resource.data.keys().hasOnly(['venue', 'uilClass', 'recheckMinutes', 'policy', 'startedBy', 'startedAt', 'endedAt', 'outdoorStart', 'latestReading'])
         && request.resource.data.venue is string && request.resource.data.venue.size() >= 1 && request.resource.data.venue.size() <= 80
         && request.resource.data.uilClass in [2, 3]
         && request.resource.data.recheckMinutes is int && request.resource.data.recheckMinutes >= 5 && request.resource.data.recheckMinutes <= 30
         && request.resource.data.policy is string
         && request.resource.data.startedBy == request.auth.uid
         && request.resource.data.startedAt == request.time
-        && request.resource.data.endedAt == null && request.resource.data.outdoorStart == null;
+        && request.resource.data.endedAt == null && request.resource.data.outdoorStart == null
+        && request.resource.data.latestReading == null;
       allow update: if isCoach(teamId)
         && resource.data.endedAt == null
         && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endedAt'])
             && request.resource.data.endedAt == request.time)
           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['outdoorStart'])
             && validOutdoorStart()));
+      allow update: if (isCoach(teamId) || isActiveTrainer(teamId))
+        && resource.data.endedAt == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['latestReading'])
+        && validReadingHead();
       allow delete: if false;
 
       // Band vitals during practice: one document per athlete, overwritten as new samples arrive.
       // Only that athlete writes it, only while practice is open, at most every 10 seconds (the
       // free plan's write budget); the coach, approved trainers and the athlete read it, teammates never.
       match /vitals/{athleteUid} {
-        function practice() { return get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)).data; }
+        function practiceInProgress() {
+          let practice = get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)).data;
+          return practice.endedAt == null && practice.get('outdoorStart', true) != null;
+        }
         function validVitals(d) {
           return d.keys().hasOnly(['heartRate', 'skinTempF', 'sweat', 'movement', 'spo2', 'recovery', 'source', 'serial', 'sampledAt', 'updatedAt'])
             && d.keys().hasAll(['heartRate', 'skinTempF', 'sweat', 'movement', 'recovery', 'source', 'serial', 'sampledAt', 'updatedAt'])
@@ -287,15 +315,28 @@ service cloud.firestore {
         }
         allow read: if isCoach(teamId) || isActiveTrainer(teamId) || (signedIn() && request.auth.uid == athleteUid && isActiveMember(teamId));
         allow create: if signedIn() && request.auth.uid == athleteUid && isActiveAthlete(teamId)
-          && practice().endedAt == null && validVitals(request.resource.data);
+          && practiceInProgress() && validVitals(request.resource.data);
         allow update: if signedIn() && request.auth.uid == athleteUid && isActiveAthlete(teamId)
-          && practice().endedAt == null && validVitals(request.resource.data)
+          && practiceInProgress() && validVitals(request.resource.data)
           && request.time > resource.data.updatedAt + duration.value(10, 's');
         allow delete: if false;
       }
 
       match /readings/{readingId} {
-        function session() { return get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)).data; }
+        function sessionPath() { return /databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId); }
+        function session() { return get(sessionPath()).data; }
+        function keepsLatestReading() {
+          let current = session();
+          let previous = current.get('latestReading', null);
+          return !('latestReading' in current)
+            || (previous != null && request.resource.data.measuredAt < previous.measuredAt)
+            || getAfter(sessionPath()).data.latestReading.id == readingId;
+        }
+        function measurementMatchesInput() {
+          let data = request.resource.data;
+          let fahrenheit = data.enteredUnit == 'C' ? data.enteredValue * 9.0 / 5.0 + 32.0 : data.enteredValue;
+          return data.wbgtF * 1.0 == math.round(fahrenheit * 10.0) / 10.0;
+        }
         function validDecision() {
           let decision = request.resource.data.decision;
           return session().endedAt == null
@@ -313,6 +354,7 @@ service cloud.firestore {
           && request.resource.data.wbgtF is number && request.resource.data.wbgtF >= 32 && request.resource.data.wbgtF <= 120
           && request.resource.data.enteredValue is number
           && request.resource.data.enteredUnit in ['F', 'C']
+          && measurementMatchesInput()
           && request.resource.data.source in ['handheld', 'station', 'other']
           && request.resource.data.measuredAt is timestamp
           && request.resource.data.measuredAt <= request.time + duration.value(1, 'm')
@@ -322,9 +364,11 @@ service cloud.firestore {
           && request.resource.data.recordedBy == request.auth.uid
           && request.resource.data.recordedAt == request.time
           && request.resource.data.acknowledgedBy == null
-          && request.resource.data.acknowledgedAt == null;
+          && request.resource.data.acknowledgedAt == null
+          && keepsLatestReading();
         allow update: if (isCoach(teamId) || isActiveTrainer(teamId))
           && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledgedBy', 'acknowledgedAt'])
+              && session().endedAt == null
               && resource.data.acknowledgedAt == null
               && request.resource.data.acknowledgedBy == request.auth.uid
               && request.resource.data.acknowledgedAt == request.time)

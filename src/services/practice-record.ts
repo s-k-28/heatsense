@@ -34,6 +34,7 @@ export function watchPracticeRecord(teamId: string, id: string, onChange: (recor
       recheckMinutes: data.recheckMinutes,
       policy: typeof data.policy === 'string' ? data.policy : null,
       outdoorStart: readOutdoorStart(data.outdoorStart),
+      latestReadingId: data.latestReading === undefined ? undefined : data.latestReading?.id ?? null,
     });
   }, onError);
 }

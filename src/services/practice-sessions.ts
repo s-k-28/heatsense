@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDocs, getDocsFromServer, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, getDocsFromServer, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc, where, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 
 import { firebaseAuth, firestore } from '@/services/firebase';
 import { UIL_VERSION, celsiusToF, classifyWbgt, type UilClass, type Zone } from '@/lib/uil-wbgt';
@@ -29,6 +29,7 @@ export type PracticeSession = {
   startedAt: Date;
   endedAt: Date | null;
   outdoorStart?: { at: Date; readingId: string } | null;
+  latestReadingId?: string | null;
 };
 
 export type FieldReading = {
@@ -90,6 +91,7 @@ export function watchActiveSession(teamId: string, onChange: (session: PracticeS
       startedAt: toDate(data.startedAt) ?? new Date(),
       endedAt: toDate(data.endedAt),
       outdoorStart: readOutdoorStart(data.outdoorStart),
+      latestReadingId: data.latestReading === undefined ? undefined : data.latestReading?.id ?? null,
     });
   }, onError);
 }
@@ -163,14 +165,30 @@ export async function startSession(teamId: string, input: { venue: string; uilCl
     startedAt: serverTimestamp(),
     endedAt: null,
     outdoorStart: null,
+    latestReading: null,
   });
   return ref.id;
 }
 
-/** Record an observed start against the coach's reviewed reading, after refreshing it from the server. */
+/** Tie outdoor start to the reading the coach saw, including during concurrent staff writes. */
 export async function recordOutdoorStart(session: PracticeSession, readingId: string) {
   if (session.outdoorStart !== null || session.endedAt) return false;
-  const coach = uid();
+  const start = { at: serverTimestamp(), by: uid(), readingId };
+  const sessionRef = doc(sessions(session.teamId), session.id);
+  if (session.latestReadingId !== undefined) {
+    const readingRef = doc(readings(session.teamId, session.id), readingId);
+    return runTransaction(db(), async (transaction) => {
+      const current = (await transaction.get(sessionRef)).data();
+      if (!current || current.endedAt || current.outdoorStart !== null || current.latestReading?.id !== readingId) return false;
+      const reading = (await transaction.get(readingRef)).data();
+      const measuredAt = toDate(reading?.measuredAt);
+      if (!reading || !measuredAt || checkOutdoorStart({ measuredAt, zone: reading.zone }, Date.now()) !== 'ready') return false;
+      transaction.update(sessionRef, { outdoorStart: start });
+      return true;
+    });
+  }
+
+  // Records opened before latest-reading tracking keep their existing schema.
   const snapshot = await getDocsFromServer(query(readings(session.teamId, session.id), orderBy('measuredAt', 'desc'), limit(1)));
   const latest = snapshot.docs[0];
   const data = latest?.data();
@@ -179,7 +197,7 @@ export async function recordOutdoorStart(session: PracticeSession, readingId: st
     || checkOutdoorStart({ measuredAt, zone: data.zone }, Date.now()) !== 'ready') {
     return false;
   }
-  await updateDoc(doc(sessions(session.teamId), session.id), { outdoorStart: { at: serverTimestamp(), by: coach, readingId } });
+  await updateDoc(sessionRef, { outdoorStart: start });
   return true;
 }
 
@@ -191,7 +209,7 @@ export function endSession(session: PracticeSession) {
 export function watchReadings(session: PracticeSession, onChange: (list: FieldReading[]) => void, onError: () => void) {
   const ordered = query(readings(session.teamId, session.id), orderBy('measuredAt', 'asc'));
   return onSnapshot(ordered, (snapshot) => {
-    onChange(snapshot.docs.map((docSnap) => {
+    const list = snapshot.docs.map((docSnap) => {
       const data = docSnap.data();
       return {
         id: docSnap.id,
@@ -205,7 +223,14 @@ export function watchReadings(session: PracticeSession, onChange: (list: FieldRe
         acknowledgedAt: toDate(data.acknowledgedAt),
         decision: readPracticeDecision(data.decision),
       };
-    }));
+    });
+    const headIndex = list.findIndex((reading) => reading.id === session.latestReadingId);
+    // Measurements can have identical timestamps. The server tracks which arrived last.
+    if (headIndex >= 0 && headIndex < list.length - 1
+      && list[headIndex].measuredAt.getTime() === list.at(-1)?.measuredAt.getTime()) {
+      list.push(...list.splice(headIndex, 1));
+    }
+    onChange(list);
   }, onError);
 }
 
@@ -214,8 +239,10 @@ export async function addReading(session: PracticeSession, input: { value: numbe
   const wbgtF = Math.round((input.unit === 'C' ? celsiusToF(input.value) : input.value) * 10) / 10;
   const zone = classifyWbgt(wbgtF, session.uilClass);
   if (!zone) return { error: 'That reading is outside what a WBGT meter reports. Check the number and unit.' } as const;
-  if (input.measuredAt.getTime() > Date.now() + 60_000) return { error: 'The measurement time can’t be in the future.' } as const;
-  await addDoc(readings(session.teamId, session.id), {
+  const measuredAt = input.measuredAt.getTime();
+  if (!Number.isFinite(measuredAt) || measuredAt > Date.now() + 60_000) return { error: 'Check when the reading was measured.' } as const;
+  const collectionRef = readings(session.teamId, session.id);
+  const measurement = {
     wbgtF,
     enteredValue: input.value,
     enteredUnit: input.unit,
@@ -227,7 +254,22 @@ export async function addReading(session: PracticeSession, input: { value: numbe
     recordedAt: serverTimestamp(),
     acknowledgedBy: null,
     acknowledgedAt: null,
-  });
+  };
+  if (session.latestReadingId === undefined) {
+    await addDoc(collectionRef, measurement);
+  } else {
+    const readingRef = doc(collectionRef);
+    const sessionRef = doc(sessions(session.teamId), session.id);
+    await runTransaction(db(), async (transaction) => {
+      const current = (await transaction.get(sessionRef)).data();
+      if (!current || current.endedAt) throw new Error('This practice record is closed.');
+      const previous = toDate(current.latestReading?.measuredAt);
+      transaction.set(readingRef, measurement);
+      if (!previous || measuredAt >= previous.getTime()) {
+        transaction.update(sessionRef, { latestReading: { id: readingRef.id, measuredAt: input.measuredAt } });
+      }
+    });
+  }
   return { zone } as const;
 }
 

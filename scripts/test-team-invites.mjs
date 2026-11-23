@@ -13,7 +13,7 @@ import { deleteApp, initializeApp } from 'firebase/app';
 import { connectAuthEmulator, createUserWithEmailAndPassword, getAuth, updateProfile } from 'firebase/auth';
 import {
   addDoc, collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, limit, onSnapshot, query,
-  serverTimestamp, setDoc, Timestamp as ClientTimestamp, updateDoc, where,
+  runTransaction, serverTimestamp, setDoc, Timestamp as ClientTimestamp, updateDoc, where,
 } from 'firebase/firestore';
 
 const projectId = process.env.GCLOUD_PROJECT ?? 'heatsense-aa3c8';
@@ -39,6 +39,27 @@ async function rejects(promise, code, message) {
     return error;
   }
   throw new Error(`${message}: expected a rejection`);
+}
+
+function fieldReadingData(user, changes = {}) {
+  return {
+    wbgtF: 84, enteredValue: 84, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(), zone: 'yellow', uilClass: 3,
+    recordedBy: user.uid, recordedAt: serverTimestamp(), acknowledgedBy: null, acknowledgedAt: null, ...changes,
+  };
+}
+
+async function saveFieldReading(user, teamId, sessionId, changes) {
+  const session = doc(user.db, 'teams', teamId, 'sessions', sessionId);
+  const ref = doc(collection(session, 'readings'));
+  const data = fieldReadingData(user, changes);
+  await runTransaction(user.db, async (transaction) => {
+    const current = (await transaction.get(session)).data();
+    transaction.set(ref, data);
+    if (current && 'latestReading' in current && (!current.latestReading || current.latestReading.measuredAt.toMillis() <= data.measuredAt.getTime())) {
+      transaction.update(session, { latestReading: { id: ref.id, measuredAt: data.measuredAt } });
+    }
+  });
+  return ref;
 }
 
 const DAY = 86_400_000;
@@ -393,11 +414,7 @@ console.log('Athlete emergency information (onboarding page 3)');
   const sessions = (user) => collection(user.db, 'teams', teamId, 'sessions');
   const newSession = (user, extra = {}) => addDoc(sessions(user), {
     venue: 'Memorial Stadium', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26',
-    startedBy: user.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null, ...extra,
-  });
-  const reading = (user, extra = {}) => ({
-    wbgtF: 84, enteredValue: 84, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(), zone: 'yellow', uilClass: 3,
-    recordedBy: user.uid, recordedAt: serverTimestamp(), acknowledgedBy: null, acknowledgedAt: null, ...extra,
+    startedBy: user.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null, latestReading: null, ...extra,
   });
   let session;
 
@@ -411,23 +428,26 @@ console.log('Athlete emergency information (onboarding page 3)');
     session = await newSession(coach);
   });
   const readings = (user) => collection(user.db, 'teams', teamId, 'sessions', session.id, 'readings');
+  const saveReading = (user, extra) => saveFieldReading(user, teamId, session.id, extra);
 
   await test('the rules recompute the UIL zone: 84 °F is Yellow in Class 3, never Orange', async () => {
-    await rejects(addDoc(readings(coach), reading(coach, { zone: 'orange' })), 'permission-denied', '84 °F stored as Orange');
-    const saved = await addDoc(readings(coach), reading(coach));
+    await rejects(saveReading(coach, { zone: 'orange' }), 'permission-denied', '84 °F stored as Orange');
+    const saved = await saveReading(coach);
     equal((await admin.doc(saved.path).get()).data().zone, 'yellow', 'stored zone');
   });
   await test('boundary readings must carry the published zone', async () => {
-    await addDoc(readings(coach), reading(coach, { wbgtF: 87.0, enteredValue: 87.0, zone: 'orange' }));
-    await addDoc(readings(coach), reading(coach, { wbgtF: 92.1, enteredValue: 92.1, zone: 'black' }));
-    await rejects(addDoc(readings(coach), reading(coach, { wbgtF: 86.9, enteredValue: 86.9, zone: 'orange' })), 'permission-denied', '86.9 as Orange');
+    await saveReading(coach, { wbgtF: 87.0, enteredValue: 87.0, zone: 'orange' });
+    await saveReading(coach, { wbgtF: 92.1, enteredValue: 92.1, zone: 'black' });
+    await rejects(saveReading(coach, { wbgtF: 86.9, enteredValue: 86.9, zone: 'orange' }), 'permission-denied', '86.9 as Orange');
   });
   await test('impossible, future-dated or forged readings are rejected', async () => {
-    await rejects(addDoc(readings(coach), reading(coach, { wbgtF: 840, zone: 'black' })), 'permission-denied', 'typo 840');
-    await rejects(addDoc(readings(coach), reading(coach, { measuredAt: new Date(Date.now() + 3_600_000) })), 'permission-denied', 'future reading');
-    await rejects(addDoc(readings(coach), reading(coach, { recordedBy: athlete.uid })), 'permission-denied', 'forged recorder');
-    await rejects(addDoc(readings(coach), reading(coach, { uilClass: 2 })), 'permission-denied', 'class differs from session');
-    await rejects(addDoc(readings(athlete), reading(athlete)), 'permission-denied', 'athlete recording');
+    await rejects(saveReading(coach, { wbgtF: 840, zone: 'black' }), 'permission-denied', 'typo 840');
+    await rejects(saveReading(coach, { measuredAt: new Date(Date.now() + 3_600_000) }), 'permission-denied', 'future reading');
+    await rejects(saveReading(coach, { recordedBy: athlete.uid }), 'permission-denied', 'forged recorder');
+    await rejects(saveReading(coach, { enteredValue: 92.4 }), 'permission-denied', 'derived Fahrenheit value differs from the entered measurement');
+    await rejects(saveReading(coach, { enteredValue: 84.04, wbgtF: 84.04 }), 'permission-denied', 'derived Fahrenheit value must use one decimal place');
+    await rejects(saveReading(coach, { uilClass: 2 }), 'permission-denied', 'class differs from session');
+    await rejects(saveReading(athlete), 'permission-denied', 'athlete recording');
   });
   await test('readings are append-only; the coach may acknowledge once', async () => {
     const [first] = (await getDocs(query(readings(coach), where('wbgtF', '==', 84)))).docs;
@@ -441,12 +461,22 @@ console.log('Athlete emergency information (onboarding page 3)');
   });
   await test('ending a session is final, and an ended session takes no readings', async () => {
     const log = (id, user = coach) => ({ outdoorStart: { at: serverTimestamp(), by: user.uid, readingId: id } });
-    const stale = await addDoc(readings(coach), reading(coach, { measuredAt: new Date(Date.now() - 16 * 60_000) }));
-    const stop = await addDoc(readings(coach), reading(coach, { wbgtF: 92.1, enteredValue: 92.1, zone: 'black' }));
+    const stale = await saveReading(coach, { measuredAt: new Date(Date.now() - 16 * 60_000) });
+    const reviewedTime = new Date();
+    const reviewed = await saveReading(coach, { measuredAt: reviewedTime });
+    equal((await getDoc(session)).data().latestReading.id, reviewed.id, 'new reading is tracked');
+    const stop = await saveReading(coach, { measuredAt: reviewedTime, wbgtF: 92.1, enteredValue: 92.1, zone: 'black' });
+    equal((await getDoc(session)).data().latestReading.id, stop.id, 'the later log wins when field times match');
     await rejects(update(session, log('missingReading012345')), 'permission-denied', 'missing opening reading');
     await rejects(update(session, log(stale.id)), 'permission-denied', 'stale opening reading');
     await rejects(update(session, log(stop.id)), 'permission-denied', 'black-zone opening reading');
-    const fresh = await addDoc(readings(coach), reading(coach));
+    await rejects(update(session, log(reviewed.id)), 'permission-denied', 'a reviewed reading was replaced before start');
+    await rejects(update(session, { latestReading: { id: reviewed.id, measuredAt: reviewedTime } }), 'permission-denied', 'latest reading cannot be moved to an old document');
+    const [fresh, lateEntry] = await Promise.all([
+      saveReading(coach),
+      saveReading(coach, { measuredAt: new Date(reviewedTime.getTime() - 60_000), enteredValue: 31.3, enteredUnit: 'C', wbgtF: 88.3, zone: 'orange' }),
+    ]);
+    equal((await getDoc(session)).data().latestReading.id, fresh.id, 'backdated readings do not replace the latest');
     await rejects(update(doc(athlete.db, session.path), log(fresh.id, athlete)), 'permission-denied', 'athlete recording start');
     await rejects(update(session, log(fresh.id, athlete)), 'permission-denied', 'wrong opening recorder');
     await update(session, log(fresh.id));
@@ -456,7 +486,8 @@ console.log('Athlete emergency information (onboarding page 3)');
     await rejects(update(session, log(fresh.id)), 'permission-denied', 'second outdoor start');
     await update(session, { endedAt: serverTimestamp() });
     await rejects(update(session, { endedAt: serverTimestamp() }), 'permission-denied', 'ending twice');
-    await rejects(addDoc(readings(coach), reading(coach)), 'permission-denied', 'reading after end');
+    await rejects(saveReading(coach), 'permission-denied', 'reading after end');
+    await rejects(update(lateEntry, { acknowledgedBy: coach.uid, acknowledgedAt: serverTimestamp() }), 'permission-denied', 'acknowledgment after end');
     await rejects(update(session, log(fresh.id)), 'permission-denied', 'outdoor start after end');
   });
 }
@@ -488,14 +519,14 @@ const trainer = await signUp('trainer');
     const roster = await getDocs(query(collection(trainer.db, 'teamMembers'), where('teamId', '==', teamId), where('role', 'in', ['athlete', 'trainer'])));
     assert(roster.docs.some((d) => d.data().userId === athlete.uid), 'trainer sees the athlete');
   });
-  const reading = (user, sessionId, extra = {}) => addDoc(collection(user.db, 'teams', teamId, 'sessions', sessionId, 'readings'), { wbgtF: 84, enteredValue: 84, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(), zone: 'yellow', uilClass: 3, recordedBy: user.uid, recordedAt: serverTimestamp(), acknowledgedBy: null, acknowledgedAt: null, ...extra });
+  const reading = (user, sessionId, extra) => saveFieldReading(user, teamId, sessionId, extra);
   await test('a trainer cannot start a session or write to an ended one', async () => {
-    await rejects(addDoc(sessions(trainer), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: trainer.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null }), 'permission-denied', 'trainer session');
+    await rejects(addDoc(sessions(trainer), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: trainer.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null, latestReading: null }), 'permission-denied', 'trainer session');
     await rejects(reading(trainer, sessionRef.id), 'permission-denied', 'trainer reading on an ended session');
   });
   await test('during a practice the coach started, a trainer logs readings and confirms guidance, but cannot end it', async () => {
     const { doc, updateDoc } = await import('firebase/firestore');
-    const open = await addDoc(sessions(coach), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null });
+    const open = await addDoc(sessions(coach), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null, latestReading: null });
     await rejects(reading(trainer, open.id, { zone: 'green' }), 'permission-denied', 'trainer picking the wrong zone');
     await rejects(reading(trainer, open.id, { recordedBy: coach.uid }), 'permission-denied', 'trainer recording as the coach');
     const logged = await reading(trainer, open.id);
@@ -506,7 +537,7 @@ const trainer = await signUp('trainer');
     await updateDoc(doc(coach.db, open.path), { endedAt: serverTimestamp() });
   });
   await test('coaches and trainers record one staff action per reading while the record is open', async () => {
-    const open = await addDoc(sessions(coach), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null });
+    const open = await addDoc(sessions(coach), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null, latestReading: null });
     const orange = await reading(trainer, open.id, { wbgtF: 88.4, enteredValue: 88.4, zone: 'orange' });
     const black = await reading(trainer, open.id, { wbgtF: 92.4, enteredValue: 92.4, zone: 'black' });
     const unrecorded = await reading(trainer, open.id);
@@ -561,8 +592,11 @@ const trainer = await signUp('trainer');
   });
 
   await test('during practice an approved athlete reports vitals the coach and trainer can read', async () => {
-    const open = await addDoc(collection(coach.db, 'teams', teamId, 'sessions'), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null });
+    const open = await addDoc(collection(coach.db, 'teams', teamId, 'sessions'), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null, latestReading: null });
     const vitals = (user, uid = athlete.uid) => doc(user.db, 'teams', teamId, 'sessions', open.id, 'vitals', uid);
+    await rejects(setDoc(vitals(athlete), sample()), 'permission-denied', 'vitals before outdoor start');
+    const opening = await saveFieldReading(coach, teamId, open.id);
+    await updateDoc(open, { outdoorStart: { at: serverTimestamp(), by: coach.uid, readingId: opening.id } });
     await rejects(setDoc(vitals(athlete), sample({ heartRate: 400 })), 'permission-denied', 'impossible heart rate');
     await rejects(setDoc(vitals(athlete), sample({ source: 'made-up' })), 'permission-denied', 'unknown source');
     await rejects(setDoc(vitals(athlete), sample({ spo2: 140 })), 'permission-denied', 'impossible blood oxygen');
@@ -627,6 +661,19 @@ const trainer = await signUp('trainer');
     await rejects(getDoc(doc(athlete.db, today.path)), 'permission-denied', 'athlete reading readiness');
   });
 }
+
+await test('an existing open record without latest-reading tracking still accepts staff updates', async () => {
+  const oldSession = admin.doc(`teams/${invite.teamId}/sessions/legacy-field-record`);
+  await oldSession.set({
+    venue: 'Practice field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26',
+    startedBy: coach.uid, startedAt: Timestamp.now(), endedAt: null, outdoorStart: null,
+  });
+  const sample = await saveFieldReading(trainer, invite.teamId, oldSession.id);
+  const record = doc(coach.db, oldSession.path);
+  await updateDoc(record, { outdoorStart: { at: serverTimestamp(), by: coach.uid, readingId: sample.id } });
+  equal((await getDoc(record)).data().outdoorStart.readingId, sample.id, 'legacy record keeps its opening reading');
+  await updateDoc(record, { endedAt: serverTimestamp() });
+});
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 await Promise.all([coach, athlete, stranger, trainer].map((u) => deleteApp(u.app)));
