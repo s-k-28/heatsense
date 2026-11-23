@@ -248,6 +248,20 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
   const began = outdoorStartTime(session);
   const startCheck = listenError ? 'unavailable' : checkOutdoorStart(latest, now);
   const recheck = recheckStatus(session, latest, now);
+  const decision = latest?.decision?.kind;
+  const outdoorExit = decision === 'moved_indoors' || decision === 'stopped_outdoors';
+  const closeAction = canEnd ? (
+    <>
+      <ActionButton busy={ending} busyLabel="Closing…" label={began ? 'End practice' : 'Close record'} onPress={async () => {
+        setEnding(true);
+        setEndError(false);
+        try { await endSession(session); }
+        catch { setEndError(true); }
+        finally { setEnding(false); }
+      }} variant="danger" />
+      {endError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t close the practice record. Check your connection and try again.</Text> : null}
+    </>
+  ) : null;
 
   return (
     <>
@@ -259,7 +273,7 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
           {!latest || recheck.msLeft === 0 ? 'Due now' : recheck.overdue ? `${clock(-recheck.msLeft)} overdue` : `in ${clock(recheck.msLeft)}`}
         </Text>
       </View> : <OutdoorStartPanel
-        measurement={latest ? `${temp.value(latest.wbgtF)}${temp.unit} WBGT · ${ZONES[latest.zone].label} · ${time(latest.measuredAt)}` : undefined}
+        measurement={latest ? `${temp.precise(latest.wbgtF).toFixed(1)}${temp.unit} WBGT · ${ZONES[latest.zone].label} · ${time(latest.measuredAt)}` : undefined}
         status={startCheck}>
         {latest && (startCheck === 'ready' || startCheck === 'stop') ? <LatestReading key={latest.id} latest={latest} session={session} /> : null}
         {canEnd ? <ActionButton
@@ -287,6 +301,7 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
 
       {began && latest ? <LatestReading key={latest.id} latest={latest} session={session} /> : null}
       {latest && !listenError ? <DecisionCard key={latest.id} reading={latest} session={session} /> : null}
+      {outdoorExit ? closeAction : null}
 
       <ReadingForm session={session} />
 
@@ -302,16 +317,7 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
         finally { sharingRef.current = false; setSharing(false); }
       }} variant="text" />
       {shareError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t share the record. Try again; the saved record is unchanged.</Text> : null}
-      {canEnd ? (
-        <ActionButton busy={ending} busyLabel="Closing…" label={began ? 'End practice' : 'Close record'} onPress={async () => {
-          setEnding(true);
-          setEndError(false);
-          try { await endSession(session); }
-          catch { setEndError(true); }
-          finally { setEnding(false); }
-        }} variant="danger" />
-      ) : null}
-      {endError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t close the practice record. Check your connection and try again.</Text> : null}
+      {outdoorExit ? null : closeAction}
     </>
   );
 }
@@ -407,6 +413,7 @@ function ReadingForm({ session }: { session: PracticeSession }) {
 }
 
 function DecisionCard({ reading, session, expanded = false }: { reading: FieldReading; session: PracticeSession; expanded?: boolean }) {
+  const temp = useTemperature();
   const [showChoices, setShowChoices] = useState(expanded);
   const [kind, setKind] = useState<PracticeDecisionKind | null>(null);
   const [busy, setBusy] = useState(false);
@@ -415,7 +422,10 @@ function DecisionCard({ reading, session, expanded = false }: { reading: FieldRe
 
   return (
     <View style={[styles.decision, reading.zone === 'black' && styles.decisionStop]}>
-      <Text accessibilityRole="header" style={styles.fieldLabel}>Staff decision · {time(reading.measuredAt)} reading</Text>
+      <View style={styles.decisionHeading}>
+        <Text accessibilityRole="header" style={styles.fieldLabel}>Staff decision</Text>
+        <Text style={styles.meta}>{temp.precise(reading.wbgtF).toFixed(1)}{temp.unit} WBGT · {time(reading.measuredAt)}</Text>
+      </View>
       {reading.decision ? (
         <Text accessibilityLiveRegion="polite" style={styles.help}>
           {PRACTICE_DECISION_LABELS[reading.decision.kind]} · Recorded {time(reading.decision.at)}
@@ -459,7 +469,7 @@ function History({ readings, temp, session, canRecord }: { readings: FieldReadin
               <Row
                 detail={[reading.decision ? PRACTICE_DECISION_LABELS[reading.decision.kind] : canAdd ? 'Log a decision' : '', !reading.acknowledgedAt ? 'Guidance pending' : ''].filter(Boolean).join(' · ') || undefined}
                 onPress={canAdd ? () => setSelected(selected === reading.id ? null : reading.id) : undefined}
-                title={`${temp.value(reading.wbgtF)}${temp.unit} · ${zones}`}
+                title={`${temp.precise(reading.wbgtF).toFixed(1)}${temp.unit} · ${zones}`}
                 value={time(reading.measuredAt)}
               />
               {canAdd && selected === reading.id ? <DecisionCard expanded reading={reading} session={session} /> : null}
@@ -494,6 +504,7 @@ const styles = StyleSheet.create({
   form: { gap: Spacing.three },
   reading: { borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.two, paddingBottom: Spacing.four },
   decision: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: 16, borderWidth: 1, gap: Spacing.three, padding: Spacing.four },
+  decisionHeading: { gap: Spacing.one },
   decisionStop: { borderColor: Palette.emergency },
   guidanceToggle: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 48 },
   guidanceCopy: { flex: 1, gap: 4 },
