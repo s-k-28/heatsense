@@ -393,7 +393,7 @@ console.log('Athlete emergency information (onboarding page 3)');
   const sessions = (user) => collection(user.db, 'teams', teamId, 'sessions');
   const newSession = (user, extra = {}) => addDoc(sessions(user), {
     venue: 'Memorial Stadium', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26',
-    startedBy: user.uid, startedAt: serverTimestamp(), endedAt: null, ...extra,
+    startedBy: user.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null, ...extra,
   });
   const reading = (user, extra = {}) => ({
     wbgtF: 84, enteredValue: 84, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(), zone: 'yellow', uilClass: 3,
@@ -406,6 +406,8 @@ console.log('Athlete emergency information (onboarding page 3)');
     await rejects(newSession(stranger), 'permission-denied', 'stranger starting a session');
     await rejects(newSession(coach, { uilClass: 4 }), 'permission-denied', 'unknown UIL class');
     await rejects(newSession(coach, { recheckMinutes: 2 }), 'permission-denied', 'recheck too frequent');
+    await rejects(newSession(coach, { recheckMinutes: 45 }), 'permission-denied', 'recheck too late');
+    await rejects(newSession(coach, { outdoorStart: {} }), 'permission-denied', 'record skips field check on creation');
     session = await newSession(coach);
   });
   const readings = (user) => collection(user.db, 'teams', teamId, 'sessions', session.id, 'readings');
@@ -438,9 +440,24 @@ console.log('Athlete emergency information (onboarding page 3)');
     await rejects(getDocs(readings(stranger)), 'permission-denied', 'stranger reading');
   });
   await test('ending a session is final, and an ended session takes no readings', async () => {
+    const log = (id, user = coach) => ({ outdoorStart: { at: serverTimestamp(), by: user.uid, readingId: id } });
+    const stale = await addDoc(readings(coach), reading(coach, { measuredAt: new Date(Date.now() - 16 * 60_000) }));
+    const stop = await addDoc(readings(coach), reading(coach, { wbgtF: 92.1, enteredValue: 92.1, zone: 'black' }));
+    await rejects(update(session, log('missingReading012345')), 'permission-denied', 'missing opening reading');
+    await rejects(update(session, log(stale.id)), 'permission-denied', 'stale opening reading');
+    await rejects(update(session, log(stop.id)), 'permission-denied', 'black-zone opening reading');
+    const fresh = await addDoc(readings(coach), reading(coach));
+    await rejects(update(doc(athlete.db, session.path), log(fresh.id, athlete)), 'permission-denied', 'athlete recording start');
+    await rejects(update(session, log(fresh.id, athlete)), 'permission-denied', 'wrong opening recorder');
+    await update(session, log(fresh.id));
+    const opening = (await getDoc(session)).data().outdoorStart;
+    equal(opening.readingId, fresh.id, 'start links to an opening reading');
+    assert(opening.at instanceof ClientTimestamp, 'start has a timestamp');
+    await rejects(update(session, log(fresh.id)), 'permission-denied', 'second outdoor start');
     await update(session, { endedAt: serverTimestamp() });
     await rejects(update(session, { endedAt: serverTimestamp() }), 'permission-denied', 'ending twice');
     await rejects(addDoc(readings(coach), reading(coach)), 'permission-denied', 'reading after end');
+    await rejects(update(session, log(fresh.id)), 'permission-denied', 'outdoor start after end');
   });
 }
 
@@ -473,12 +490,12 @@ const trainer = await signUp('trainer');
   });
   const reading = (user, sessionId, extra = {}) => addDoc(collection(user.db, 'teams', teamId, 'sessions', sessionId, 'readings'), { wbgtF: 84, enteredValue: 84, enteredUnit: 'F', source: 'handheld', measuredAt: new Date(), zone: 'yellow', uilClass: 3, recordedBy: user.uid, recordedAt: serverTimestamp(), acknowledgedBy: null, acknowledgedAt: null, ...extra });
   await test('a trainer cannot start a session or write to an ended one', async () => {
-    await rejects(addDoc(sessions(trainer), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: trainer.uid, startedAt: serverTimestamp(), endedAt: null }), 'permission-denied', 'trainer session');
+    await rejects(addDoc(sessions(trainer), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: trainer.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null }), 'permission-denied', 'trainer session');
     await rejects(reading(trainer, sessionRef.id), 'permission-denied', 'trainer reading on an ended session');
   });
   await test('during a practice the coach started, a trainer logs readings and confirms guidance, but cannot end it', async () => {
     const { doc, updateDoc } = await import('firebase/firestore');
-    const open = await addDoc(sessions(coach), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null });
+    const open = await addDoc(sessions(coach), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null });
     await rejects(reading(trainer, open.id, { zone: 'green' }), 'permission-denied', 'trainer picking the wrong zone');
     await rejects(reading(trainer, open.id, { recordedBy: coach.uid }), 'permission-denied', 'trainer recording as the coach');
     const logged = await reading(trainer, open.id);
@@ -514,7 +531,7 @@ const trainer = await signUp('trainer');
   });
 
   await test('during practice an approved athlete reports vitals the coach and trainer can read', async () => {
-    const open = await addDoc(collection(coach.db, 'teams', teamId, 'sessions'), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null });
+    const open = await addDoc(collection(coach.db, 'teams', teamId, 'sessions'), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null });
     const vitals = (user, uid = athlete.uid) => doc(user.db, 'teams', teamId, 'sessions', open.id, 'vitals', uid);
     await rejects(setDoc(vitals(athlete), sample({ heartRate: 400 })), 'permission-denied', 'impossible heart rate');
     await rejects(setDoc(vitals(athlete), sample({ source: 'made-up' })), 'permission-denied', 'unknown source');

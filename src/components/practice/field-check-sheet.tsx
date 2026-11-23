@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Group, Row, TextLink } from '@/components/ui/list';
+import { OutdoorStartPanel } from '@/components/practice/outdoor-start-panel';
 import { shareMessage } from '@/components/ui/share-message';
 import { ActionButton } from '@/components/ui/action-button';
 import { Face, Palette, Spacing, Type } from '@/constants/theme';
+import { checkOutdoorStart, MAX_RECHECK_MINUTES, outdoorStartTime } from '@/lib/outdoor-start';
 import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, type UilClass } from '@/lib/uil-wbgt';
 import { firestore } from '@/services/firebase';
@@ -17,6 +19,7 @@ import {
   acknowledgeReading,
   addReading,
   endSession,
+  recordOutdoorStart,
   recheckStatus,
   sessionReport,
   startSession,
@@ -30,7 +33,7 @@ import { askForHeatAlerts } from '@/services/heat-alerts';
 import { useTeamDraft } from '@/state/onboarding';
 import { endPractice, startPractice, usePreferences, useTemperature } from '@/state/preferences';
 
-const RECHECK_CHOICES = [15, 30, 45, 60] as const;
+const RECHECK_CHOICES = [15, MAX_RECHECK_MINUTES] as const;
 const MEASURED_CHOICES = [0, 5, 10, 15] as const;
 
 function clock(ms: number) {
@@ -84,7 +87,8 @@ function FieldCheckContent({ onClose, visible, trainerTeamId, uid, authReady }: 
       if (!live) return;
       setRecord({ teamId, session: next });
       setFailedTeam(null);
-      if (next) startPractice(next.startedAt.getTime());
+      const outdoorStart = next && outdoorStartTime(next);
+      if (outdoorStart) startPractice(outdoorStart.getTime());
       else endPractice();
     }, () => { if (live) setFailedTeam(teamId); });
     return () => { live = false; stop(); };
@@ -103,7 +107,7 @@ function FieldCheckContent({ onClose, visible, trainerTeamId, uid, authReady }: 
     </>
   );
   else if (failed) body = <><Notice text="Couldn’t load practice records. Check your connection and try again." /><ActionButton label="Try again" onPress={retrySession} variant="secondary" /></>;
-  else if (!session) body = trainer ? <Notice text="Practice hasn’t started yet. Once the head coach starts it, you can log readings and confirm guidance here." /> : <StartForm key={teamId} teamId={teamId} />;
+  else if (!session) body = trainer ? <Notice text="Once the head coach opens a practice record, you can log field readings here." /> : <StartForm key={teamId} teamId={teamId} />;
   else body = <SessionView canEnd={!trainer} key={`${session.teamId}:${session.id}`} session={session} />;
 
   return (
@@ -168,10 +172,8 @@ function StartForm({ teamId }: { teamId: string }) {
     setError(null);
     try {
       await startSession(teamId, { venue, uilClass, recheckMinutes: recheck });
-      // Starting practice is when recheck reminders start to matter.
-      askForHeatAlerts().catch(() => {});
     } catch {
-      setError('Couldn’t start the session. Check your connection and try again.');
+      setError('Couldn’t open the practice record. Check your connection and try again.');
     } finally {
       setBusy(false);
     }
@@ -179,6 +181,7 @@ function StartForm({ teamId }: { teamId: string }) {
 
   return (
     <>
+      <Text style={styles.help}>Open the team record, then log an on-site WBGT reading before outdoor practice.</Text>
       <Field label="Where is practice?">
         <TextInput editable={!busy} accessibilityLabel="Practice location" maxLength={80} onChangeText={setVenue} placeholderTextColor={Palette.inkFaint} style={styles.input} value={venue} />
       </Field>
@@ -192,7 +195,7 @@ function StartForm({ teamId }: { teamId: string }) {
         <Text style={styles.help}>Use the interval in your school’s heat plan. HeatSense tells you when a reading is due.</Text>
       </Field>
       {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
-      <ActionButton busy={busy} busyLabel="Starting…" disabled={!uilClass || !venue.trim()} label="Start practice session" onPress={start} />
+      <ActionButton busy={busy} busyLabel="Opening…" disabled={!uilClass || !venue.trim()} label="Open practice record" onPress={start} />
     </>
   );
 }
@@ -218,6 +221,9 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
   const retryReadings = () => { setReadings(null); setListenError(false); setListenAttempt(value => value + 1); };
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const startingRef = useRef(false);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -237,21 +243,47 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
   const report = sessionReport(session, readings);
   const copied = copiedReport === report;
   const latest = readings.at(-1) ?? null;
+  const began = outdoorStartTime(session);
+  const startCheck = listenError ? 'unavailable' : checkOutdoorStart(latest, now);
   const recheck = recheckStatus(session, latest, now);
 
   return (
     <>
-      <Text style={styles.meta}>{session.venue} · UIL Class {session.uilClass} · started {time(session.startedAt)}</Text>
+      <Text style={styles.meta}>{session.venue} · UIL Class {session.uilClass} · {began ? `Started ${time(began)}` : `Record opened ${time(session.startedAt)}`}</Text>
 
-      <View style={styles.recheck}>
+      {began ? <View style={styles.recheck}>
         <Text style={styles.recheckLabel}>{!latest ? 'First reading' : 'Next reading'}</Text>
         <Text style={[styles.recheckValue, recheck.overdue && { color: Palette.emergency }]}>
           {!latest || recheck.msLeft === 0 ? 'Due now' : recheck.overdue ? `${clock(-recheck.msLeft)} overdue` : `in ${clock(recheck.msLeft)}`}
         </Text>
-      </View>
-      {!latest ? <Text style={styles.help}>Take a WBGT reading on the field before athletes start.</Text> : null}
+      </View> : <OutdoorStartPanel
+        measurement={latest ? `${temp.value(latest.wbgtF)}${temp.unit} WBGT · ${ZONES[latest.zone].label} · ${time(latest.measuredAt)}` : undefined}
+        status={startCheck}>
+        {latest && (startCheck === 'ready' || startCheck === 'stop') ? <LatestReading key={latest.id} latest={latest} session={session} /> : null}
+        {canEnd ? <ActionButton
+          busy={starting}
+          busyLabel="Verifying reading…"
+          disabled={startCheck !== 'ready'}
+          label="Record outdoor start"
+          onPress={async () => {
+            if (!latest || startCheck !== 'ready' || startingRef.current) return;
+            startingRef.current = true;
+            setStarting(true);
+            setStartError(null);
+            try {
+              if (await recordOutdoorStart(session, latest.id)) void askForHeatAlerts().catch(() => {});
+              else setStartError('The latest reading changed or expired. Review the current reading and try again.');
+            } catch {
+              setStartError('Couldn’t save outdoor start. Check your connection and the current field reading.');
+            } finally {
+              startingRef.current = false;
+              setStarting(false);
+            }
+          }} /> : <Text style={styles.help}>The head coach records outdoor start.</Text>}
+        {startError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{startError}</Text> : null}
+      </OutdoorStartPanel>}
 
-      {latest ? <LatestReading key={latest.id} latest={latest} session={session} /> : null}
+      {began && latest ? <LatestReading key={latest.id} latest={latest} session={session} /> : null}
 
       <ReadingForm session={session} />
 
@@ -268,7 +300,7 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
       }} variant="text" />
       {shareError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t share the record. Try again; the saved record is unchanged.</Text> : null}
       {canEnd ? (
-        <ActionButton busy={ending} busyLabel="Ending…" label="End practice" onPress={async () => {
+        <ActionButton busy={ending} busyLabel="Closing…" label={began ? 'End practice' : 'Close record'} onPress={async () => {
           setEnding(true);
           setEndError(false);
           try { await endSession(session); }
@@ -276,7 +308,7 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
           finally { setEnding(false); }
         }} variant="danger" />
       ) : null}
-      {endError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t end practice. Check your connection and try again.</Text> : null}
+      {endError ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t close the practice record. Check your connection and try again.</Text> : null}
     </>
   );
 }
@@ -295,7 +327,7 @@ function LatestReading({ latest, session }: { latest: FieldReading; session: Pra
       <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={styles.guidanceToggle} aria-expanded={expanded}>
         <View style={styles.guidanceCopy}>
           <Text style={[styles.guidanceTitle, { color: zone.text }]}>{zone.label} guidance</Text>
-          <Text style={styles.help}>{latest.acknowledgedAt ? `Applied at ${time(latest.acknowledgedAt)}` : 'Review and confirm for the latest reading'}</Text>
+          <Text style={styles.help}>{latest.acknowledgedAt ? `Acknowledged at ${time(latest.acknowledgedAt)}` : 'Review the guidance for this reading'}</Text>
         </View>
         <Text style={styles.help}>{expanded ? 'Hide' : 'View'}</Text>
       </Pressable>
@@ -315,7 +347,7 @@ function LatestReading({ latest, session }: { latest: FieldReading; session: Pra
           accessibilityHint="Records that you've read the guidance for this reading"
           busy={acking}
           busyLabel="Saving…"
-          label="I’ve applied this guidance"
+          label="Acknowledge guidance"
           onPress={async () => {
             setAcking(true);
             setError(false);
@@ -363,11 +395,10 @@ function ReadingForm({ session }: { session: PracticeSession }) {
         <TextInput editable={!busy} accessibilityLabel={`WBGT in degrees ${unit === 'F' ? 'Fahrenheit' : 'Celsius'}`} inputMode="decimal" keyboardType="decimal-pad" maxLength={5} onChangeText={setValue} onSubmitEditing={save} placeholder="WBGT" placeholderTextColor={Palette.inkFaint} style={[styles.input, styles.inputGrow]} value={value} />
         <Chips<'F' | 'C'> disabled={busy} format={(u) => `°${u}`} label="Unit" onSelect={setUnit} options={['F', 'C']} selected={unit} />
       </View>
-      {/* Save sits right under the number, above where the number pad opens (the pad has no return key). */}
-      {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
-      <ActionButton busy={busy} busyLabel="Saving…" label="Save reading" onPress={() => { Keyboard.dismiss(); save(); }} />
       <Chips<ReadingSource> disabled={busy} format={(s) => SOURCE_LABEL[s]} label="Where the reading came from" onSelect={setSource} options={['handheld', 'station', 'other']} selected={source} />
       <Chips disabled={busy} format={(m) => (m === 0 ? 'Measured now' : `${m} min ago`)} label="When it was measured" onSelect={setMinutesAgo} options={MEASURED_CHOICES} selected={minutesAgo as (typeof MEASURED_CHOICES)[number]} />
+      {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
+      <ActionButton busy={busy} busyLabel="Saving…" label="Save reading" onPress={() => { Keyboard.dismiss(); save(); }} />
     </View>
   );
 }

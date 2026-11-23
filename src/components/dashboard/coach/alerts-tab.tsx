@@ -76,13 +76,13 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
   const session = data?.session ?? null;
   const resolutionScope = JSON.stringify([user?.uid ?? null, data?.sample ? 'sample' : data?.teamId ?? null, session?.id ?? null]);
   const resolved = resolution?.scope === resolutionScope ? resolution.dates : {};
-  const recheck = session ? recheckStatus(session, latest, now) : null;
+  const recheck = session && session.outdoorStart !== null ? recheckStatus(session, latest, now) : null;
 
   if (recheck?.overdue) {
     items.push({ id: 'overdue', tone: Palette.emergency, open: true, resolvable: false, at: new Date(recheck.dueAt), title: 'Field reading overdue', detail: `Your plan rechecks every ${session!.recheckMinutes} min.`, action: { label: 'Add a reading', onPress: () => setSheet(true) } });
   }
   if (latest && !latest.acknowledgedAt) {
-    items.push({ id: `ack-${latest.id}`, tone: Palette.warning, open: true, resolvable: false, at: latest.measuredAt, title: 'Guidance not applied yet', detail: `${temp.value(latest.wbgtF)}${temp.unit} · ${ZONES[latest.zone].label}. Confirm the UIL changes.`, action: openSheet });
+    items.push({ id: `ack-${latest.id}`, tone: Palette.warning, open: true, resolvable: false, at: latest.measuredAt, title: 'Guidance awaiting acknowledgment', detail: `${temp.value(latest.wbgtF)}${temp.unit} · ${ZONES[latest.zone].label}. Review the UIL guidance for this reading.`, action: openSheet });
   }
   // The field got hotter than today's plan allows: say which rules it breaks and open the plan.
   const { active: plan } = usePracticePlans();
@@ -125,7 +125,7 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
   return (
     <>
       {data?.sample ? <SampleTag /> : null}
-      <StatusBar latest={latest} now={now} overdue={Boolean(recheck?.overdue)} msLeft={recheck?.msLeft ?? null} unit={temp.unit} value={latest ? temp.value(latest.wbgtF) : null} />
+      <StatusBar awaitingStart={session?.outdoorStart === null} latest={latest} now={now} overdue={Boolean(recheck?.overdue)} msLeft={recheck?.msLeft ?? null} unit={temp.unit} value={latest ? temp.value(latest.wbgtF) : null} />
 
       <View style={styles.segmentWrap}><SlidingTabs label="Alert status" onChange={(index) => setView(index === 0 ? 'open' : 'resolved')} options={[`Open ${open.length}`, `Resolved ${closed.length}`]} selected={view === 'open' ? 0 : 1} variant="coach" /></View>
 
@@ -155,9 +155,9 @@ export function AlertsTab({ onNavigate }: { onNavigate: (tab: string) => void })
 }
 
 /** The field right now: zone, reading, and a live countdown to the next recheck. */
-function StatusBar({ latest, now, overdue, msLeft, unit, value }: { latest: { zone: Zone; measuredAt: Date } | null; now: number; overdue: boolean; msLeft: number | null; unit: string; value: number | string | null }) {
+function StatusBar({ awaitingStart, latest, now, overdue, msLeft, unit, value }: { awaitingStart: boolean; latest: { zone: Zone; measuredAt: Date } | null; now: number; overdue: boolean; msLeft: number | null; unit: string; value: number | string | null }) {
   const tone = latest ? zoneColor(latest.zone) : Palette.inkFaint;
-  const missingReading = msLeft === null ? 'No practice in progress.' : overdue ? 'First field reading is overdue.' : 'First field reading needed.';
+  const missingReading = awaitingStart ? 'Take a reading before outdoor start.' : msLeft === null ? 'No practice in progress.' : overdue ? 'First field reading is overdue.' : 'First field reading needed.';
   return (
     <View accessible accessibilityLabel={latest ? `${ZONES[latest.zone].label}, ${value}${unit}. ${msLeft === null ? '' : overdue ? 'Reading overdue' : `Next reading in ${Math.ceil(msLeft / 60_000)} minutes`}` : `No reading yet. ${missingReading}`} style={styles.status}>
       <View style={[styles.statusEdge, { backgroundColor: tone }]} />

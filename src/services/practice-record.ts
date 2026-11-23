@@ -1,7 +1,7 @@
 import { doc, onSnapshot, type Timestamp } from 'firebase/firestore';
 
 import { firestore } from '@/services/firebase';
-import { sessionReport, type FieldReading, type PracticeSession } from '@/services/practice-sessions';
+import { readOutdoorStart, sessionReport, type FieldReading, type PracticeSession } from '@/services/practice-sessions';
 
 export type PracticeRecord = PracticeSession & { policy: string | null };
 
@@ -33,6 +33,7 @@ export function watchPracticeRecord(teamId: string, id: string, onChange: (recor
       uilClass: data.uilClass,
       recheckMinutes: data.recheckMinutes,
       policy: typeof data.policy === 'string' ? data.policy : null,
+      outdoorStart: readOutdoorStart(data.outdoorStart),
     });
   }, onError);
 }

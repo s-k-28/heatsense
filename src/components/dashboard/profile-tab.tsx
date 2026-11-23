@@ -1,3 +1,4 @@
+import { outdoorPracticeDuration } from '@/lib/outdoor-start';
 import { Text, TextInput } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { File, Paths } from 'expo-file-system';
@@ -211,7 +212,7 @@ function Season({ team, waiting, coach = false }: { team: ReturnType<typeof useC
   const days = PERIOD_DAYS[period];
   const inRange = (from: number, to: number) => (past ?? []).filter((p) => p.session.startedAt.getTime() >= from && p.session.startedAt.getTime() < to);
   const current = days ? inRange(now - days * 86_400_000, now) : past ?? [];
-  const hours = (list: typeof current) => list.reduce((sum, p) => sum + ((p.session.endedAt ?? p.session.startedAt).getTime() - p.session.startedAt.getTime()), 0) / 3_600_000;
+  const hours = (list: typeof current) => list.reduce((sum, p) => sum + (outdoorPracticeDuration(p.session) ?? 0), 0) / 3_600_000;
   const hottest = current.reduce<{ wbgtF: number; zone: Zone } | null>((hot, p) => (p.peak && (!hot || p.peak.wbgtF > hot.wbgtF) ? p.peak : hot), null);
   return (
     <View style={[styles.season, coach && styles.coachSeason]}>

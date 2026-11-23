@@ -233,20 +233,37 @@ service cloud.firestore {
     }
 
     match /teams/{teamId}/sessions/{sessionId} {
+      function freshOpeningReading(readingId) {
+        let reading = get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)/readings/$(readingId)).data;
+        return reading.zone in ['green', 'yellow', 'orange', 'red']
+          && reading.measuredAt is timestamp
+          && reading.measuredAt <= request.time
+          && reading.measuredAt >= request.time - duration.value(15, 'm');
+      }
+      function validOutdoorStart() {
+        let start = request.resource.data.outdoorStart;
+        return resource.data.outdoorStart == null
+          && start is map && start.keys().hasOnly(['at', 'by', 'readingId'])
+          && start.at == request.time && start.by == request.auth.uid
+          && start.readingId is string && start.readingId.matches('^[A-Za-z0-9]{20}$')
+          && freshOpeningReading(start.readingId);
+      }
       allow read: if isCoach(teamId) || isActiveMember(teamId);
       allow create: if isCoach(teamId)
-        && request.resource.data.keys().hasOnly(['venue', 'uilClass', 'recheckMinutes', 'policy', 'startedBy', 'startedAt', 'endedAt'])
+        && request.resource.data.keys().hasOnly(['venue', 'uilClass', 'recheckMinutes', 'policy', 'startedBy', 'startedAt', 'endedAt', 'outdoorStart'])
         && request.resource.data.venue is string && request.resource.data.venue.size() >= 1 && request.resource.data.venue.size() <= 80
         && request.resource.data.uilClass in [2, 3]
-        && request.resource.data.recheckMinutes is int && request.resource.data.recheckMinutes >= 5 && request.resource.data.recheckMinutes <= 120
+        && request.resource.data.recheckMinutes is int && request.resource.data.recheckMinutes >= 5 && request.resource.data.recheckMinutes <= 30
         && request.resource.data.policy is string
         && request.resource.data.startedBy == request.auth.uid
         && request.resource.data.startedAt == request.time
-        && request.resource.data.endedAt == null;
+        && request.resource.data.endedAt == null && request.resource.data.outdoorStart == null;
       allow update: if isCoach(teamId)
         && resource.data.endedAt == null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endedAt'])
-        && request.resource.data.endedAt == request.time;
+        && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['endedAt'])
+            && request.resource.data.endedAt == request.time)
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['outdoorStart'])
+            && validOutdoorStart()));
       allow delete: if false;
 
       // Band vitals during practice: one document per athlete, overwritten as new samples arrive.

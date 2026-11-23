@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { ZONES } from '@/lib/practice';
+import { outdoorStartTime } from '@/lib/outdoor-start';
 import { nextReadingDueAt } from '@/lib/recheck';
 import { setActivityReading } from '@/lib/practice-activity';
 import { UIL_GUIDANCE } from '@/lib/uil-wbgt';
@@ -24,7 +25,7 @@ export function useHeatAlerts(role: SessionRole) {
 
   // Recheck reminders go to whoever logs readings: the coach and approved trainers.
   const logs = live && role !== 'athlete';
-  const dueAt = session && !session.endedAt ? nextReadingDueAt(session, latest) : null;
+  const dueAt = session && !session.endedAt && outdoorStartTime(session) ? nextReadingDueAt(session, latest) : null;
   useEffect(() => {
     if (!logs) return;
     // Turning reminders off in Profile cancels the ones already scheduled.

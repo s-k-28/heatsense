@@ -73,7 +73,7 @@ export function ReadingsTimeline({ readings, startedAt, uilClass, now, temp }: {
             <View style={[styles.dot, { backgroundColor: tone(r.zone) }]} />
             <Text style={styles.rowValue}>{temp.value(r.wbgtF)}<Text style={styles.rowUnit}>{temp.unit}</Text></Text>
             <Text style={[styles.rowZone, { color: ZONES[r.zone].text }]}>{ZONES[r.zone].label.replace(' zone', '')}</Text>
-            <Text style={[styles.rowState, { color: r.acknowledgedAt ? Palette.safe : Palette.inkMuted }]}>{r.acknowledgedAt ? 'Applied' : 'Pending'}</Text>
+            <Text style={[styles.rowState, { color: r.acknowledgedAt ? Palette.safe : Palette.inkMuted }]}>{r.acknowledgedAt ? 'Acknowledged' : 'Pending'}</Text>
           </View>
         ))}
       </View>

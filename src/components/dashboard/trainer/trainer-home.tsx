@@ -42,7 +42,8 @@ function PracticeOverview({ onInvite, readOnly = false, role = 'coach', teamPrac
   const latest = data?.readings.at(-1) ?? null;
   const zone = latest?.zone ?? null;
   const session = data?.session ?? null;
-  const recheck = session ? recheckStatus(session, latest, now) : null;
+  const awaitingStart = session?.outdoorStart === null;
+  const recheck = session && session.outdoorStart !== null ? recheckStatus(session, latest, now) : null;
   const acked = data?.readings.filter((r) => r.acknowledgedAt).length ?? 0;
   const total = data?.readings.length ?? 0;
   const [detail, setDetail] = useState<'recheck' | 'readings' | 'guidance' | null>(null);
@@ -52,11 +53,11 @@ function PracticeOverview({ onInvite, readOnly = false, role = 'coach', teamPrac
   const todayPeak = (data?.readings ?? []).filter((r) => r.measuredAt.toDateString() === new Date(now).toDateString()).reduce<{ wbgtF: number; zone: Zone } | null>((hot, r) => (!hot || r.wbgtF > hot.wbgtF ? { wbgtF: r.wbgtF, zone: r.zone } : hot), null);
   const minutesAgo = latest ? Math.max(0, Math.round((now - latest.measuredAt.getTime()) / 60_000)) : 0;
 
-  const action = !data ? 'Loading practice…' : !session ? 'Start practice' : latest && !latest.acknowledgedAt ? 'Review guidance' : latest ? 'Add a reading' : 'Take first reading';
-  // Trainers log readings once the coach has started practice; athletes only watch.
+  const action = !data ? 'Loading practice…' : !session ? 'Check field conditions' : awaitingStart ? 'Continue field check' : latest && !latest.acknowledgedAt ? 'Review guidance' : latest ? 'Add a reading' : 'Take first reading';
+  // Trainers log readings once the coach opens the record; athletes only watch.
   const trainerRecords = role === 'trainer' && Boolean(session) && !data?.sample;
   const canRecord = !readOnly || trainerRecords;
-  const checkLabel = !data ? 'Loading practice' : !session ? 'No practice' : !latest ? 'First reading due now' : recheck?.overdue ? 'A fresh reading is due' : `Next reading in ${Math.max(0, Math.ceil((recheck?.msLeft ?? 0) / 60_000))} min`;
+  const checkLabel = !data ? 'Loading practice' : !session ? 'No practice' : !latest ? 'First reading due now' : awaitingStart ? 'Awaiting outdoor start' : recheck?.overdue ? 'A fresh reading is due' : `Next reading in ${Math.max(0, Math.ceil((recheck?.msLeft ?? 0) / 60_000))} min`;
 
   if (team.status === 'error') {
     return <>
@@ -104,7 +105,7 @@ function PracticeOverview({ onInvite, readOnly = false, role = 'coach', teamPrac
           </View>
           <View style={styles.coachQuickCard}>
             <Text style={styles.coachQuickLabel}>TEAM STATUS</Text>
-            <Text style={styles.coachQuickValue}>{!data ? 'Loading…' : total ? `${acked}/${total} applied` : 'No readings'}</Text>
+            <Text style={styles.coachQuickValue}>{!data ? 'Loading…' : total ? `${acked}/${total} reviewed` : 'No readings'}</Text>
           </View>
         </Animated.View>
 
@@ -112,7 +113,7 @@ function PracticeOverview({ onInvite, readOnly = false, role = 'coach', teamPrac
         <Animated.View entering={enter(2, reduced)} style={styles.coachSurface}>
           <View style={styles.coachPracticeRow}>
             <View>
-              <Text style={styles.coachCardTitle}>{!data ? 'Loading practice…' : session ? 'Practice in progress' : 'No active practice'}</Text>
+              <Text style={styles.coachCardTitle}>{!data ? 'Loading practice…' : awaitingStart ? 'Awaiting outdoor start' : session ? 'Practice in progress' : 'No active practice'}</Text>
               <Text style={styles.coachBody}>{!data ? 'Looking for your team’s latest reading.' : latest ? `${ZONES[latest.zone].label} guidance is based on the latest field reading.` : 'Field guidance appears after a real WBGT reading.'}</Text>
             </View>
             {latest ? <View accessibilityElementsHidden style={styles.coachScale}>{(['green', 'yellow', 'orange', 'red', 'black'] as Zone[]).map((key) => <View key={key} style={[styles.coachScaleStep, { backgroundColor: key === 'black' ? '#8E8E93' : ZONES[key].color, opacity: zone === key ? 1 : 0.25 }]} />)}</View> : null}
@@ -193,7 +194,7 @@ function PracticeOverview({ onInvite, readOnly = false, role = 'coach', teamPrac
             <Text style={styles.ringValue}>{data ? total : '--'}</Text>
           </HomeRing>
         </Metric>
-        <Metric largeText={largeText} label={role === 'athlete' ? "Team days" : "Applied"} onPress={() => setDetail(detail === 'guidance' ? null : 'guidance')} selected={detail === 'guidance'} value={role === 'athlete' ? teamPracticeDays === undefined ? 'Team practice history loading' : `${teamPracticeDays} available team practice days` : !data ? 'Acknowledgements loading' : `${acked} of ${total} readings acknowledged`}>
+        <Metric largeText={largeText} label={role === 'athlete' ? "Team days" : "Reviewed"} onPress={() => setDetail(detail === 'guidance' ? null : 'guidance')} selected={detail === 'guidance'} value={role === 'athlete' ? teamPracticeDays === undefined ? 'Team practice history loading' : `${teamPracticeDays} available team practice days` : !data ? 'Acknowledgements loading' : `${acked} of ${total} readings acknowledged`}>
           <HomeRing max={role === 'athlete' ? Math.max(teamPracticeDays ?? 0, 1) : Math.max(total, 1)} segments={[{ color: Palette.safe, value: role === 'athlete' ? teamPracticeDays ?? 0 : acked }]} size={ringSize} stroke={7} summary={role === 'athlete' ? teamPracticeDays === undefined ? 'Team practice history loading' : `${teamPracticeDays} available team practice days` : !data ? 'Acknowledgements loading' : `${acked} of ${total} readings acknowledged`}>
             <Text style={styles.ringValue}>{role === 'athlete' ? `${teamPracticeDays ?? '--'}` : total ? `${acked}/${total}` : '--'}</Text>
           </HomeRing>

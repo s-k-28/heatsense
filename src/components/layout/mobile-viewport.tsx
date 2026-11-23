@@ -21,9 +21,9 @@ function frameFor(width: number, height: number): Frame {
  * Wraps the whole app once, at the root. On a desktop browser every screen renders inside one
  * phone-sized frame in the middle of the window; on phones and native it fills the screen.
  */
-export function PhoneFrame({ children }: { children: ReactNode }) {
+export function PhoneFrame({ children, fullWidth = false }: { children: ReactNode; fullWidth?: boolean }) {
   const { width, height } = useWindowDimensions();
-  const frame = frameFor(width, height);
+  const frame = fullWidth ? { framed: false, width, height } : frameFor(width, height);
   return (
     <FrameContext.Provider value={frame}>
       <View style={frame.framed ? styles.desktop : styles.fill}>

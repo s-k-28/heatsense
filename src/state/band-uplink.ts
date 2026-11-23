@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { DEMO_TEAM, recoveryStatus, vitalsAt } from '@/lib/band-simulator';
+import { outdoorStartTime } from '@/lib/outdoor-start';
 import { publishVitals } from '@/services/band-vitals';
 import { demoSeconds } from '@/state/demo-team';
 import { usePreferences } from '@/state/preferences';
@@ -21,7 +22,7 @@ export function useBandUplink(enabled: boolean) {
   const zone = data?.readings.at(-1)?.zone ?? 'yellow';
 
   useEffect(() => {
-    if (!session || session.endedAt) return;
+    if (!session || session.endedAt || !outdoorStartTime(session)) return;
     const send = () => {
       const t = demoSeconds(Date.now());
       const v = vitalsAt(SELF, t, zone);

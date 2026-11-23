@@ -1,7 +1,8 @@
-import { addDoc, collection, doc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, getDocsFromServer, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 
 import { firebaseAuth, firestore } from '@/services/firebase';
 import { UIL_VERSION, celsiusToF, classifyWbgt, type UilClass, type Zone } from '@/lib/uil-wbgt';
+import { checkOutdoorStart, MAX_RECHECK_MINUTES } from '@/lib/outdoor-start';
 
 export { recheckStatus } from '@/lib/recheck';
 
@@ -26,6 +27,7 @@ export type PracticeSession = {
   recheckMinutes: number;
   startedAt: Date;
   endedAt: Date | null;
+  outdoorStart?: { at: Date; readingId: string } | null;
 };
 
 export type FieldReading = {
@@ -41,6 +43,13 @@ export type FieldReading = {
 };
 
 const toDate = (value: unknown) => (value && typeof (value as Timestamp).toDate === 'function' ? (value as Timestamp).toDate() : null);
+
+export function readOutdoorStart(value: unknown): PracticeSession['outdoorStart'] {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || !('at' in value) || !('readingId' in value)) return null;
+  const at = toDate(value.at);
+  return at && Number.isFinite(at.getTime()) && typeof value.readingId === 'string' ? { at, readingId: value.readingId } : null;
+}
 
 function db() {
   if (!firestore) throw new Error('Firebase is not configured for this build.');
@@ -72,6 +81,7 @@ export function watchActiveSession(teamId: string, onChange: (session: PracticeS
       // serverTimestamp is null until the write lands; the local clock is close enough until then.
       startedAt: toDate(data.startedAt) ?? new Date(),
       endedAt: toDate(data.endedAt),
+      outdoorStart: readOutdoorStart(data.outdoorStart),
     });
   }, onError);
 }
@@ -87,7 +97,7 @@ function finishedSessions(docs: QueryDocumentSnapshot[], teamId: string, count: 
       const startedAt = toDate(data.startedAt);
       const endedAt = toDate(data.endedAt);
       // Pending server timestamps aren't finished records yet. Wait for the committed dates.
-      return startedAt && endedAt ? [{ id: docSnap.id, teamId, venue: data.venue, uilClass: data.uilClass, recheckMinutes: data.recheckMinutes, startedAt, endedAt }] : [];
+      return startedAt && endedAt ? [{ id: docSnap.id, teamId, venue: data.venue, uilClass: data.uilClass, recheckMinutes: data.recheckMinutes, startedAt, endedAt, outdoorStart: readOutdoorStart(data.outdoorStart) }] : [];
     })
     .slice(0, count);
 }
@@ -134,6 +144,9 @@ export function watchRecentSessions(teamId: string, count: number, onChange: (li
 }
 
 export async function startSession(teamId: string, input: { venue: string; uilClass: UilClass; recheckMinutes: number }) {
+  if (!Number.isInteger(input.recheckMinutes) || input.recheckMinutes < 5 || input.recheckMinutes > MAX_RECHECK_MINUTES) {
+    throw new Error('Choose a recheck interval of 5–30 minutes.');
+  }
   const ref = await addDoc(sessions(teamId), {
     ...input,
     venue: input.venue.trim().slice(0, 80),
@@ -141,8 +154,25 @@ export async function startSession(teamId: string, input: { venue: string; uilCl
     startedBy: uid(),
     startedAt: serverTimestamp(),
     endedAt: null,
+    outdoorStart: null,
   });
   return ref.id;
+}
+
+/** Record an observed start against the coach's reviewed reading, after refreshing it from the server. */
+export async function recordOutdoorStart(session: PracticeSession, readingId: string) {
+  if (session.outdoorStart !== null || session.endedAt) return false;
+  const coach = uid();
+  const snapshot = await getDocsFromServer(query(readings(session.teamId, session.id), orderBy('measuredAt', 'desc'), limit(1)));
+  const latest = snapshot.docs[0];
+  const data = latest?.data();
+  const measuredAt = toDate(data?.measuredAt);
+  if (!latest || latest.id !== readingId || !data || !measuredAt || latest.metadata.hasPendingWrites
+    || checkOutdoorStart({ measuredAt, zone: data.zone }, Date.now()) !== 'ready') {
+    return false;
+  }
+  await updateDoc(doc(sessions(session.teamId), session.id), { outdoorStart: { at: serverTimestamp(), by: coach, readingId } });
+  return true;
 }
 
 export function endSession(session: PracticeSession) {
@@ -202,16 +232,23 @@ export function sessionReport(session: PracticeSession, list: FieldReading[]) {
   const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const lines = [
     `HeatSense practice record · ${session.venue}`,
-    `${session.startedAt.toLocaleDateString()} · started ${time(session.startedAt)}${session.endedAt ? ` · ended ${time(session.endedAt)}` : ' · in progress'}`,
+    `${session.startedAt.toLocaleDateString()} · ${session.outdoorStart === undefined ? 'started' : 'record opened'} ${time(session.startedAt)}${session.endedAt ? ` · ${session.outdoorStart === undefined ? 'ended' : 'closed'} ${time(session.endedAt)}` : ' · open'}`,
     `Policy: UIL WBGT activity guidelines ${UIL_VERSION}, Class ${session.uilClass}. Recheck every ${session.recheckMinutes} min.`,
     '',
   ];
+  if (session.outdoorStart !== undefined) {
+    const openingReading = list.find((reading) => reading.id === session.outdoorStart?.readingId);
+    lines.push(session.outdoorStart
+      ? `Outdoor start recorded at ${time(session.outdoorStart.at)}${openingReading ? ` using the ${time(openingReading.measuredAt)} reading` : ''}.`
+      : 'Outdoor start has not been recorded.', '');
+  }
+  const startAt = session.outdoorStart?.at;
   let previous: FieldReading | null = null;
   for (const r of list) {
     const gap = previous ? Math.round((r.measuredAt.getTime() - previous.measuredAt.getTime()) / 60_000) : null;
     const late = gap !== null && gap > session.recheckMinutes ? ` (late: ${gap} min after previous)` : '';
     lines.push(`${time(r.measuredAt)}  ${r.wbgtF.toFixed(1)} °F WBGT  ${r.zone.toUpperCase()}  ${SOURCE_LABEL[r.source]}${r.acknowledgedAt ? `  acknowledged ${time(r.acknowledgedAt)}` : '  NOT acknowledged'}${late}`);
-    previous = r;
+    if (session.outdoorStart === undefined || (startAt && (r.measuredAt >= startAt || r.id === session.outdoorStart?.readingId))) previous = r;
   }
   if (list.length === 0) lines.push('No readings recorded.');
   return lines.join('\n');

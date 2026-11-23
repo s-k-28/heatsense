@@ -1,3 +1,4 @@
+import { outdoorPracticeDuration } from '@/lib/outdoor-start';
 import { Text } from '@/components/ui/text';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -70,7 +71,9 @@ function PracticeRecordContent() {
   const session = sampleRecord?.session ?? record;
   const peak = sampleRecord?.peak ?? readings.reduce<SessionSummary['peak']>((hot, reading) =>
     !hot || reading.wbgtF > hot.wbgtF ? { wbgtF: reading.wbgtF, zone: reading.zone } : hot, null);
-  const minutes = session?.endedAt ? Math.max(0, Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000)) : null;
+  const duration = session ? outdoorPracticeDuration(session) : null;
+  const minutes = duration === null ? null : Math.round(duration / 60_000);
+  const durationLabel = minutes !== null ? `${minutes} min` : session?.outdoorStart === null ? 'Awaiting outdoor start' : 'In progress';
   const canShare = Boolean(session && (sampleRecord || (record && readingResult && !readingResult.error)));
   const message = !session || !canShare ? null : sampleRecord
       ? `HeatSense sample practice summary\n${session.venue}\n${session.startedAt.toLocaleDateString()} · ${time(session.startedAt)}${session.endedAt ? `–${time(session.endedAt)}` : ''}\n${minutes ?? '—'} min · ${sampleRecord.readingCount} readings\nPeak WBGT: ${peak ? `${temp.value(peak.wbgtF)}${temp.unit}, ${ZONES[peak.zone].label}` : 'Not available'}\nSample summary only. Individual measurements and guidance confirmations are not available.`
@@ -110,10 +113,11 @@ function PracticeRecordContent() {
       {sample ? <SampleTag /> : null}
       <Text style={styles.date}>{session.startedAt.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</Text>
       <Text accessibilityRole="header" style={styles.title}>{session.venue}</Text>
-      <Text style={styles.date}>{time(session.startedAt)}{session.endedAt ? `–${recordTime(session.endedAt, session.startedAt)}` : ' · In progress'}</Text>
+      <Text style={styles.date}>{time(session.startedAt)}{session.endedAt ? `–${recordTime(session.endedAt, session.startedAt)}` : ' · Open'}</Text>
+      {session.outdoorStart !== undefined ? <Text style={styles.date}>{session.outdoorStart ? `Outdoor start recorded at ${recordTime(session.outdoorStart.at, session.startedAt)}` : 'Outdoor start not recorded'}</Text> : null}
       <View style={styles.summary}>
         <Rows>
-          <ListRow label="Duration" value={minutes !== null ? `${minutes} min` : 'In progress'} />
+          <ListRow label="Duration" value={session.outdoorStart === null && session.endedAt ? 'No outdoor start' : durationLabel} />
           <ListRow label="Peak WBGT" value={peak ? `${temp.value(peak.wbgtF)}${temp.unit} · ${ZONES[peak.zone].label.replace(' zone', '')}` : readingResult?.error ? 'Unavailable' : sample ? 'Not available' : readingResult ? 'No readings' : 'Loading…'} valueTone={peak ? ZONES[peak.zone].text : undefined} />
           <ListRow label="Readings" value={sampleRecord ? String(sampleRecord.readingCount) : readingResult && !readingResult.error ? String(readings.length) : '—'} />
           <ListRow label="UIL heat class" value={`Class ${session.uilClass}`} />
@@ -130,13 +134,13 @@ function PracticeRecordContent() {
           : !readingResult ? <ActivityIndicator accessible accessibilityRole="progressbar" accessibilityState={{ busy: true }} accessibilityLabel="Loading readings" color={Palette.inkMuted} aria-busy={true} />
             : !readings.length ? <Text style={styles.message}>No field readings were recorded in this practice.</Text>
               : <Rows>{readings.map((reading) => (
-                <View accessible accessibilityLabel={`${recordTime(reading.measuredAt, session.startedAt)}, ${reading.enteredValue} degrees ${reading.enteredUnit === 'C' ? 'Celsius' : 'Fahrenheit'} WBGT, ${ZONES[reading.zone].label}. ${SOURCE_LABEL[reading.source]}. ${reading.acknowledgedAt ? `Guidance applied at ${recordTime(reading.acknowledgedAt, session.startedAt)}` : 'Guidance not confirmed'}`} key={reading.id} style={styles.reading}>
+                <View accessible accessibilityLabel={`${recordTime(reading.measuredAt, session.startedAt)}, ${reading.enteredValue} degrees ${reading.enteredUnit === 'C' ? 'Celsius' : 'Fahrenheit'} WBGT, ${ZONES[reading.zone].label}. ${SOURCE_LABEL[reading.source]}. ${reading.acknowledgedAt ? `Guidance acknowledged at ${recordTime(reading.acknowledgedAt, session.startedAt)}` : 'Guidance not acknowledged'}`} key={reading.id} style={styles.reading}>
                   <View style={styles.readingHead}>
                     <Text style={styles.readingTime}>{recordTime(reading.measuredAt, session.startedAt)}</Text>
                     <Text style={[styles.readingValue, { color: ZONES[reading.zone].text }]}>{reading.enteredValue}<Text style={styles.readingUnit}>°{reading.enteredUnit} WBGT</Text></Text>
                   </View>
-                  <Text style={styles.readingSource}>{ZONES[reading.zone].label} · {SOURCE_LABEL[reading.source]}</Text>
-                  <Text style={styles.readingSource}>{reading.acknowledgedAt ? `Guidance applied at ${recordTime(reading.acknowledgedAt, session.startedAt)}` : 'Guidance not confirmed'}</Text>
+                  <Text style={styles.readingSource}>{ZONES[reading.zone].label} · {SOURCE_LABEL[reading.source]}{reading.id === session.outdoorStart?.readingId ? ' · Opening reading' : ''}</Text>
+                  <Text style={styles.readingSource}>{reading.acknowledgedAt ? `Guidance acknowledged at ${recordTime(reading.acknowledgedAt, session.startedAt)}` : 'Guidance not acknowledged'}</Text>
                 </View>
               ))}</Rows>}
     </>

@@ -66,7 +66,7 @@ export function HomeOverview({ data, role, onAction, onOpenPlan, onInvite, perso
   const history = usePastSessionsState(data?.teamId ?? null, Boolean(data?.sample), 40);
   const latest = data?.readings.at(-1) ?? null;
   const session = data?.session ?? null;
-  const recheck = session ? recheckStatus(session, latest, now) : null;
+  const recheck = session && session.outdoorStart !== null ? recheckStatus(session, latest, now) : null;
   const acknowledged = data?.readings.filter((reading) => reading.acknowledgedAt).length ?? 0;
   const readingCount = data?.readings.length ?? 0;
   const todayPeak = (data?.readings ?? []).filter((reading) => reading.measuredAt.toDateString() === new Date(now).toDateString()).reduce<{ wbgtF: number; zone: Zone } | null>((peak, reading) => (!peak || reading.wbgtF > peak.wbgtF ? { wbgtF: reading.wbgtF, zone: reading.zone } : peak), null);
@@ -253,7 +253,7 @@ export function PracticeCard({ data, onOpenPlan, readOnly = false }: { data: Coa
 }
 
 /** The practice loop as three dials, after WHOOP's Home: time to the next reading, readings so far,
- *  and the share of readings whose guidance was applied. */
+ *  and the share of readings whose guidance was acknowledged. */
 export function PracticeRings({ data, style }: { data: CoachData | null; style?: StyleProp<ViewStyle> }) {
   const styles = useAthleteStyles(baseStyles);
   const now = useNow();
@@ -262,14 +262,14 @@ export function PracticeRings({ data, style }: { data: CoachData | null; style?:
   const dialSize = stacked ? Math.min(width - 64, Math.max(160, Math.round(100 * fontScale))) : Math.min(100, Math.floor((width - 64) / 3));
   const latest = data?.readings.at(-1) ?? null;
   const session = data?.session ?? null;
-  const recheck = session ? recheckStatus(session, latest, now) : null;
+  const recheck = session && session.outdoorStart !== null ? recheckStatus(session, latest, now) : null;
   const acked = data?.readings.filter((r) => r.acknowledgedAt).length ?? 0;
   const total = data?.readings.length ?? 0;
   const minutesLeft = recheck ? Math.max(0, Math.ceil(recheck.msLeft / 60_000)) : 0;
   const recheckColor = recheck?.overdue ? Palette.emergency : Palette.coral;
   const readingsColor = latest ? zoneColor(latest.zone) : Palette.inkFaint;
   const applied = total ? Math.round((acked / total) * 100) : 0;
-  // Applied is always drawn green: a green track that fills as readings are acted on.
+  // The green track fills as staff acknowledge readings.
   const appliedColor = Palette.safe;
 
   return (
@@ -297,7 +297,7 @@ export function PracticeRings({ data, style }: { data: CoachData | null; style?:
       <Dial
         size={dialSize} stacked={stacked}
         color={appliedColor}
-        label="Applied"
+        label="Reviewed"
         ring={{ max: Math.max(total, 1), segments: [{ color: appliedColor, value: acked }], track: 'rgba(48,209,88,0.28)' }}
         status={!data ? 'Loading…' : total ? `${acked} of ${total}` : 'Guidance'}
         summary={data ? `${acked} of ${total} readings acknowledged` : 'Acknowledgements loading'}
@@ -386,7 +386,7 @@ export function GetStarted({ onInvite, onReading, showReading }: { onInvite?: In
   );
 }
 
-/** Every reading taken today, newest first, with whether its guidance was applied. */
+/** Every reading taken today, newest first, with whether its guidance was acknowledged. */
 export function TodaysReadings({ data }: { data: CoachData | null }) {
   const styles = useAthleteStyles(baseStyles);
   const temp = useTemperature();
@@ -403,7 +403,7 @@ export function TodaysReadings({ data }: { data: CoachData | null }) {
               <Text style={styles.rowTitle}>{temp.value(r.wbgtF)}{temp.unit} · {ZONES[r.zone].label}</Text>
               <Text style={styles.rowMeta}>{r.measuredAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {SOURCE_LABEL[r.source]}</Text>
             </View>
-            <Text style={[styles.rowState, { color: r.acknowledgedAt ? Palette.safe : Palette.inkMuted }]}>{r.acknowledgedAt ? 'Applied' : 'Pending'}</Text>
+            <Text style={[styles.rowState, { color: r.acknowledgedAt ? Palette.safe : Palette.inkMuted }]}>{r.acknowledgedAt ? 'Acknowledged' : 'Pending'}</Text>
           </View>
         ))}
       </View>

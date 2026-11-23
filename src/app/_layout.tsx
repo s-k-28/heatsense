@@ -1,7 +1,7 @@
 import { Archivo_700Bold, Archivo_800ExtraBold } from '@expo-google-fonts/archivo';
 import { Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
@@ -19,6 +19,7 @@ SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({ duration: 350, fade: true });
 
 export default function RootLayout() {
+  const pathname = usePathname();
   const reducedMotion = useReducedMotion();
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -69,7 +70,7 @@ export default function RootLayout() {
 
   return (
     <AuthSessionContext.Provider value={{ user, ready: authReady }}>
-      <PhoneFrame>
+      <PhoneFrame fullWidth={pathname === '/demo'}>
         <Stack
           screenOptions={{
             animation: reducedMotion ? 'none' : 'fade',

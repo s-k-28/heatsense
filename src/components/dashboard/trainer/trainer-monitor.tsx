@@ -1,3 +1,4 @@
+import { outdoorStartTime } from '@/lib/outdoor-start';
 import { Text } from '@/components/ui/text';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -105,6 +106,7 @@ export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach
   }
 
   const latest = data?.readings.at(-1) ?? null;
+  const outdoorStart = data?.session ? outdoorStartTime(data.session) : null;
   const scope = `${role}:${sample ? 'sample' : data?.teamId ?? 'none'}:${data?.session?.id ?? 'none'}`;
   const currentChecks = Object.entries(checked).filter(([, check]) => check.scope === scope);
   // A different cue (for example a lost signal after a recovery check-in) must still appear.
@@ -130,7 +132,7 @@ export function TrainerMonitor({ role = 'trainer' }: { role?: 'trainer' | 'coach
         </View>
         <View style={styles.practice}>
           <Text style={[styles.practiceZone, latest && { color: ZONES[latest.zone].text }]}>{latest ? ZONES[latest.zone].label : 'No field reading'}</Text>
-          {simulatedPhase ? <Text style={styles.practiceMeta}>Simulated {simulatedPhase === 'work' ? 'work' : 'rest'} block</Text> : data?.session ? <Text style={styles.practiceMeta}>Practice {Math.max(0, Math.round((now - data.session.startedAt.getTime()) / 60_000))} min in</Text> : null}
+          {simulatedPhase ? <Text style={styles.practiceMeta}>Simulated {simulatedPhase === 'work' ? 'work' : 'rest'} block</Text> : outdoorStart ? <Text style={styles.practiceMeta}>Practice {Math.max(0, Math.round((now - outdoorStart.getTime()) / 60_000))} min in</Text> : data?.session ? <Text style={styles.practiceMeta}>Awaiting outdoor start</Text> : null}
         </View>
       </View>
 

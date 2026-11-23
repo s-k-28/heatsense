@@ -1,3 +1,4 @@
+import { outdoorPracticeDuration } from '@/lib/outdoor-start';
 import { useAthletePalette, useAthleteStyles } from '@/components/ui/role-appearance';
 import { Text } from '@/components/ui/text';
 import { router } from 'expo-router';
@@ -194,7 +195,8 @@ export function AthleteSessions() {
       ) : past.length ? (
         <Rows>
           {past.slice(0, visible).map(({ session, readingCount, peak }) => {
-            const minutes = session.endedAt ? Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60_000) : null;
+            const duration = outdoorPracticeDuration(session);
+            const minutes = duration === null ? null : Math.round(duration / 60_000);
             return (
               <ListRow
                 detail={`${session.venue}${minutes !== null ? ` · ${minutes} min` : ''} · ${readingCount} ${readingCount === 1 ? 'reading' : 'readings'}`}

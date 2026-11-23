@@ -81,7 +81,8 @@ export function FieldHero({ data, onAction, readOnly = false }: { data: CoachDat
   const estimate = useWeatherEstimate();
   const estimateZone = estimate ? classifyWbgt(estimate.wbgtF, uilClass) : null;
   const showEstimate = Boolean(data && estimate && estimateZone && (!latest || minutesAgo >= 10));
-  const action = !data ? 'Loading practice…' : readOnly ? 'View guidance' : !session ? 'Check field conditions' : latest && !latest.acknowledgedAt ? 'Review guidance' : latest ? 'Add a reading' : 'Take first reading';
+  const waiting = session?.outdoorStart === null;
+  const action = !data ? 'Loading practice…' : readOnly ? 'View guidance' : !session ? 'Check field conditions' : waiting ? 'Continue field check' : latest && !latest.acknowledgedAt ? 'Review guidance' : latest ? 'Add a reading' : 'Take first reading';
 
   return (
     <View style={styles.card}>
@@ -100,6 +101,7 @@ export function FieldHero({ data, onAction, readOnly = false }: { data: CoachDat
 
       <View style={styles.body}>
         <Text style={styles.label}>Field WBGT</Text>
+        {waiting ? <Text style={styles.measured}>Outdoor start pending</Text> : null}
         {latest && zone ? (
           <>
             <View style={styles.readingRow}>
