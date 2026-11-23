@@ -1,8 +1,11 @@
-name: Auth preflight
+name: App and backend checks
 
 on:
   push:
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   auth:
@@ -18,4 +21,13 @@ jobs:
       - run: npm run check:auth
       - run: npx tsc --noEmit --pretty false
       - run: npm run lint
+      - run: npm run test:logic
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Test Firestore authorization
+        run: npx -y firebase-tools@14 emulators:exec --project demo-heatsense --only auth,firestore 'node scripts/test-team-invites.mjs'
+        env:
+          GCLOUD_PROJECT: demo-heatsense
       - run: npx expo export --platform web
