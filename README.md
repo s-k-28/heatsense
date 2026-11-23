@@ -4,11 +4,11 @@
 
 **Field measurement → policy decision → practice action → auditable record.**
 
-HeatSense is an Expo and React Native application for UIL member schools managing heat exposure during outdoor practice. Staff enter a measured wet-bulb globe temperature (WBGT), and the app maps it to the school's UIL Class 2 or Class 3 zone, presents the corresponding activity limits, checks a practice plan, schedules rechecks, and records what staff acknowledged. Coaches, athletic trainers, and athletes use role-specific views of the same team and practice data.
+HeatSense is an Expo and React Native application for UIL member schools managing heat exposure during outdoor practice. Staff enter a measured wet-bulb globe temperature (WBGT), and the app maps it to the school's UIL Class 2 or Class 3 zone, presents the corresponding activity limits, checks a practice plan, schedules rechecks, and records the outdoor start and staff acknowledgments. Coaches, athletic trainers, and athletes use role-specific views of the same team and practice data.
 
 The project is a 2026 Congressional App Challenge entry for Texas District 4. [Watch the three-minute demonstration](https://youtu.be/qMQcvorwxp8). The [UIL 2026–27 required plan](https://www.uiltexas.org/health/info/heat-stress-and-athletic-participation) is the governing source for school practice decisions. HeatSense is a decision-support prototype, not a medical device or a substitute for a school's emergency action plan.
 
-**Try the practice heat drill.** Open `/demo` on the web build or choose **Try the practice heat drill** on the welcome screen. Follow three simulated readings, apply the timing changes, and see how an outdoor practice stops at the Black zone. The drill needs no account and uses no athlete data. [Run the demo or prepare a submission](docs/competition-readiness.md).
+**Try the practice heat drill.** Open `/demo` on the web build or choose **Try the practice heat drill** on the welcome screen. Replace a stale field reading before recording a simulated outdoor start. Then apply timing changes as WBGT rises and see the drill stop at the Black zone. The drill needs no account and uses no athlete data. [Run the demo or prepare a submission](docs/competition-readiness.md).
 
 ## Implemented system
 
@@ -27,7 +27,7 @@ flowchart LR
 | Identity | Firebase Authentication; coach-owned teams, six-digit invite codes, pending membership and coach approval |
 | Storage and authorization | Cloud Firestore on the Firebase Spark plan; security rules enforce schema, role permissions, timestamps, and append-only WBGT readings |
 | Heat engine | Pure TypeScript WBGT classifier for UIL Classes 2 and 3, shared by practice guidance, plan checks, and display logic |
-| Practice workflow | Staff-entered field readings, zone-specific limits, plan validation and suggested timing fixes, recheck reminders, and shareable practice records |
+| Practice workflow | Fresh opening field check, a coach-recorded outdoor start linked to the reading, zone-specific limits, plan validation and suggested timing fixes, recheck reminders, and shareable practice records |
 | iOS glance view | Expo Live Activity shows the zone and WBGT, adding practice and break clocks after a session starts |
 | Weather context | A separately labeled local-weather WBGT estimate; it does not replace a field measurement or drive compliance records |
 | Team telemetry demonstration | Deterministic simulated athlete vitals, recovery states, and Firestore uplink, visibly labeled as simulation |
@@ -39,6 +39,8 @@ The central engineering choice is **dual-layer validation**. The client computes
 `src/lib/uil-wbgt.ts` classifies plausible WBGT values after conversion and rounding to one decimal place, using the school's fixed UIL class. `src/lib/plan-check.ts` compares a proposed practice schedule with the zone's activity limits. `src/services/practice-sessions.ts` persists measured readings and their timestamps. Firestore rules in `firebase/firestore.rules` independently recompute the submitted zone and reject a mismatch; the app's UI is not the authorization boundary. Readings cannot be deleted through the rules, and later changes are limited to the permitted guidance acknowledgment.
 
 For example, **88.4°F WBGT in UIL Class 3 is Orange**: practice is limited to two hours, with at least four separate rest breaks per hour of at least four minutes. The school must follow the complete UIL plan, including its other equipment and rapid-cooling requirements.
+
+Opening a team record lets staff collect measurements. For new records, the coach confirms outdoor start against a field reading taken within the previous 15 minutes. Firestore verifies the referenced reading belongs to the same practice record, is within that window, and has a zone below Black.
 
 The recheck clock uses `measuredAt + recheckMinutes`, not the time a slow network write finishes. The plan checker evaluates work/rest cycles, minimum break duration, total rest where applicable, and maximum practice duration; its suggested correction is returned as a partial timing change for staff review. No outdoor timing fix is offered when the zone prohibits outdoor practice.
 
