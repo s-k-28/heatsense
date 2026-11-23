@@ -28,19 +28,19 @@ npx expo serve --port 8911
 Open `/demo` in a signed-out browser. For a recording, use the same `dist` export and show the labels that identify synthetic readings.
 
 1. At the scheduled **4:00 p.m.** start, the last field reading is **88.4°F WBGT, Orange**, measured at 3:38 p.m. Show how the age prompts a new sample. Take a fresh example and record the simulated outdoor start.
-2. The 90-minute plan with 18 minutes of work and three minutes of rest fails two Orange timing checks. Apply the changes to 11 minutes of work and four minutes of rest. Show the 4:30 p.m. recheck.
-3. Advance to **90.4°F, Red**. Apply the new 60-minute plan with 20 minutes of work and 10 minutes of rest per cycle.
-4. Advance to **92.4°F, Black**. Outdoor practice stops in the drill. The field log shows the outdoor start, all three practice readings, and both timing revisions.
+2. The 90-minute plan with 18 minutes of work and three minutes of rest fails two Orange timing checks. Apply the changes to 11 minutes of work and four minutes of rest. Record the adjustment, then open the 4:30 p.m. recheck.
+3. Advance to **90.4°F, Red**. Apply the new 60-minute plan with 20 minutes of work and 10 minutes of rest per cycle. Record the second adjustment.
+4. Advance to **92.4°F, Black**. Record the outdoor stop. The field log shows the outdoor start, the three readings, both timing adjustments, and the stop.
 
 Use “timing checks pass” for the code result. A school’s full heat and emergency plans govern practice. Use the drill and emulator as software evidence. A supervised school pilot, hardware validation, and health outcomes remain future work. [UIL required plan](https://www.uiltexas.org/health/info/heat-stress-and-athletic-participation)
 
 | Verified workflow | Observed result | Evidence |
 | --- | --- | --- |
 | Signed-out start | The stale Orange reading prompts a new sample. A fresh reading enables the separate start action. | [Phone screenshot](screenshots/competition/drill-orange.png) |
-| Orange, Red, and Black | Both timing revisions are preserved. Black stops the drill and offers no outdoor timing revision. | [Desktop screenshot](screenshots/competition/drill-black.png) |
+| Orange, Red, and Black | Both timing decisions are preserved. In Black, the drill records an explicit stop and offers no outdoor timing revision. | [Desktop screenshot](screenshots/competition/drill-black.png) |
 | Browser at 320, 390, and 1440 px | Keyboard sampling, fresh start, both revisions, stop, restart, and exit passed with external requests blocked. | Run the drill sequence above. |
 | Signed-in coach on the web emulators | The coach closed a legacy session, opened a new record, could not start against a Black reading, saved a fresh Orange reading, then recorded the start and saw the recheck timer. | Use the synthetic accounts in `scripts/seed-emulator.mjs`. |
-| Firestore and Auth emulators | The coach can save one outdoor start against a same-session fresh reading. The rules reject stale and Black readings, disallowed writers, and edits after close. | Run `npm run test:invites`. |
+| Firestore and Auth emulators | The coach can save one outdoor start against a same-session fresh reading. The rules reject stale or Black opening readings. Staff can add one server-timestamped decision per reading while the record is open. Competing writes, changes after close, and unsupported Black-zone actions are rejected. | Run `npm run test:invites`. |
 
 For a deployment with team accounts, release the client and the matching Firestore rules together. The new client creates a record with `outdoorStart: null` and fills it when the coach confirms. Old records keep their existing start time. Old clients must update to create records under the new rules. The signed-out drill is independent of the database release.
 
@@ -48,7 +48,7 @@ For a deployment with team accounts, release the client and the matching Firesto
 
 **Users and need.** Coaches and athletic trainers need to turn changing field readings into decisions about outdoor practice. The UIL plan spells out the activity changes and recommends keeping a record of readings. HeatSense puts the reading, timing checks, and next recheck in one workflow. [UIL required plan](https://www.uiltexas.org/health/info/heat-stress-and-athletic-participation)
 
-**Event contribution.** The existing CAC prototype included the staff workflow, athlete and team views, weather context, and simulated band telemetry. The event work adds an interactive public drill and a new live-team workflow for the opening field reading. A coach can open a team record before practice, an approved trainer can log the on-site sample, and the coach records the outdoor start against a fresh non-Black reading. The app starts the practice clock after that record is saved. The drill uses the same freshness check, WBGT classifier, timing checks, and recheck calculations. The pre-event Git baseline is `14dc838`. Link the submission branch and verify the recorded team contributions before posting.
+**Event contribution.** The existing CAC prototype included the staff workflow, athlete and team views, weather context, and simulated band telemetry. The event work adds an interactive public drill and a new live-team workflow for the opening field reading. A coach can open a team record before practice, an approved trainer can log the on-site sample, and the coach records the outdoor start against a fresh non-Black reading. The app starts the practice clock after that record is saved. The team can also log what staff did after a reading. A coach or trainer can record adjusted breaks or duration, a delay, a move indoors, or an outdoor stop. The action stays with the reading in the saved record and export. The drill uses the same freshness check, WBGT classifier, timing checks, and recheck calculations. The pre-event Git baseline is `14dc838`. Link the submission branch and verify the recorded team contributions before posting.
 
 **AI disclosure.** Codex assisted development, rule research, and QA scripting. The app’s decision logic is deterministic TypeScript grounded in the published rule chart. Before posting, have a team member repeat the drill and document one specific AI-assisted change they inspected and kept, edited, or rejected.
 
