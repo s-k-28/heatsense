@@ -13,6 +13,7 @@ import { shareMessage } from '@/components/ui/share-message';
 import { ActionButton } from '@/components/ui/action-button';
 import { Face, MaxContentWidth, Palette } from '@/constants/theme';
 import { ZONES } from '@/lib/practice';
+import { PRACTICE_DECISION_LABELS } from '@/lib/practice-decision';
 import { practiceRecordReport, savedPolicyLabel, watchPracticeRecord, type PracticeRecord } from '@/services/practice-record';
 import { SOURCE_LABEL, watchReadings, type FieldReading, type SessionSummary } from '@/services/practice-sessions';
 import { useAuthSession } from '@/state/auth-session';
@@ -133,16 +134,19 @@ function PracticeRecordContent() {
         </View>
           : !readingResult ? <ActivityIndicator accessible accessibilityRole="progressbar" accessibilityState={{ busy: true }} accessibilityLabel="Loading readings" color={Palette.inkMuted} aria-busy={true} />
             : !readings.length ? <Text style={styles.message}>No field readings were recorded in this practice.</Text>
-              : <Rows>{readings.map((reading) => (
-                <View accessible accessibilityLabel={`${recordTime(reading.measuredAt, session.startedAt)}, ${reading.enteredValue} degrees ${reading.enteredUnit === 'C' ? 'Celsius' : 'Fahrenheit'} WBGT, ${ZONES[reading.zone].label}. ${SOURCE_LABEL[reading.source]}. ${reading.acknowledgedAt ? `Guidance acknowledged at ${recordTime(reading.acknowledgedAt, session.startedAt)}` : 'Guidance not acknowledged'}`} key={reading.id} style={styles.reading}>
+              : <Rows>{readings.map((reading) => {
+                const acknowledgment = reading.acknowledgedAt ? `Guidance acknowledged at ${recordTime(reading.acknowledgedAt, session.startedAt)}` : 'Guidance not acknowledged';
+                const decision = reading.decision ? `${PRACTICE_DECISION_LABELS[reading.decision.kind]} · Recorded ${recordTime(reading.decision.at, session.startedAt)}` : null;
+                return <View accessible accessibilityLabel={`${recordTime(reading.measuredAt, session.startedAt)}, ${reading.enteredValue} degrees ${reading.enteredUnit === 'C' ? 'Celsius' : 'Fahrenheit'} WBGT, ${ZONES[reading.zone].label}. ${SOURCE_LABEL[reading.source]}. ${acknowledgment}.${decision ? ` Staff decision. ${decision}` : ''}`} key={reading.id} style={styles.reading}>
                   <View style={styles.readingHead}>
                     <Text style={styles.readingTime}>{recordTime(reading.measuredAt, session.startedAt)}</Text>
                     <Text style={[styles.readingValue, { color: ZONES[reading.zone].text }]}>{reading.enteredValue}<Text style={styles.readingUnit}>°{reading.enteredUnit} WBGT</Text></Text>
                   </View>
                   <Text style={styles.readingSource}>{ZONES[reading.zone].label} · {SOURCE_LABEL[reading.source]}{reading.id === session.outdoorStart?.readingId ? ' · Opening reading' : ''}</Text>
-                  <Text style={styles.readingSource}>{reading.acknowledgedAt ? `Guidance acknowledged at ${recordTime(reading.acknowledgedAt, session.startedAt)}` : 'Guidance not acknowledged'}</Text>
-                </View>
-              ))}</Rows>}
+                  <Text style={styles.readingSource}>{acknowledgment}</Text>
+                  {decision ? <Text style={styles.readingSource}>{decision}</Text> : null}
+                </View>;
+              })}</Rows>}
     </>
   );
 

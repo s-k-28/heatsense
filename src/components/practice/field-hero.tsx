@@ -9,6 +9,7 @@ import { StyleSheet, View } from 'react-native';
 import { CoachPalette } from '@/constants/coach-theme';
 import { Palette, Spacing } from '@/constants/theme';
 import { SAMPLE_HOURLY_WBGT, ZONES } from '@/lib/practice';
+import { PRACTICE_DECISION_LABELS } from '@/lib/practice-decision';
 import { classifyWbgt, zoneThresholds, type UilClass, type Zone } from '@/lib/uil-wbgt';
 import { useTemperature } from '@/state/preferences';
 import { useNow, type CoachData } from '@/state/team-session';
@@ -123,6 +124,7 @@ export function FieldHero({ data, onAction, readOnly = false }: { data: CoachDat
         ) : (
           <Text accessibilityLiveRegion="polite" style={styles.headroom}>{!data ? 'Loading your team’s practice…' : session ? 'No reading yet this practice.' : 'No practice started.'}</Text>
         )}
+        {latest?.decision ? <Text accessibilityLiveRegion="polite" style={styles.measured}>Staff decision: {PRACTICE_DECISION_LABELS[latest.decision.kind]}</Text> : null}
 
         {showEstimate && estimate && estimateZone ? (
           <View accessible accessibilityLabel={`Weather estimate now, about ${temp.value(estimate.wbgtF)} degrees, ${ZONES[estimateZone].label}. Take a reading to confirm.`} style={styles.estimate}>

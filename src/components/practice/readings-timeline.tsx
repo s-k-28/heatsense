@@ -6,6 +6,7 @@ import Svg, { Circle, Line, Polyline, Rect, Text as SvgText } from 'react-native
 
 import { Face, Palette } from '@/constants/theme';
 import { ZONES, type Zone } from '@/lib/practice';
+import { PRACTICE_DECISION_LABELS } from '@/lib/practice-decision';
 import { zoneBounds, type UilClass } from '@/lib/uil-wbgt';
 import type { FieldReading } from '@/services/practice-sessions';
 
@@ -68,12 +69,15 @@ export function ReadingsTimeline({ readings, startedAt, uilClass, now, temp }: {
       </View>
       <View style={styles.list}>
         {[...readings].reverse().map((r) => (
-          <View accessible key={r.id} style={styles.row}>
-            <Text style={styles.rowTime}>{time(r.measuredAt)}</Text>
-            <View style={[styles.dot, { backgroundColor: tone(r.zone) }]} />
-            <Text style={styles.rowValue}>{temp.value(r.wbgtF)}<Text style={styles.rowUnit}>{temp.unit}</Text></Text>
-            <Text style={[styles.rowZone, { color: ZONES[r.zone].text }]}>{ZONES[r.zone].label.replace(' zone', '')}</Text>
-            <Text style={[styles.rowState, { color: r.acknowledgedAt ? Palette.safe : Palette.inkMuted }]}>{r.acknowledgedAt ? 'Acknowledged' : 'Pending'}</Text>
+          <View accessible key={r.id} style={styles.entry}>
+            <View style={styles.row}>
+              <Text style={styles.rowTime}>{time(r.measuredAt)}</Text>
+              <View style={[styles.dot, { backgroundColor: tone(r.zone) }]} />
+              <Text style={styles.rowValue}>{temp.value(r.wbgtF)}<Text style={styles.rowUnit}>{temp.unit}</Text></Text>
+              <Text style={[styles.rowZone, { color: ZONES[r.zone].text }]}>{ZONES[r.zone].label.replace(' zone', '')}</Text>
+              <Text style={[styles.rowState, { color: r.acknowledgedAt ? Palette.safe : Palette.inkMuted }]}>{r.acknowledgedAt ? 'Acknowledged' : 'Pending'}</Text>
+            </View>
+            {r.decision ? <Text style={styles.rowDecision}>{PRACTICE_DECISION_LABELS[r.decision.kind]} · Recorded {time(r.decision.at)}</Text> : null}
           </View>
         ))}
       </View>
@@ -85,11 +89,13 @@ const baseStyles = StyleSheet.create({
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   axisText: { color: Palette.inkMuted, fontSize: 13, fontWeight: '500' },
   list: { marginTop: 12 },
-  row: { alignItems: 'center', borderTopColor: 'rgba(255,255,255,0.06)', borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: 10, minHeight: 48 },
+  entry: { borderTopColor: 'rgba(255,255,255,0.06)', borderTopWidth: StyleSheet.hairlineWidth },
+  row: { alignItems: 'center', flexDirection: 'row', gap: 8, minHeight: 48 },
   rowTime: { color: Palette.inkMuted, fontSize: 15, fontVariant: ['tabular-nums'], width: 72 },
   dot: { borderRadius: 5, height: 10, width: 10 },
   rowValue: { color: Palette.ink, fontFamily: Face.figure, fontSize: 22, width: 64 },
   rowUnit: { color: Palette.inkMuted, fontFamily: Face.label, fontSize: 15 },
   rowZone: { flex: 1, fontSize: 15, fontWeight: '600' },
   rowState: { fontSize: 14, fontWeight: '600' },
+  rowDecision: { color: Palette.inkMuted, fontSize: 14, paddingBottom: 10 },
 });

@@ -3,6 +3,7 @@ import { addDoc, collection, doc, getDocs, getDocsFromServer, limit, onSnapshot,
 import { firebaseAuth, firestore } from '@/services/firebase';
 import { UIL_VERSION, celsiusToF, classifyWbgt, type UilClass, type Zone } from '@/lib/uil-wbgt';
 import { checkOutdoorStart, MAX_RECHECK_MINUTES } from '@/lib/outdoor-start';
+import { isPracticeDecisionKind, PRACTICE_DECISION_LABELS, practiceDecisionOptions, type PracticeDecisionKind } from '@/lib/practice-decision';
 
 export { recheckStatus } from '@/lib/recheck';
 
@@ -40,9 +41,16 @@ export type FieldReading = {
   zone: Zone;
   recordedBy: string;
   acknowledgedAt: Date | null;
+  decision?: { kind: PracticeDecisionKind; at: Date } | null;
 };
 
 const toDate = (value: unknown) => (value && typeof (value as Timestamp).toDate === 'function' ? (value as Timestamp).toDate() : null);
+
+function readPracticeDecision(value: unknown): FieldReading['decision'] {
+  if (!value || typeof value !== 'object' || !('at' in value) || !('kind' in value)) return null;
+  const at = toDate(value.at);
+  return at && isPracticeDecisionKind(value.kind) ? { kind: value.kind, at } : null;
+}
 
 export function readOutdoorStart(value: unknown): PracticeSession['outdoorStart'] {
   if (value === undefined) return undefined;
@@ -195,6 +203,7 @@ export function watchReadings(session: PracticeSession, onChange: (list: FieldRe
         zone: data.zone,
         recordedBy: data.recordedBy,
         acknowledgedAt: toDate(data.acknowledgedAt),
+        decision: readPracticeDecision(data.decision),
       };
     }));
   }, onError);
@@ -227,6 +236,15 @@ export function acknowledgeReading(session: PracticeSession, reading: FieldReadi
   return updateDoc(doc(readings(session.teamId, session.id), reading.id), { acknowledgedBy: uid(), acknowledgedAt: serverTimestamp() });
 }
 
+export function recordPracticeDecision(session: PracticeSession, reading: FieldReading, kind: PracticeDecisionKind) {
+  if (session.endedAt || reading.decision || !practiceDecisionOptions(reading.zone).includes(kind)) {
+    throw new Error('This decision is unavailable for the reading.');
+  }
+  return updateDoc(doc(readings(session.teamId, session.id), reading.id), {
+    decision: { kind, by: uid(), at: serverTimestamp() },
+  });
+}
+
 /** A plain-text record of the session for sharing with an athletic trainer or administrator. */
 export function sessionReport(session: PracticeSession, list: FieldReading[]) {
   const time = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -248,6 +266,7 @@ export function sessionReport(session: PracticeSession, list: FieldReading[]) {
     const gap = previous ? Math.round((r.measuredAt.getTime() - previous.measuredAt.getTime()) / 60_000) : null;
     const late = gap !== null && gap > session.recheckMinutes ? ` (late: ${gap} min after previous)` : '';
     lines.push(`${time(r.measuredAt)}  ${r.wbgtF.toFixed(1)} °F WBGT  ${r.zone.toUpperCase()}  ${SOURCE_LABEL[r.source]}${r.acknowledgedAt ? `  acknowledged ${time(r.acknowledgedAt)}` : '  NOT acknowledged'}${late}`);
+    if (r.decision) lines.push(`  Staff decision at ${time(r.decision.at)}: ${PRACTICE_DECISION_LABELS[r.decision.kind]}`);
     if (session.outdoorStart === undefined || (startAt && (r.measuredAt >= startAt || r.id === session.outdoorStart?.readingId))) previous = r;
   }
   if (list.length === 0) lines.push('No readings recorded.');

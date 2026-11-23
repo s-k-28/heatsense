@@ -505,6 +505,36 @@ const trainer = await signUp('trainer');
     await rejects(reading(athlete, open.id), 'permission-denied', 'athlete logging a reading');
     await updateDoc(doc(coach.db, open.path), { endedAt: serverTimestamp() });
   });
+  await test('coaches and trainers record one staff action per reading while the record is open', async () => {
+    const open = await addDoc(sessions(coach), { venue: 'Field', uilClass: 3, recheckMinutes: 30, policy: 'uil-wbgt@2025-26', startedBy: coach.uid, startedAt: serverTimestamp(), endedAt: null, outdoorStart: null });
+    const orange = await reading(trainer, open.id, { wbgtF: 88.4, enteredValue: 88.4, zone: 'orange' });
+    const black = await reading(trainer, open.id, { wbgtF: 92.4, enteredValue: 92.4, zone: 'black' });
+    const unrecorded = await reading(trainer, open.id);
+    const save = (user, ref, kind, fields = {}, extra = {}) => updateDoc(doc(user.db, ref.path), {
+      decision: { kind, by: user.uid, at: serverTimestamp(), ...fields },
+      ...extra,
+    });
+    await rejects(save(athlete, orange, 'adjusted_timing'), 'permission-denied', 'athlete records decision');
+    await rejects(save(stranger, orange, 'adjusted_timing'), 'permission-denied', 'stranger records decision');
+    await rejects(save(trainer, orange, 'unknown'), 'permission-denied', 'unrecognized decision');
+    await rejects(save(trainer, orange, 'adjusted_timing', { by: coach.uid }), 'permission-denied', 'forged recorder');
+    await rejects(save(trainer, orange, 'adjusted_timing', { at: ClientTimestamp.fromMillis(0) }), 'permission-denied', 'forged timestamp');
+    await rejects(save(trainer, orange, 'adjusted_timing', {}, { wbgtF: 85 }), 'permission-denied', 'modifying measurement with a decision');
+    await rejects(save(trainer, black, 'adjusted_timing'), 'permission-denied', 'outdoor timing adjustment in Black');
+    await save(trainer, orange, 'adjusted_timing');
+    const persisted = (await getDoc(doc(coach.db, orange.path))).data();
+    equal(persisted.decision.by, trainer.uid, 'trainer attribution');
+    equal(persisted.decision.kind, 'adjusted_timing', 'recorded action');
+    assert(persisted.decision.at instanceof ClientTimestamp, 'server timestamp');
+    equal(persisted.acknowledgedAt, null, 'decision is independent of guidance acknowledgment');
+    await updateDoc(doc(coach.db, orange.path), { acknowledgedBy: coach.uid, acknowledgedAt: serverTimestamp() });
+    await rejects(save(coach, orange, 'moved_indoors'), 'permission-denied', 'existing decision is immutable');
+    const writes = await Promise.allSettled([save(trainer, black, 'moved_indoors'), save(coach, black, 'stopped_outdoors')]);
+    equal(writes.filter((result) => result.status === 'fulfilled').length, 1, 'exactly one simultaneous decision is recorded');
+    assert(['moved_indoors', 'stopped_outdoors'].includes((await getDoc(doc(athlete.db, black.path))).data().decision.kind), 'athlete sees the safety action');
+    await updateDoc(open, { endedAt: serverTimestamp() });
+    await rejects(save(trainer, unrecorded, 'delayed_outdoors'), 'permission-denied', 'closed practice stays unchanged');
+  });
   await test('an athlete sees their trainer but not other athletes; a stranger sees neither', async () => {
     const staff = await getDocs(query(collection(athlete.db, 'teamMembers'), where('teamId', '==', teamId), where('role', '==', 'trainer'), where('status', '==', 'active')));
     equal(staff.size, 1, 'athlete sees one trainer');

@@ -224,7 +224,7 @@ service cloud.firestore {
     }
 
     // Practice sessions and WBGT readings. The coach records; approved members can follow along.
-    // Readings are append-only: the only later change is the coach's one-time acknowledgment.
+    // Measurement fields are immutable. Staff can acknowledge guidance and add one practice decision.
     function uilZone(f, uilClass) {
       let b = uilClass == 3
         ? { 'yellow': 82.0, 'orange': 87.0, 'red': 90.1, 'black': 92.1 }
@@ -296,6 +296,15 @@ service cloud.firestore {
 
       match /readings/{readingId} {
         function session() { return get(/databases/$(database)/documents/teams/$(teamId)/sessions/$(sessionId)).data; }
+        function validDecision() {
+          let decision = request.resource.data.decision;
+          return session().endedAt == null
+            && resource.data.get('decision', null) == null
+            && decision is map && decision.keys().hasOnly(['kind', 'by', 'at'])
+            && decision.by == request.auth.uid && decision.at == request.time
+            && (decision.kind in ['moved_indoors', 'delayed_outdoors', 'stopped_outdoors']
+              || (decision.kind == 'adjusted_timing' && resource.data.zone != 'black'));
+        }
         allow read: if isCoach(teamId) || isActiveMember(teamId);
         // The head coach or an approved athletic trainer logs readings and confirms guidance; only the coach starts and ends practice.
         allow create: if (isCoach(teamId) || isActiveTrainer(teamId))
@@ -315,10 +324,12 @@ service cloud.firestore {
           && request.resource.data.acknowledgedBy == null
           && request.resource.data.acknowledgedAt == null;
         allow update: if (isCoach(teamId) || isActiveTrainer(teamId))
-          && resource.data.acknowledgedAt == null
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledgedBy', 'acknowledgedAt'])
-          && request.resource.data.acknowledgedBy == request.auth.uid
-          && request.resource.data.acknowledgedAt == request.time;
+          && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledgedBy', 'acknowledgedAt'])
+              && resource.data.acknowledgedAt == null
+              && request.resource.data.acknowledgedBy == request.auth.uid
+              && request.resource.data.acknowledgedAt == request.time)
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['decision'])
+              && validDecision()));
         allow delete: if false;
       }
     }

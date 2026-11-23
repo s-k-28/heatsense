@@ -19,6 +19,7 @@ import { Face, Palette } from '@/constants/theme';
 import { enter, swap } from '@/lib/motion';
 import { ZONES, type Zone } from '@/lib/practice';
 import { recheckStatus } from '@/services/practice-sessions';
+import { PRACTICE_DECISION_LABELS } from '@/lib/practice-decision';
 import { usePastSessionsState } from '@/state/past-sessions';
 import { useTemperature } from '@/state/preferences';
 import { useCoachDataState, useNow, type SessionRole } from '@/state/team-session';
@@ -182,6 +183,7 @@ function PracticeOverview({ onInvite, readOnly = false, role = 'coach', teamPrac
           )}
         </HeatOrb>
         {latest ? <Text style={styles.measured}>WBGT measured {minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`}</Text> : null}
+        {latest?.decision ? <Text accessibilityLiveRegion="polite" style={styles.measured}>Staff decision: {PRACTICE_DECISION_LABELS[latest.decision.kind]}</Text> : null}
       </View>
       <View style={[styles.rings, largeText && styles.ringsLarge]}>
         <Metric largeText={largeText} label={role === 'athlete' ? "Next check" : "Recheck"} onPress={() => setDetail(detail === 'recheck' ? null : 'recheck')} selected={detail === 'recheck'} value={checkLabel}>

@@ -13,6 +13,7 @@ import { Text } from '@/components/ui/text';
 import { Face, Palette, Spacing, Type } from '@/constants/theme';
 import { checkOutdoorStart } from '@/lib/outdoor-start';
 import { checkPlan, type PlanTimings } from '@/lib/plan-check';
+import { PRACTICE_DECISION_LABELS, type PracticeDecisionKind } from '@/lib/practice-decision';
 import { nextReadingDueAt } from '@/lib/recheck';
 import { classifyWbgt, UIL_GUIDANCE, UIL_SOURCE_URL, type Zone } from '@/lib/uil-wbgt';
 
@@ -22,8 +23,8 @@ const STARTED_AT = new Date('2026-09-01T16:00:00Z');
 const OLD_READING_AT = new Date(STARTED_AT.getTime() - 22 * 60_000);
 const DRILL = { startedAt: STARTED_AT, recheckMinutes: 30 };
 const READINGS = [88.4, 90.4, 92.4];
-type DrillStep = { plan: PlanTimings; adjusted: boolean };
-const INITIAL_STEP: DrillStep = { plan: { workMinutes: 18, restMinutes: 3, lengthMinutes: 90 }, adjusted: false };
+type DrillStep = { plan: PlanTimings; decision: PracticeDecisionKind | null };
+const INITIAL_STEP: DrillStep = { plan: { workMinutes: 18, restMinutes: 3, lengthMinutes: 90 }, decision: null };
 const TONE: Record<Zone, string> = {
   green: Palette.safe,
   yellow: Palette.caution,
@@ -57,7 +58,7 @@ export default function DemoScreen() {
   const [started, setStarted] = useState(false);
   const [steps, setSteps] = useState([INITIAL_STEP]);
   const index = steps.length - 1;
-  const { plan } = steps[index];
+  const { plan, decision } = steps[index];
   const reading = READINGS[index];
   const zone = classifyWbgt(reading, UIL_CLASS);
   if (!zone) throw new Error('The drill reading must be within the WBGT classifier range.');
@@ -69,9 +70,10 @@ export default function DemoScreen() {
   const nextTime = drillClock.format(nextReadingDueAt(DRILL, { measuredAt }));
   const finalReading = index === READINGS.length - 1;
   const phase = !started ? 0 : finalReading ? 2 : 1;
-  const timingStatus = !guidance.outdoorAllowed ? 'Outdoor practice stops' :
+  const timingStatus = !guidance.outdoorAllowed ? (decision ? 'Outdoor stop recorded' : 'Outdoor practice must stop') :
     result.ok ? 'Timing checks pass' : 'Timing changes needed';
   const fix = result.fix;
+  const updateStep = (step: DrillStep) => setSteps((current) => [...current.slice(0, index), step]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -143,8 +145,9 @@ export default function DemoScreen() {
                           <Text style={styles.ruleLabel}>{value.toFixed(1)}°F WBGT</Text>
                           <Text style={[styles.label, { color: TONE[loggedZone] }]}>{zoneLabel(loggedZone)}</Text>
                         </View>
-                        {step.adjusted ? <Text style={styles.small}>Timing revised to {planLabel(step.plan)}</Text> : null}
-                        {loggedZone === 'black' ? <Text style={styles.small}>Outdoor practice stopped in the drill.</Text> : null}
+                        {step.decision ? <Text style={styles.small}>
+                          {PRACTICE_DECISION_LABELS[step.decision]}{step.decision === 'adjusted_timing' ? ` · ${planLabel(step.plan)}` : ''}
+                        </Text> : null}
                       </View>
                     );
                   })}
@@ -174,19 +177,21 @@ export default function DemoScreen() {
                       </Text>
                     </View>
                   ))}
-                  {fix ? <ActionButton label="Apply timing changes" onPress={() => setSteps([
-                    ...steps.slice(0, index), { plan: { ...plan, ...fix }, adjusted: true },
-                  ])} /> : null}
+                  {fix ? <ActionButton label="Apply timing changes" onPress={() => updateStep({ plan: { ...plan, ...fix }, decision: null })} /> : null}
                   <Text style={styles.small}>The timing check covers duration and breaks. Follow your school’s full heat and emergency plans in real practice.</Text>
-                  {finalReading ? (
+                  {finalReading && !decision ? (
+                    <ActionButton label="Record outdoor stop" onPress={() => updateStep({ plan, decision: 'stopped_outdoors' })} />
+                  ) : finalReading ? (
                     <ActionButton label="Restart drill" variant="secondary" onPress={() => {
                       setSteps([INITIAL_STEP]);
                       setMeasurement(OLD_READING_AT);
                       setStarted(false);
                     }} />
+                  ) : !decision ? (
+                    <ActionButton disabled={!result.ok} label="Record timing adjustment" variant="secondary" onPress={() => updateStep({ plan, decision: 'adjusted_timing' })} />
                   ) : (
-                    <ActionButton disabled={Boolean(fix)} label={`Advance to ${nextTime} recheck`} variant="secondary" onPress={() => setSteps([
-                      ...steps, { plan, adjusted: false },
+                    <ActionButton label={`Advance to ${nextTime} recheck`} variant="secondary" onPress={() => setSteps([
+                      ...steps, { plan, decision: null },
                     ])} />
                   )}
                 </Card>

@@ -9,6 +9,7 @@ import { shareMessage } from '@/components/ui/share-message';
 import { ActionButton } from '@/components/ui/action-button';
 import { Face, Palette, Spacing, Type } from '@/constants/theme';
 import { checkOutdoorStart, MAX_RECHECK_MINUTES, outdoorStartTime } from '@/lib/outdoor-start';
+import { PRACTICE_DECISION_LABELS, practiceDecisionOptions, type PracticeDecisionKind } from '@/lib/practice-decision';
 import { ZONES } from '@/lib/practice';
 import { UIL_GUIDANCE, UIL_SOURCE_URL, UIL_VERSION, type UilClass } from '@/lib/uil-wbgt';
 import { firestore } from '@/services/firebase';
@@ -20,6 +21,7 @@ import {
   addReading,
   endSession,
   recordOutdoorStart,
+  recordPracticeDecision,
   recheckStatus,
   sessionReport,
   startSession,
@@ -146,7 +148,7 @@ function Notice({ text }: { text: string }) {
   return <Text style={styles.note}>{text}</Text>;
 }
 
-function Chips<T extends string | number>({ label, onSelect, options, selected, format, disabled = false }: { label: string; onSelect: (v: T) => void; options: readonly T[]; selected: T; format: (v: T) => string; disabled?: boolean }) {
+function Chips<T extends string | number>({ label, onSelect, options, selected, format, disabled = false }: { label: string; onSelect: (v: T) => void; options: readonly T[]; selected: T | null; format: (v: T) => string; disabled?: boolean }) {
   return (
     <View accessibilityLabel={label} accessibilityRole="radiogroup" style={styles.chips}>
       {options.map((option) => (
@@ -284,11 +286,12 @@ function SessionView({ session, canEnd = true }: { session: PracticeSession; can
       </OutdoorStartPanel>}
 
       {began && latest ? <LatestReading key={latest.id} latest={latest} session={session} /> : null}
+      {latest && !listenError ? <DecisionCard key={latest.id} reading={latest} session={session} /> : null}
 
       <ReadingForm session={session} />
 
       {listenError ? <><Text accessibilityLiveRegion="assertive" style={styles.error}>Readings may be out of date. Check your connection.</Text><ActionButton label="Reload readings" onPress={retryReadings} variant="secondary" /></> : null}
-      {readings.length > 0 ? <History readings={readings} temp={temp} /> : null}
+      {readings.length > 0 ? <History readings={readings} session={session} temp={temp} canRecord={!listenError} /> : null}
 
       <ActionButton busy={sharing} busyLabel="Opening sharing…" label={copied ? 'Copied' : 'Share practice record'} onPress={async () => {
         if (sharingRef.current) return;
@@ -403,23 +406,64 @@ function ReadingForm({ session }: { session: PracticeSession }) {
   );
 }
 
-/** Newest first. Each row says what changed since the reading before it; nothing is ever overwritten. */
-function History({ readings, temp }: { readings: FieldReading[]; temp: Temp }) {
+function DecisionCard({ reading, session, expanded = false }: { reading: FieldReading; session: PracticeSession; expanded?: boolean }) {
+  const [showChoices, setShowChoices] = useState(expanded);
+  const [kind, setKind] = useState<PracticeDecisionKind | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
+  const pending = useRef(false);
+
+  return (
+    <View style={[styles.decision, reading.zone === 'black' && styles.decisionStop]}>
+      <Text accessibilityRole="header" style={styles.fieldLabel}>Staff decision · {time(reading.measuredAt)} reading</Text>
+      {reading.decision ? (
+        <Text accessibilityLiveRegion="polite" style={styles.help}>
+          {PRACTICE_DECISION_LABELS[reading.decision.kind]} · Recorded {time(reading.decision.at)}
+        </Text>
+      ) : showChoices ? (
+        <>
+          <Text style={styles.help}>Select the action staff took for this reading. You can save one decision per reading.</Text>
+          <Chips disabled={busy} format={(option) => PRACTICE_DECISION_LABELS[option]} label="Staff action" onSelect={setKind} options={practiceDecisionOptions(reading.zone)} selected={kind} />
+          <ActionButton busy={busy} busyLabel="Saving…" disabled={!kind} label="Save decision" onPress={async () => {
+            if (!kind || pending.current) return;
+            pending.current = true;
+            setBusy(true);
+            setError(false);
+            try { await recordPracticeDecision(session, reading, kind); }
+            catch { setError(true); }
+            finally { pending.current = false; setBusy(false); }
+          }} />
+          {error ? <Text accessibilityLiveRegion="assertive" style={styles.error}>Couldn’t save the decision. Check the connection and confirm this record is still open.</Text> : null}
+        </>
+      ) : (
+        <ActionButton label="Log staff decision" onPress={() => setShowChoices(true)} variant={reading.zone === 'black' ? 'primary' : 'secondary'} />
+      )}
+    </View>
+  );
+}
+
+/** Newest first, with a way to record a missed decision while the session is still open. */
+function History({ readings, temp, session, canRecord }: { readings: FieldReading[]; temp: Temp; session: PracticeSession; canRecord: boolean }) {
+  const [selected, setSelected] = useState<string | null>(null);
   const rows = readings.map((reading, index) => ({ reading, previous: readings[index - 1] ?? null })).reverse();
   return (
     <View>
       <Text style={styles.planTitle}>Today’s readings</Text>
       <Group>
-        {rows.map(({ reading, previous }) => {
-          // One line: the reading and its zone (with the change when the zone moved), then the time.
+        {rows.map(({ reading, previous }, index) => {
           const zone = ZONES[reading.zone].label.replace(' zone', '');
           const zones = previous && previous.zone !== reading.zone ? `${ZONES[previous.zone].label.replace(' zone', '')} → ${zone}` : zone;
+          const canAdd = canRecord && index > 0 && !reading.decision;
           return (
-            <Row
-              key={reading.id}
-              title={`${temp.value(reading.wbgtF)}${temp.unit} · ${zones}`}
-              value={`${time(reading.measuredAt)}${reading.acknowledgedAt ? '' : ' · pending'}`}
-            />
+            <View key={reading.id}>
+              <Row
+                detail={[reading.decision ? PRACTICE_DECISION_LABELS[reading.decision.kind] : canAdd ? 'Log a decision' : '', !reading.acknowledgedAt ? 'Guidance pending' : ''].filter(Boolean).join(' · ') || undefined}
+                onPress={canAdd ? () => setSelected(selected === reading.id ? null : reading.id) : undefined}
+                title={`${temp.value(reading.wbgtF)}${temp.unit} · ${zones}`}
+                value={time(reading.measuredAt)}
+              />
+              {canAdd && selected === reading.id ? <DecisionCard expanded reading={reading} session={session} /> : null}
+            </View>
           );
         })}
       </Group>
@@ -449,6 +493,8 @@ const styles = StyleSheet.create({
   chipTextOn: { color: Palette.ink },
   form: { gap: Spacing.three },
   reading: { borderBottomColor: Palette.border, borderBottomWidth: StyleSheet.hairlineWidth, gap: Spacing.two, paddingBottom: Spacing.four },
+  decision: { backgroundColor: Palette.surface, borderColor: Palette.border, borderRadius: 16, borderWidth: 1, gap: Spacing.three, padding: Spacing.four },
+  decisionStop: { borderColor: Palette.emergency },
   guidanceToggle: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 48 },
   guidanceCopy: { flex: 1, gap: 4 },
   guidanceTitle: { color: Palette.ink, ...Type.headline },
